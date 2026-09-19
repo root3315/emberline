@@ -1,0 +1,13 @@
+node_modules
+dist
+.env
+
+# Raw FIRMS cache and build logs live at the repo root: tens of thousands of
+# files, all regenerable. The leading slash matters — without it this would
+# also swallow public/data, which holds the built archives we do want.
+/data/
+
+# Local tooling output
+.wrangler
+/shots
+*.local

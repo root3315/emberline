@@ -1,0 +1,105 @@
+/**
+ * Sensor contribution per year.
+ *
+ * This chart exists to keep the project honest. The bars are split by which
+ * instrument family actually detected each active cell, so the moment VIIRS
+ * joins the record is visible as a seam rather than hidden inside a total. Any
+ * claim the calendar makes about the 2000s has to survive looking at this.
+ */
+
+import { formatNumber, t } from '../i18n'
+import { fitCanvas, LABEL, MONO, rgba, roundRect, varColor, type Rgb } from './paint'
+
+export interface ContribYear {
+  year: number
+  modisOnly: number
+  both: number
+  viirsOnly: number
+}
+
+const PAD = { top: 16, right: 10, bottom: 26, left: 52 }
+const HEIGHT = 188
+
+export function drawContrib(canvas: HTMLCanvasElement, data: ContribYear[]): void {
+  const surface = fitCanvas(canvas, HEIGHT)
+  if (!surface || data.length === 0) return
+  const { ctx, width } = surface
+
+  const plotW = width - PAD.left - PAD.right
+  const plotH = HEIGHT - PAD.top - PAD.bottom
+
+  const peak = Math.max(...data.map((d) => d.modisOnly + d.both + d.viirsOnly), 1)
+  const step = plotW / data.length
+  const barW = Math.max(3, Math.min(26, step - 4))
+
+  const inkMuted = varColor('--ink-muted')
+  const inkTertiary = varColor('--ink-tertiary')
+  const edgeSoft = varColor('--edge-soft')
+  const cModis = varColor('--sensor-modis')
+  const cBoth = varColor('--sensor-both')
+  const cViirs = varColor('--sensor-viirs')
+
+  ctx.font = MONO
+  ctx.textAlign = 'right'
+  ctx.textBaseline = 'middle'
+  for (let i = 0; i <= 2; i++) {
+    const v = (peak / 2) * i
+    const yy = Math.round(PAD.top + plotH - (v / peak) * plotH) + 0.5
+    ctx.strokeStyle = rgba(edgeSoft, 1)
+    ctx.lineWidth = 1
+    ctx.beginPath()
+    ctx.moveTo(PAD.left, yy)
+    ctx.lineTo(width - PAD.right, yy)
+    ctx.stroke()
+    ctx.fillStyle = rgba(inkMuted, 0.9)
+    ctx.fillText(formatNumber(Math.round(v)), PAD.left - 8, yy)
+  }
+
+  data.forEach((d, i) => {
+    const x = PAD.left + i * step + (step - barW) / 2
+    let cursor = PAD.top + plotH
+
+    const segments: Array<[number, Rgb]> = [
+      [d.modisOnly, cModis],
+      [d.both, cBoth],
+      [d.viirsOnly, cViirs],
+    ]
+
+    const total = d.modisOnly + d.both + d.viirsOnly
+    const totalH = (total / peak) * plotH
+    const topY = PAD.top + plotH - totalH
+
+    // One rounded silhouette, clipped, so the stack keeps a single soft top.
+    ctx.save()
+    roundRect(ctx, x, topY, barW, Math.max(totalH, 2), Math.min(5, barW / 2))
+    ctx.clip()
+    for (const [value, color] of segments) {
+      if (value <= 0) continue
+      const h = (value / peak) * plotH
+      ctx.fillStyle = rgba(color, 0.92)
+      ctx.fillRect(x, cursor - h, barW, h)
+      cursor -= h
+    }
+    ctx.restore()
+  })
+
+  // Year labels, thinned so they never collide.
+  ctx.font = LABEL
+  ctx.textAlign = 'center'
+  ctx.textBaseline = 'alphabetic'
+  const every = Math.ceil((data.length * 30) / Math.max(plotW, 1))
+  data.forEach((d, i) => {
+    if (i % every !== 0 && i !== data.length - 1) return
+    ctx.fillStyle = rgba(inkTertiary, 0.8)
+    ctx.fillText(String(d.year), PAD.left + i * step + step / 2, HEIGHT - 8)
+  })
+}
+
+/** Legend entries, rendered as DOM so they stay selectable and translatable. */
+export function contribLegend(): Array<{ label: string; color: string }> {
+  return [
+    { label: t('legendModis'), color: 'var(--sensor-modis)' },
+    { label: t('legendBoth'), color: 'var(--sensor-both)' },
+    { label: t('legendViirs'), color: 'var(--sensor-viirs)' },
+  ]
+}

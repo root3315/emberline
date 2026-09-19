@@ -1,0 +1,282 @@
+<!doctype html>
+<html lang="en" data-theme="night">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Emberline — when and where it burns</title>
+    <meta
+      name="description"
+      content="A burning-activity calendar that reconciles MODIS and VIIRS fire detections into one comparable record."
+    />
+    <link rel="stylesheet" href="/node_modules/leaflet/dist/leaflet.css" />
+    <link rel="stylesheet" href="/fonts.css" />
+    <link rel="stylesheet" href="/src/styles/tokens.css" />
+    <link rel="stylesheet" href="/src/styles/app.css" />
+  </head>
+  <body>
+    <a class="skip-link" href="#calendar" data-i18n="skip">Skip to the calendar</a>
+
+    <header class="bar">
+      <div class="bar__inner">
+        <div class="brand">
+          <span class="brand__mark" aria-hidden="true"></span>
+          <span class="brand__text">
+            <strong>Emberline</strong>
+            <span data-i18n="tagline">When and where it burns</span>
+          </span>
+        </div>
+
+        <div class="bar__controls">
+          <label class="field">
+            <span class="field__label" data-i18n="areaOfInterest">Area</span>
+            <select id="aoi" class="select"></select>
+          </label>
+
+          <fieldset class="segmented" id="mode">
+            <legend class="sr-only" data-i18n="seriesMode">Series</legend>
+            <label>
+              <input type="radio" name="mode" value="harmonized" checked />
+              <span data-i18n="modeHarmonized">Reconciled</span>
+            </label>
+            <label>
+              <input type="radio" name="mode" value="raw" />
+              <span data-i18n="modeRaw">As recorded</span>
+            </label>
+          </fieldset>
+
+          <div class="bar__toggles">
+            <button type="button" class="ghost-btn" id="lang" aria-label="Switch language">RU</button>
+            <button type="button" class="ghost-btn" id="theme" aria-label="Switch theme">
+              <span data-theme-icon></span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <main class="page">
+      <!-- The answer, before any chart asks to be interpreted. -->
+      <section class="hero">
+        <p class="hero__where" id="hero-where"></p>
+        <h1 class="hero__answer" id="hero-answer"></h1>
+        <p class="hero__aside" id="hero-aside"></p>
+        <dl class="hero__stats" id="hero-stats"></dl>
+      </section>
+
+      <section class="band" id="calendar">
+        <header class="band__head">
+          <div>
+            <h2 data-i18n="sectionCalendar">When does it burn here?</h2>
+            <p class="note" id="calendar-note" data-i18n="sectionCalendarNote"></p>
+          </div>
+          <div class="legend" id="ribbon-legend"></div>
+        </header>
+
+        <!-- The mode switch is the heart of the project; it has to explain itself. -->
+        <p class="mode-explain" id="mode-explain"></p>
+
+        <div class="ribbon" id="ribbon-canvas-wrap">
+          <canvas id="ribbon-canvas"></canvas>
+          <div class="ribbon__tip" id="ribbon-tip" hidden></div>
+        </div>
+
+        <div class="blank" id="blank" hidden>
+          <h3 id="blank-title"></h3>
+          <p id="blank-body"></p>
+        </div>
+
+        <dl class="metrics" id="metrics"></dl>
+      </section>
+
+      <section class="band band--split">
+        <div class="band__col">
+          <header class="band__head band__head--tight">
+            <div>
+              <h2 id="year-title"></h2>
+              <p class="note" data-i18n="sectionYearNote"></p>
+            </div>
+            <div class="yearpick">
+              <button type="button" class="ghost-btn" id="year-prev" aria-label="Previous year">&#8249;</button>
+              <output class="yearpick__value" id="year-value">—</output>
+              <button type="button" class="ghost-btn" id="year-next" aria-label="Next year">&#8250;</button>
+            </div>
+          </header>
+          <div class="cycle"><canvas id="cycle-canvas"></canvas></div>
+          <p class="concentration" id="concentration"></p>
+        </div>
+
+        <div class="band__col band__col--narrow">
+          <h3 class="subhead" data-i18n="readingTitle">What stands out</h3>
+          <p class="verdict" id="verdict"></p>
+          <dl class="facts" id="facts"></dl>
+          <h3 class="subhead" data-i18n="criticalTitle">Stretches under pressure</h3>
+          <p class="note note--tight" data-i18n="criticalNote"></p>
+          <ol class="periods" id="periods"></ol>
+        </div>
+      </section>
+
+      <section class="band">
+        <header class="band__head band__head--tight">
+          <div>
+            <h2 data-i18n="sectionTable">Every year, side by side</h2>
+            <p class="note" data-i18n="sectionTableNote"></p>
+          </div>
+        </header>
+        <div class="table-wrap">
+          <table class="years">
+            <thead>
+              <tr id="years-head">
+                <th scope="col" data-sort="year" aria-sort="ascending">
+                  <button type="button" data-i18n="colYear">Year</button>
+                </th>
+                <th scope="col" data-sort="start"><button type="button" data-i18n="colSeason">Season ran</button></th>
+                <th scope="col" data-sort="peak"><button type="button" data-i18n="colPeak">Peak</button></th>
+                <th scope="col" class="num" data-sort="length">
+                  <button type="button" data-i18n="colLength">Days</button>
+                </th>
+                <th scope="col" class="num" data-sort="total">
+                  <button type="button" data-i18n="colTotal">Fires</button>
+                </th>
+                <th scope="col" class="num" data-sort="ratio">
+                  <button type="button" data-i18n="colRatio">vs usual</button>
+                </th>
+                <th scope="col" class="num" data-sort="above">
+                  <button type="button" data-i18n="colAbove">Busy days</button>
+                </th>
+              </tr>
+            </thead>
+            <tbody id="years-body"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="band band--split">
+        <div class="band__col band__col--narrow">
+          <header class="band__head band__head--tight">
+            <div>
+              <h2 data-i18n="sectionSensors">Who saw it, and how it was reconciled</h2>
+            </div>
+          </header>
+          <ul class="sensors" id="sensors"></ul>
+          <h3 class="subhead" id="split-title"></h3>
+          <div class="split-bar" id="sensor-split"></div>
+          <p class="note note--tight" id="sensitivity-note"></p>
+        </div>
+
+        <div class="band__col">
+          <header class="band__head band__head--tight">
+            <div>
+              <h3 class="subhead subhead--plain" data-i18n="contribTitle">Detections by sensor, year by year</h3>
+              <p class="note" data-i18n="contribNote"></p>
+            </div>
+            <div class="legend" id="contrib-legend"></div>
+          </header>
+          <div class="contrib"><canvas id="contrib-canvas"></canvas></div>
+        </div>
+      </section>
+
+      <section class="band band--split">
+        <div class="band__col band__col--narrow">
+          <header class="band__head band__head--tight">
+            <div>
+              <h2 data-i18n="sectionMap">Where it burns</h2>
+              <p class="note" id="map-note"></p>
+            </div>
+          </header>
+          <div class="map">
+            <div class="map__canvas" id="map"></div>
+            <div class="map__probe" id="map-probe" hidden></div>
+          </div>
+
+          <fieldset class="segmented segmented--wide basemap" id="basemap">
+            <legend class="sr-only" data-i18n="basemapLegend">Base map</legend>
+            <label>
+              <input type="radio" name="basemap" value="dark" checked />
+              <span data-i18n="basemapDark">Map</span>
+            </label>
+            <label>
+              <input type="radio" name="basemap" value="satellite" />
+              <span data-i18n="basemapSatellite">Satellite</span>
+            </label>
+            <label>
+              <input type="radio" name="basemap" value="relief" />
+              <span data-i18n="basemapRelief">Relief</span>
+            </label>
+          </fieldset>
+          <div class="ramp" aria-hidden="true"></div>
+          <p class="ramp__labels">
+            <span data-i18n="rampLow">burned once</span>
+            <span data-i18n="rampHigh">burns often</span>
+          </p>
+          <dl class="mini-facts" id="map-facts"></dl>
+        </div>
+
+        <div class="band__col">
+          <header class="band__head band__head--tight">
+            <div><h2 data-i18n="sectionSource">Where the numbers come from</h2></div>
+          </header>
+
+          <fieldset class="segmented segmented--wide" id="source">
+            <legend class="sr-only" data-i18n="dataSource">Data source</legend>
+            <label>
+              <input type="radio" name="source" value="archive" checked />
+              <span data-i18n="srcArchive">Bundled</span>
+            </label>
+            <label><input type="radio" name="source" value="live" /><span data-i18n="srcLive">Live</span></label>
+            <label><input type="radio" name="source" value="file" /><span data-i18n="srcFile">My file</span></label>
+          </fieldset>
+
+          <div class="source-pane" id="pane-archive">
+            <p class="note" id="provenance"></p>
+          </div>
+
+          <div class="source-pane" id="pane-live" hidden>
+            <div class="row">
+              <label class="field field--grow">
+                <span class="field__label" data-i18n="mapKey">FIRMS key</span>
+                <input
+                  class="input"
+                  id="map-key"
+                  type="password"
+                  autocomplete="off"
+                  spellcheck="false"
+                  placeholder="0123456789abcdef"
+                />
+              </label>
+              <label class="field">
+                <span class="field__label" data-i18n="lastDays">Window</span>
+                <select class="select select--small" id="live-days">
+                  <option value="1">1</option>
+                  <option value="3">3</option>
+                  <option value="7" selected>7</option>
+                  <option value="10">10</option>
+                </select>
+              </label>
+            </div>
+            <button type="button" class="btn" id="live-fetch" data-i18n="fetchLive">Fetch recent fires</button>
+            <p class="note note--tight" data-i18n="liveNote"></p>
+          </div>
+
+          <div class="source-pane" id="pane-file" hidden>
+            <div class="dropzone" id="dropzone" tabindex="0" role="button">
+              <span data-i18n="dropCsv">Drop a FIRMS CSV here, or click to choose</span>
+              <input type="file" id="file" accept=".csv,text/csv" hidden multiple />
+            </div>
+            <p class="note note--tight" data-i18n="fileNote"></p>
+          </div>
+
+          <p class="status" id="status" role="status" aria-live="polite"></p>
+          <button type="button" class="ghost-btn ghost-btn--wide" id="export" data-i18n="exportSeries">
+            Download this series as CSV
+          </button>
+        </div>
+      </section>
+    </main>
+
+    <footer class="colophon">
+      <div class="colophon__inner"><p id="colophon-text"></p></div>
+    </footer>
+
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

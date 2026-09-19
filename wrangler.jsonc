@@ -1,0 +1,10 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "emberline",
+  "compatibility_date": "2026-09-18",
+  // A static site: Workers serves the built assets directly, no server code.
+  "assets": {
+    "directory": "./dist",
+    "not_found_handling": "single-page-application"
+  }
+}

@@ -1,0 +1,141 @@
+/*
+ * Emberline tokens.
+ *
+ * The palette is blackbody radiation — the way a fire actually emits, and the
+ * way a thermal sensor actually sees it. Cold char through dull red, ember
+ * orange, amber, to the near-white core. Nothing in this interface is coloured
+ * for decoration: if something is warm, it is burning.
+ *
+ * One hue throughout (a warm graphite around 28deg). Surfaces move by lightness
+ * only, a few percent at a time, so the structure is felt rather than seen.
+ */
+
+:root {
+  /* ---- surfaces: warm graphite, lightness only ---- */
+  --ash-void: hsl(28 12% 6%);
+  --ash-base: hsl(28 11% 8%);
+  --ash-raised: hsl(28 10% 11%);
+  --ash-panel: hsl(28 10% 13%);
+  --ash-lifted: hsl(28 9% 16%);
+  --ash-input: hsl(28 12% 7%);
+
+  /*
+   * Ink: four levels, never two. Tertiary and muted are set by measurement,
+   * not by eye — both carry real body text (captions, scale labels, the
+   * colophon) and have to clear 4.5:1 on the darkest surface they sit on.
+   */
+  --ink-primary: hsl(36 24% 94%);
+  --ink-secondary: hsl(32 12% 72%);
+  --ink-tertiary: hsl(30 9% 60%);
+  --ink-muted: hsl(30 8% 50%);
+
+  /* ---- edges: found when looked for, invisible otherwise ---- */
+  --edge: hsl(34 20% 88% / 0.09);
+  --edge-soft: hsl(34 20% 88% / 0.055);
+  --edge-strong: hsl(34 20% 88% / 0.16);
+  --edge-focus: hsl(31 92% 58% / 0.55);
+
+  /* ---- blackbody ramp: the one accent family ---- */
+  --heat-00: hsl(20 30% 12%);
+  --heat-15: hsl(12 62% 20%);
+  --heat-35: hsl(12 78% 32%);
+  --heat-55: hsl(22 82% 45%);
+  --heat-75: hsl(31 88% 55%);
+  --heat-90: hsl(39 92% 66%);
+  --heat-100: hsl(44 96% 82%);
+
+  --ember: var(--heat-75);
+  --ember-dim: hsl(31 60% 42%);
+  --ember-glow: hsl(31 92% 58% / 0.18);
+
+  /* ---- meaning, borrowed from the same fire ---- */
+  --signal-above: hsl(8 78% 58%); /* above the 90th percentile */
+  --signal-normal: hsl(32 14% 46%); /* inside the normal band */
+  --signal-quiet: hsl(200 14% 42%); /* below normal: cold smoke */
+
+  /* ---- sensor identity: two families, two temperatures ---- */
+  --sensor-modis: hsl(199 52% 58%);
+  --sensor-viirs: hsl(31 88% 58%);
+  --sensor-both: hsl(275 40% 66%);
+
+  /* ---- type ---- */
+  --font-display: 'Manrope', system-ui, sans-serif;
+  --font-ui: 'IBM Plex Sans', system-ui, sans-serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, monospace;
+
+  /* 14px base, 1.25 ratio, rounded to whole pixels */
+  --t-caption: 11px;
+  --t-small: 12px;
+  --t-body: 14px;
+  --t-h4: 16px;
+  --t-h3: 18px;
+  --t-h2: 22px;
+  --t-h1: 28px;
+  --t-display: 42px;
+
+  /* ---- spacing: base 4 ---- */
+  --s-1: 4px;
+  --s-2: 8px;
+  --s-3: 12px;
+  --s-4: 16px;
+  --s-5: 20px;
+  --s-6: 24px;
+  --s-8: 32px;
+  --s-10: 40px;
+
+  /* ---- radii: nothing in this interface has a corner ---- */
+  --r-panel: 24px;
+  --r-card: 18px;
+  --r-control: 12px;
+  --r-tight: 8px;
+  --r-pill: 999px;
+
+  /* ---- motion ---- */
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-move: cubic-bezier(0.77, 0, 0.175, 1);
+  --t-fast: 140ms;
+  --t-base: 190ms;
+  --t-slow: 260ms;
+}
+
+/*
+ * Daylight mode. Same hierarchy, inverted values, and the ramp shifts to deep
+ * reds first so heat still reads as heat against paper rather than washing out.
+ */
+:root[data-theme='day'] {
+  --ash-void: hsl(36 28% 93%);
+  --ash-base: hsl(36 30% 96%);
+  --ash-raised: hsl(36 26% 99%);
+  --ash-panel: hsl(0 0% 100%);
+  --ash-lifted: hsl(36 24% 97%);
+  --ash-input: hsl(36 20% 94%);
+
+  --ink-primary: hsl(28 22% 12%);
+  --ink-secondary: hsl(28 12% 28%);
+  --ink-tertiary: hsl(28 8% 36%);
+  --ink-muted: hsl(28 6% 41%);
+
+  --edge: hsl(28 20% 16% / 0.13);
+  --edge-soft: hsl(28 20% 16% / 0.08);
+  --edge-strong: hsl(28 20% 16% / 0.22);
+
+  --heat-00: hsl(36 28% 90%);
+  --heat-15: hsl(28 56% 76%);
+  --heat-35: hsl(20 74% 60%);
+  --heat-55: hsl(14 76% 48%);
+  --heat-75: hsl(10 78% 40%);
+  --heat-90: hsl(6 74% 32%);
+  --heat-100: hsl(2 68% 24%);
+
+  --ember: hsl(14 80% 45%);
+  --ember-dim: hsl(18 48% 58%);
+  --ember-glow: hsl(14 80% 45% / 0.14);
+
+  --signal-above: hsl(4 72% 46%);
+  --signal-normal: hsl(28 10% 48%);
+  --signal-quiet: hsl(200 18% 48%);
+
+  --sensor-modis: hsl(205 62% 42%);
+  --sensor-viirs: hsl(22 80% 46%);
+  --sensor-both: hsl(278 38% 48%);
+}

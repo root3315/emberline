@@ -1,0 +1,279 @@
+/**
+ * The harmonization pipeline.
+ *
+ * Six steps turn two incompatible detection records into one comparable series:
+ *   1. snap every detection onto a shared grid  (grid.ts)
+ *   2. date it by local solar day               (grid.ts)
+ *   3. deduplicate cells seen by several sensors on the same day
+ *   4. collapse both confidence schemes onto one scale
+ *   5. measure the sensitivity ratio between the two families, per AOI
+ *   6. carry FRP without double counting the same fire
+ *
+ * Step 5 is the honest part. The pre-VIIRS record cannot be made equivalent to
+ * the modern one; it can only be adjusted by a stated ratio carrying a stated
+ * uncertainty. Every raw number survives alongside its adjusted twin so the
+ * interface can always show both.
+ */
+
+import { cellOf, dayIndex, localSolarDay, DEFAULT_CELL_KM } from './grid'
+import {
+  MODIS_MASK,
+  SENSOR_BIT,
+  SENSOR_META,
+  SENSORS,
+  VIIRS_MASK,
+  type CellDay,
+  type ConfidenceClass,
+  type DayRecord,
+  type Detection,
+  type SensorId,
+} from './types'
+
+/**
+ * Step 4. MODIS reports 0-100, VIIRS reports low/nominal/high. The two schemes
+ * meet at 30 and 80, the break points FIRMS documents for MODIS, rather than at
+ * an invented midpoint.
+ */
+export function confidenceFromModis(pct: number): ConfidenceClass {
+  if (pct >= 80) return 2
+  if (pct >= 30) return 1
+  return 0
+}
+
+export function confidenceFromViirs(token: string): ConfidenceClass {
+  const t = String(token).trim().toLowerCase()
+  if (t === 'h' || t === 'high') return 2
+  if (t === 'l' || t === 'low') return 0
+  if (t === 'n' || t === 'nominal') return 1
+  const n = Number(t)
+  return Number.isFinite(n) ? confidenceFromModis(n) : 1
+}
+
+export interface HarmonizeOptions {
+  cellKm?: number
+  /** Drop detections below this confidence class. */
+  minConfidence?: ConfidenceClass
+}
+
+export interface CellAggregate {
+  lat: number
+  lon: number
+  days: number
+  frp: number
+  sensors: number
+}
+
+export interface HarmonizedRecord {
+  cellDays: CellDay[]
+  /** One entry per day that had at least one detection, ascending. */
+  days: DayRecord[]
+  /** Per-cell totals across the whole record, for the map. */
+  cells: Map<string, CellAggregate>
+  sensorsPresent: Set<SensorId>
+  firstDay: string | null
+  lastDay: string | null
+  rawDetections: number
+}
+
+/** Steps 1-4 and 6: raw detections in, one deduplicated cell-day record out. */
+export function harmonize(detections: readonly Detection[], options: HarmonizeOptions = {}): HarmonizedRecord {
+  const cellKm = options.cellKm ?? DEFAULT_CELL_KM
+  const minConfidence = options.minConfidence ?? 0
+
+  const byCellDay = new Map<string, CellDay>()
+  const cells = new Map<string, CellAggregate>()
+  const sensorsPresent = new Set<SensorId>()
+  let rawDetections = 0
+
+  for (const d of detections) {
+    if (d.confidence < minConfidence) continue
+    rawDetections++
+    sensorsPresent.add(d.sensor)
+
+    const cell = cellOf(d.lat, d.lon, cellKm)
+    const day = localSolarDay(d.dateUtc, d.timeUtc, d.lon)
+    const key = cell.id + '|' + day
+
+    let rec = byCellDay.get(key)
+    if (!rec) {
+      rec = {
+        cell: cell.id,
+        day,
+        sensors: 0,
+        raw: 0,
+        confidence: 0,
+        frp: 0,
+        night: true,
+        lat: cell.lat,
+        lon: cell.lon,
+      }
+      byCellDay.set(key, rec)
+    }
+
+    // Step 3: one cell seen by two sensors is one burning cell, not two.
+    rec.sensors |= SENSOR_BIT[d.sensor]
+    rec.raw++
+    if (d.confidence > rec.confidence) rec.confidence = d.confidence
+    // Step 6: two sensors staring at one fire is not twice the power.
+    if (d.frp > rec.frp) rec.frp = d.frp
+    if (!d.night) rec.night = false
+  }
+
+  const cellDays = [...byCellDay.values()].sort((a, b) => (a.day < b.day ? -1 : a.day > b.day ? 1 : 0))
+
+  const byDay = new Map<string, DayRecord>()
+  for (const cd of cellDays) {
+    let day = byDay.get(cd.day)
+    if (!day) {
+      day = { day: cd.day, activeCells: 0, modisOnly: 0, viirsOnly: 0, both: 0, frp: 0, raw: 0 }
+      byDay.set(cd.day, day)
+    }
+    day.activeCells++
+    day.frp += cd.frp
+    day.raw += cd.raw
+
+    const hasModis = (cd.sensors & MODIS_MASK) !== 0
+    const hasViirs = (cd.sensors & VIIRS_MASK) !== 0
+    if (hasModis && hasViirs) day.both++
+    else if (hasModis) day.modisOnly++
+    else day.viirsOnly++
+
+    let agg = cells.get(cd.cell)
+    if (!agg) {
+      agg = { lat: cd.lat, lon: cd.lon, days: 0, frp: 0, sensors: 0 }
+      cells.set(cd.cell, agg)
+    }
+    agg.days++
+    agg.frp += cd.frp
+    agg.sensors |= cd.sensors
+  }
+
+  const days = [...byDay.values()].sort((a, b) => (a.day < b.day ? -1 : 1))
+
+  return {
+    cellDays,
+    days,
+    cells,
+    sensorsPresent,
+    firstDay: days.length ? days[0].day : null,
+    lastDay: days.length ? days[days.length - 1].day : null,
+    rawDetections,
+  }
+}
+
+export interface SensitivityRatio {
+  /** Median VIIRS-to-MODIS active-cell ratio measured for this AOI. */
+  k: number
+  /** Interquartile bounds — the uncertainty the adjustment carries. */
+  lo: number
+  hi: number
+  /** Days that qualified for the measurement. */
+  samples: number
+  /** First day on which both families were operating in this record. */
+  overlapFrom: string | null
+}
+
+/**
+ * Step 5, measured per AOI rather than assumed globally. How much more a 375 m
+ * sensor resolves than a 1 km one depends on how fragmented the fires are, and
+ * a stubble-burning plain fragments nothing like a crown fire front.
+ */
+export function measureSensitivity(record: HarmonizedRecord, minModisCells = 3): SensitivityRatio {
+  return summarizeSensitivity(dailySensitivityRatios(record, minModisCells))
+}
+
+export interface DailyRatio {
+  day: string
+  ratio: number
+}
+
+/**
+ * One ratio per day on which both families saw the AOI. Exposed separately so a
+ * long archive can be processed a year at a time without holding every
+ * detection in memory at once.
+ */
+export function dailySensitivityRatios(record: HarmonizedRecord, minModisCells = 3): DailyRatio[] {
+  const perDay = new Map<string, { modis: number; viirs: number }>()
+  for (const cd of record.cellDays) {
+    let d = perDay.get(cd.day)
+    if (!d) perDay.set(cd.day, (d = { modis: 0, viirs: 0 }))
+    if (cd.sensors & MODIS_MASK) d.modis++
+    if (cd.sensors & VIIRS_MASK) d.viirs++
+  }
+
+  const out: DailyRatio[] = []
+  for (const [day, d] of [...perDay.entries()].sort((a, b) => (a[0] < b[0] ? -1 : 1))) {
+    if (d.modis < minModisCells || d.viirs === 0) continue
+    out.push({ day, ratio: d.viirs / d.modis })
+  }
+  return out
+}
+
+export function summarizeSensitivity(daily: readonly DailyRatio[]): SensitivityRatio {
+  const overlapFrom = daily.length ? daily.reduce((a, b) => (a.day < b.day ? a : b)).day : null
+  if (daily.length < MIN_RATIO_SAMPLES) {
+    return { k: 1, lo: 1, hi: 1, samples: daily.length, overlapFrom }
+  }
+  const ratios = daily.map((d) => d.ratio).sort((a, b) => a - b)
+  return {
+    k: quantileSorted(ratios, 0.5),
+    lo: quantileSorted(ratios, 0.25),
+    hi: quantileSorted(ratios, 0.75),
+    samples: ratios.length,
+    overlapFrom,
+  }
+}
+
+/** Below this, the overlap era is too thin to support an adjustment. */
+export const MIN_RATIO_SAMPLES = 10
+
+export interface AdjustedDay {
+  day: string
+  /** What the instruments actually counted. */
+  raw: number
+  /** Raw, or a MODIS-only day scaled to its VIIRS-era equivalent. */
+  value: number
+  lo: number
+  hi: number
+  /** True when this day predates VIIRS and carries the adjustment. */
+  adjusted: boolean
+}
+
+/**
+ * Apply the measured ratio to the MODIS-only era. Overlap-era days pass through
+ * untouched — they need no adjustment, and bending real observations to fit a
+ * model would be the opposite of the point.
+ */
+export function applySensitivity(
+  days: readonly DayRecord[],
+  ratio: SensitivityRatio,
+  viirsFrom: string | null,
+): AdjustedDay[] {
+  const cut = viirsFrom ?? SENSOR_META.viirs_snpp.since
+  const usable = ratio.samples >= MIN_RATIO_SAMPLES
+  return days.map((d) => {
+    const raw = d.activeCells
+    const pre = d.day < cut
+    if (!pre || !usable) {
+      return { day: d.day, raw, value: raw, lo: raw, hi: raw, adjusted: false }
+    }
+    return { day: d.day, raw, value: raw * ratio.k, lo: raw * ratio.lo, hi: raw * ratio.hi, adjusted: true }
+  })
+}
+
+/** Which sensors were in orbit on a given day — drives the availability rail. */
+export function sensorsOnDay(day: string): SensorId[] {
+  return SENSORS.filter((s) => day >= SENSOR_META[s].since)
+}
+
+export function quantileSorted(sorted: readonly number[], q: number): number {
+  if (sorted.length === 0) return 0
+  if (sorted.length === 1) return sorted[0]
+  const pos = (sorted.length - 1) * q
+  const lo = Math.floor(pos)
+  const hi = Math.ceil(pos)
+  if (lo === hi) return sorted[lo]
+  return sorted[lo] + (sorted[hi] - sorted[lo]) * (pos - lo)
+}
+
+export { dayIndex }
