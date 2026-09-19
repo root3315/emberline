@@ -1,0 +1,168 @@
+/*
+ * Styles for the transition lab only. Built on the product's tokens so the
+ * candidates are judged against the same colours, radii and ink tiers they
+ * would ship into — but kept in their own file, because none of this belongs
+ * in the product and mixing it into `app.css` would guarantee it stayed.
+ */
+
+.lab-bar {
+  display: flex;
+  align-items: baseline;
+  gap: var(--s-4);
+  width: min(100% - 2 * var(--s-6), 1240px);
+  margin-inline: auto;
+  padding-block: var(--s-4);
+}
+
+.lab-note {
+  color: var(--ink-tertiary);
+  font-size: var(--t-small);
+}
+
+.lab {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-6);
+  width: min(100% - 2 * var(--s-6), 1240px);
+  margin-inline: auto;
+  padding-block: var(--s-8) var(--s-10);
+}
+
+.lab-pick {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: var(--s-4);
+}
+
+.lab-opt {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
+  padding: var(--s-5);
+  border: 1px solid var(--edge-soft);
+  border-radius: var(--r-card);
+  background: var(--ash-raised);
+}
+
+.lab-opt h2 {
+  margin: 0;
+  font-size: var(--t-h4);
+}
+
+.lab-opt p {
+  flex: 1;
+  margin: 0;
+  color: var(--ink-secondary);
+  font-size: var(--t-small);
+  line-height: 1.5;
+}
+
+.lab-opt button {
+  align-self: start;
+  padding: var(--s-2) var(--s-5);
+  border: 1px solid var(--edge);
+  border-radius: var(--r-pill);
+  background: var(--ash-lifted);
+  color: var(--ink-primary);
+  font: inherit;
+  font-size: var(--t-small);
+  cursor: pointer;
+}
+
+.lab-opt button:hover {
+  border-color: var(--edge-strong);
+}
+
+/* The one already in production reads as a reference, not a candidate. */
+.lab-opt--ref {
+  border-style: dashed;
+  background: none;
+}
+
+.lab-hint {
+  margin: 0;
+  color: var(--ink-tertiary);
+  font-size: var(--t-small);
+}
+
+.lab-card {
+  padding: var(--s-6);
+  border: 1px solid var(--edge-soft);
+  border-radius: var(--r-card);
+  background: var(--ash-raised);
+}
+
+.lab-card--tall {
+  min-height: 60vh;
+}
+
+.lab-eyebrow {
+  margin: 0 0 var(--s-3);
+  color: var(--ink-tertiary);
+  font-family: 'IBM Plex Mono', ui-monospace, monospace;
+  font-size: var(--t-small);
+  letter-spacing: 0.04em;
+}
+
+.lab-h1 {
+  margin: 0 0 var(--s-4);
+  font-size: clamp(1.9rem, 4vw, 3rem);
+  line-height: 1.08;
+  letter-spacing: -0.02em;
+  text-wrap: balance;
+}
+
+.lab-h1 em {
+  color: var(--heat-90);
+  font-style: normal;
+}
+
+.lab-h2 {
+  margin: 0 0 var(--s-4);
+  font-size: var(--t-h3);
+}
+
+.lab-lead {
+  max-width: 62ch;
+  margin: 0;
+  color: var(--ink-secondary);
+}
+
+.lab-facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-6);
+  margin-top: var(--s-6);
+}
+
+.lab-facts div {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-1);
+}
+
+.lab-facts b {
+  font-size: var(--t-h3);
+  font-variant-numeric: tabular-nums;
+}
+
+.lab-facts span {
+  color: var(--ink-tertiary);
+  font-size: var(--t-small);
+}
+
+/* Stand-ins for the ribbon, so there is something dense for an effect to cross. */
+.lab-strip {
+  height: 26px;
+  margin-top: var(--s-2);
+  border-radius: var(--r-tight);
+  background: linear-gradient(
+    90deg,
+    var(--heat-00) 0%,
+    var(--heat-35) 22%,
+    var(--heat-75) 44%,
+    var(--heat-15) 58%,
+    var(--heat-90) 74%,
+    var(--heat-35) 100%
+  );
+}

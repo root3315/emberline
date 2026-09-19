@@ -572,10 +572,29 @@ canvas {
   width: 100%;
 }
 
-.ribbon canvas {
-  width: 100%;
-  height: 240px; /* placeholder until the ribbon sizes itself to its years */
-  cursor: pointer;
+#ribbon-svg {
+  min-height: 240px; /* placeholder until the ribbon sizes itself to its years */
+}
+
+/*
+ * The ribbon is SVG so it stays sharp at any zoom, and SVG text takes its face
+ * from CSS like anything else. These mirror the three faces the canvas version
+ * set by hand.
+ */
+.rb-label {
+  font: 500 11px 'IBM Plex Sans', system-ui, sans-serif;
+}
+
+.rb-mono {
+  font: 500 11px 'IBM Plex Mono', ui-monospace, monospace;
+}
+
+.rb-year {
+  font: 500 11px 'IBM Plex Mono', ui-monospace, monospace;
+}
+
+.rb-year--on {
+  font: 700 13px 'Manrope', system-ui, sans-serif;
 }
 
 .ribbon__tip {
@@ -1142,8 +1161,19 @@ canvas {
 
 /* ============================================================ map */
 
+/*
+ * `isolation` is the whole point of this rule.
+ *
+ * Leaflet lays its panes out from 100 up to 1000 for the controls, and a
+ * positioned element with `z-index: auto` does not contain any of that — so
+ * those numbers were competing directly with the rest of the page, where the
+ * sticky bar sits at 40. The map climbed over the bar on scroll. Isolating it
+ * puts Leaflet's whole stack inside one context that ranks as a single element,
+ * and nothing inside the map can outrank anything outside it again.
+ */
 .map {
   position: relative;
+  isolation: isolate;
   aspect-ratio: 4 / 3;
   border: 1px solid var(--edge-soft);
   border-radius: var(--r-card);
@@ -1510,10 +1540,47 @@ canvas {
  * away from the bottom up by a torn edge, while the incoming one simply sits
  * underneath. The browser's default cross-fade would wash both out, so it goes.
  */
-::view-transition-old(root),
+/*
+ * A transition lives exactly as long as some animation is running on its
+ * layers. Removing the browser's cross-fade left this one with *none*, and
+ * Chrome is then free to close it on the very next frame — before the script
+ * has attached the clip animation it was about to. When that happened the
+ * outgoing snapshot was already gone, the theme appeared to change instantly,
+ * and the fire rode over a page that had finished changing. It was a race, so
+ * it was intermittent, and it got worse every time the key frames got heavier.
+ *
+ * This animation does nothing but exist. It is written in the stylesheet, so it
+ * is running from the transition's first frame and there is no window to lose.
+ * The script finishes it when the effect is done.
+ */
+@keyframes vt-hold {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+::view-transition-old(root) {
+  animation: vt-hold 30s linear forwards;
+  mix-blend-mode: normal;
+}
+
 ::view-transition-new(root) {
   animation: none;
   mix-blend-mode: normal;
+}
+
+/*
+ * Stacking, and it is not optional. Left to itself the browser paints the
+ * incoming snapshot *over* the outgoing one, which buries the whole effect: the
+ * clip still runs, the old theme is still there, and none of it is visible
+ * because the new theme is lying on top. `isolation: auto` is what lets the two
+ * z-indexes below mean anything at all.
+ */
+::view-transition-image-pair(root) {
+  isolation: auto;
 }
 
 ::view-transition-new(root) {

@@ -88,7 +88,16 @@ const FireLayer = L.Layer.extend({
 
   onAdd(this: FireLayerInstance, map: L.Map) {
     this._map = map as ZoomingMap
-    const canvas = L.DomUtil.create('canvas', 'fire-layer') as HTMLCanvasElement
+    // `leaflet-zoom-animated` is not decoration. Leaflet drives its zoom with a
+    // CSS transition on the panes, and only elements carrying that class are
+    // transitioned along with it — without it the transform handed over in
+    // `zoomanim` lands instantly while the tiles are still travelling, so the
+    // grid sits in the wrong corner for the length of the animation and snaps
+    // back at the end.
+    const canvas = L.DomUtil.create(
+      'canvas',
+      'fire-layer leaflet-zoom-animated',
+    ) as HTMLCanvasElement
     canvas.style.position = 'absolute'
     canvas.style.pointerEvents = 'none'
     this._canvas = canvas

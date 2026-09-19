@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="ru" data-theme="night">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex" />
+    <title>Emberline — лаборатория переходов</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;700;800&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+  </head>
+  <body>
+    <!--
+      Not part of the product. Vite builds `index.html` and nothing else, so
+      this page exists in development only and never reaches `dist`.
+    -->
+    <header class="bar">
+      <div class="lab-bar">
+        <strong>Лаборатория переходов</strong>
+        <span class="lab-note">Кандидаты на замену губке. В прод не входит.</span>
+      </div>
+    </header>
+
+    <main class="lab">
+      <div class="lab-pick">
+        <article class="lab-opt">
+          <h2>Рассвет</h2>
+          <p>
+            Терминатор идёт по странице, за ним день. Единственный кандидат,
+            который вырастает из самих данных: у каждой засечки есть признак
+            день&nbsp;/&nbsp;ночь, и календарь считается по местным солнечным
+            суткам — солнце и решает, когда сенсор вообще видит пожар.
+          </p>
+          <button type="button" data-effect="dawn">Показать</button>
+        </article>
+
+        <article class="lab-opt">
+          <h2>Дым рассеивается</h2>
+          <p>
+            Тёмная тема — это то, что осталось после огня, и уходит она как дым:
+            редеет, клубится и пропадает. Ничего нового вводить не надо,
+            остаётся в том же словаре.
+          </p>
+          <button type="button" data-effect="smoke">Показать</button>
+        </article>
+
+        <article class="lab-opt">
+          <h2>Дождь</h2>
+          <p>
+            То, чем кончается пожарный сезон, и приходит сверху — поэтому чистая
+            страница идёт вниз, а не вверх. Иначе читалось бы как горение задом
+            наперёд. Почти обесцвечен: синего в палитре сайта нет.
+          </p>
+          <button type="button" data-effect="rain">Показать</button>
+        </article>
+
+        <article class="lab-opt">
+          <h2>Проход сенсора</h2>
+          <p>
+            Страница пересобирается так же, как собирались данные под ней.
+            Засечки растут к краям полосы, потому что растёт и площадь земли под
+            ними — из-за этого километровый и 375-метровый сенсоры и расходятся
+            на одном пожаре. Риск: яркая полоса поперёк — это ещё и то, как
+            выглядит индикатор загрузки.
+          </p>
+          <button type="button" data-effect="scan">Показать</button>
+        </article>
+
+        <article class="lab-opt">
+          <h2>Пепел сдувает</h2>
+          <p>
+            Тёмная тема — это зола, оставшаяся от огня, и её уносит ветром.
+            Читается как вторая половина эффекта, который на сайте уже есть, и
+            все цвета в нём уже из той же палитры.
+          </p>
+          <button type="button" data-effect="ash">Показать</button>
+        </article>
+
+        <article class="lab-opt lab-opt--ref">
+          <h2>Горение</h2>
+          <p>
+            То, что стоит в проде, для сравнения. Идёт в другую сторону — со
+            светлой на тёмную.
+          </p>
+          <button type="button" data-effect="burn">Показать</button>
+        </article>
+      </div>
+      <p class="lab-hint">
+        Каждый кандидат всегда идёт <b>с тёмной темы на светлую</b> — если
+        страница уже светлая, она сначала молча вернётся в тёмную. Сравнивать
+        имеет смысл только в одну сторону.
+      </p>
+
+      <section class="lab-card">
+        <p class="lab-eyebrow">Пенджаб и Харьяна, Индия · 29.0°N–32.5°N</p>
+        <h1 class="lab-h1">Здесь горит с <em>6 мая</em> по <em>12 ноября</em>.</h1>
+        <p class="lab-lead">
+          Текст и блоки здесь только для того, чтобы было видно, что эффект делает
+          с настоящим содержимым, а не с пустым фоном.
+        </p>
+        <div class="lab-facts">
+          <div><b>190</b><span>дней сезона</span></div>
+          <div><b>2.3M</b><span>очагов</span></div>
+          <div><b>27</b><span>лет наблюдений</span></div>
+          <div><b>7.07×</b><span>разница сенсоров</span></div>
+        </div>
+      </section>
+
+      <section class="lab-card">
+        <h2 class="lab-h2">Полоса под ленту</h2>
+        <div class="lab-strip"></div>
+        <div class="lab-strip"></div>
+        <div class="lab-strip"></div>
+      </section>
+
+      <section class="lab-card lab-card--tall">
+        <h2 class="lab-h2">Высокий блок</h2>
+        <p class="lab-lead">
+          Нужен, чтобы переход было видно и в середине страницы, а не только
+          на первом экране.
+        </p>
+      </section>
+    </main>
+
+    <script type="module" src="/src/lab.ts"></script>
+  </body>
+</html>

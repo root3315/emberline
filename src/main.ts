@@ -98,7 +98,7 @@ const els = {
   sensitivityNote: $('sensitivity-note'),
   provenance: $('provenance'),
   status: $('status'),
-  ribbonCanvas: $<HTMLCanvasElement>('ribbon-canvas'),
+  ribbonHost: $('ribbon-svg'),
   ribbonTip: $('ribbon-tip'),
   ribbonLegend: $('ribbon-legend'),
   cycleCanvas: $<HTMLCanvasElement>('cycle-canvas'),
@@ -140,7 +140,7 @@ const els = {
   file: $<HTMLInputElement>('file'),
 }
 
-const ribbon = new Ribbon(els.ribbonCanvas, pickYear, showTip)
+const ribbon = new Ribbon(els.ribbonHost, pickYear, showTip)
 
 /** Only re-frame the map when the area changes, never on a year click. */
 let mapFittedFor = ''
@@ -1196,12 +1196,13 @@ function applyTheme(theme: 'night' | 'day'): void {
 }
 
 /**
- * Switching theme burns the old one away rather than cutting to the new one.
- * The swap happens under the cover, so the repaint of every canvas and the map
- * tiles is hidden behind the fire instead of flashing through it.
+ * Switching theme clears the old one away rather than cutting to the new one —
+ * fire on the way to night, a sponge on the way to day. The swap happens under
+ * the cover, so the repaint of every canvas and the map tiles is hidden behind
+ * the effect instead of flashing through it.
  */
 function setTheme(theme: 'night' | 'day'): void {
-  burnTransition(() => applyTheme(theme))
+  burnTransition(() => applyTheme(theme), theme)
 }
 
 function switchLang(lang: Lang): void {
