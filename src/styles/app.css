@@ -1500,6 +1500,68 @@ canvas {
   background: var(--ash-void);
 }
 
+/*
+ * The consequences band.
+ *
+ * One sentence gets to be large, because it is the only number on the page
+ * that is about people rather than about pixels. Everything under it stays at
+ * body size: four short items, each a lead and one line. The temptation here
+ * is an essay, and an essay is what a reader looking at a map will skip.
+ */
+.impact__lead {
+  margin: 0;
+  max-width: 54ch;
+  font-size: var(--t-h3);
+  line-height: 1.35;
+  text-wrap: balance;
+}
+
+.impact__lead b {
+  color: var(--ember);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+#impact-caveat {
+  max-width: 68ch;
+  margin-top: var(--s-3);
+}
+
+.impact__list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: var(--s-5) var(--s-6);
+  margin: var(--s-6) 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.impact__list li {
+  min-width: 0;
+  border-top: 1px solid var(--edge-soft);
+  padding-top: var(--s-3);
+}
+
+.impact__list b {
+  display: block;
+  margin-bottom: var(--s-1);
+  font-size: var(--t-body);
+  font-weight: 600;
+  color: var(--ink-primary);
+}
+
+.impact__list span {
+  display: block;
+  font-size: var(--t-small);
+  line-height: 1.5;
+  color: var(--ink-secondary);
+}
+
+.impact__sources {
+  margin-top: var(--s-6);
+  color: var(--ink-tertiary);
+}
+
 .basemap {
   margin-top: var(--s-3);
 }

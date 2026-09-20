@@ -46,6 +46,23 @@ const LAST_YEAR = new Date().getUTCFullYear()
 const MONTHS = monthIndex(LAST_YEAR + 1, 1)
 
 /**
+ * Radiative power per year, kept apart by instrument.
+ *
+ * The grid sums the two families into one power figure, which is right for
+ * drawing and wrong for arithmetic: the combined series jumps in 2012 when
+ * VIIRS arrives and again in 2018 and 2024 as more satellites join, and any
+ * quantity derived from it inherits those steps as if the planet had caught
+ * fire on those dates. An emissions estimate in particular has to run on one
+ * consistent pair of instruments, so MODIS is kept on its own — Terra from
+ * 2000, Aqua from mid-2002, and nothing added since.
+ *
+ * Only the annual totals, not a grid: this exists to be divided and scaled,
+ * never to be drawn.
+ */
+const frpModisYear = new Float64Array(LAST_YEAR - BASE_YEAR + 1)
+const frpViirsYear = new Float64Array(LAST_YEAR - BASE_YEAR + 1)
+
+/**
  * The accumulator: three flat arrays over cell × month.
  *
  * Twenty million slots each. Counts are 32-bit because a hot degree-cell in
@@ -220,6 +237,11 @@ function foldWindow(buf: Buffer, stats: { rows: number; kept: number }): void {
     }
     frp[slot] += power
     if (di >= 0 && di < DAYS) dayFrp[di] += power
+    const yi = year - BASE_YEAR
+    if (yi >= 0 && yi < frpModisYear.length) {
+      if (buf[field[8]] === 0x4d) frpModisYear[yi] += power
+      else frpViirsYear[yi] += power
+    }
     stats.kept++
 
     i = j + 1
@@ -332,7 +354,15 @@ async function main(): Promise<void> {
    * is the subject, and a reader has to be able to take the planet's season
    * from the finer sensor alone and see that it is not the same curve.
    */
-  const totals: Array<{ year: number; modis: number; viirs: number; frp: number }> = []
+  const totals: Array<{
+    year: number
+    modis: number
+    viirs: number
+    frp: number
+    /** The same power, split, because only one family runs the whole record. */
+    frpModis: number
+    frpViirs: number
+  }> = []
   const seasons: Array<{ year: number; modis: number[]; viirs: number[] }> = []
   for (let y = BASE_YEAR; y <= LAST_YEAR; y++) {
     let ym = 0
@@ -356,7 +386,14 @@ async function main(): Promise<void> {
       }
     }
     if (ym + yv === 0) continue
-    totals.push({ year: y, modis: ym, viirs: yv, frp: Math.round(yf) })
+    totals.push({
+      year: y,
+      modis: ym,
+      viirs: yv,
+      frp: Math.round(yf),
+      frpModis: Math.round(frpModisYear[y - BASE_YEAR]),
+      frpViirs: Math.round(frpViirsYear[y - BASE_YEAR]),
+    })
     seasons.push({ year: y, modis: mm, viirs: mv })
   }
 

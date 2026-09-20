@@ -31,8 +31,22 @@ export interface WorldIndex {
   cols: number
   rows: number
   years: Array<{ year: number; bytes: number; records: number }>
-  /** Per-year totals, summed during the fold so the charts need no grids. */
-  totals: Array<{ year: number; modis: number; viirs: number; frp: number }>
+  /**
+   * Per-year totals, summed during the fold so the charts need no grids.
+   *
+   * The power is also carried split by instrument, because only MODIS runs
+   * the whole record: the combined figure steps upward on every new satellite
+   * and cannot be used for arithmetic. Optional, so an index built before the
+   * split still loads.
+   */
+  totals: Array<{
+    year: number
+    modis: number
+    viirs: number
+    frp: number
+    frpModis?: number
+    frpViirs?: number
+  }>
   /** The same, by month, for the planet's seasonal shape. */
   seasons: Array<{ year: number; modis: number[]; viirs: number[] }>
   detections: number

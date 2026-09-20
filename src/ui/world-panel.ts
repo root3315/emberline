@@ -124,12 +124,26 @@ export function drawWorldSeason(canvas: HTMLCanvasElement, seasons: WorldSeason[
  * instrument switching on — which is what happened, and is the thing this
  * whole project exists to make visible.
  */
-export function drawWorldYears(canvas: HTMLCanvasElement, totals: WorldTotal[], year: number): void {
+export function drawWorldYears(
+  canvas: HTMLCanvasElement,
+  totals: WorldTotal[],
+  year: number,
+  temps?: Map<number, number>,
+): void {
   const surface = fitCanvas(canvas, YEARS_H)
   if (!surface || totals.length === 0) return
   const { ctx, width } = surface
 
-  const plotW = width - PAD.left - PAD.right
+  /**
+   * Room on the right only when there is a second axis to put there.
+   *
+   * The temperature is a different quantity in different units, so it gets
+   * its own scale; and a second scale needs its own labels, which need their
+   * own margin. Without the temperature the chart keeps the full width.
+   */
+  const hasTemp = Boolean(temps && temps.size >= 2)
+  const padRight = hasTemp ? 44 : PAD.right
+  const plotW = width - PAD.left - padRight
   const plotH = YEARS_H - PAD.top - PAD.bottom
   const peak = Math.max(1, ...totals.map((d) => Math.max(d.modis, d.viirs)))
 
@@ -184,6 +198,48 @@ export function drawWorldYears(canvas: HTMLCanvasElement, totals: WorldTotal[], 
       ctx.fillText(String(d.year), cx, PAD.top + plotH + 7)
     }
   })
+
+  if (!hasTemp || !temps) return
+
+  /**
+   * Temperature, on its own scale, deliberately quiet.
+   *
+   * Grey and thin, over the bars rather than among them, because it is
+   * context and not a finding. The two series share a horizontal axis and
+   * nothing else — putting them on one vertical scale would invent a
+   * relationship, and drawing the line as boldly as the bars would suggest
+   * the page is claiming one.
+   */
+  const shown = totals.map((d) => temps.get(d.year)).filter((v): v is number => v !== undefined)
+  if (shown.length < 2) return
+  const lo = Math.min(...shown)
+  const hi = Math.max(...shown)
+  const span = hi - lo || 1
+  const ty = (v: number) => PAD.top + plotH - ((v - lo) / span) * plotH * 0.82 - plotH * 0.09
+
+  ctx.strokeStyle = rgba(inkTertiary, 0.85)
+  ctx.lineWidth = 1.6
+  ctx.lineJoin = 'round'
+  ctx.beginPath()
+  let started = false
+  totals.forEach((d, i) => {
+    const v = temps.get(d.year)
+    if (v === undefined) return
+    const cx = PAD.left + step * (i + 0.5)
+    if (started) ctx.lineTo(cx, ty(v))
+    else {
+      ctx.moveTo(cx, ty(v))
+      started = true
+    }
+  })
+  ctx.stroke()
+
+  ctx.fillStyle = rgba(inkTertiary, 0.85)
+  ctx.font = MONO
+  ctx.textAlign = 'left'
+  ctx.textBaseline = 'middle'
+  ctx.fillText(`+${hi.toFixed(1)}°`, PAD.left + plotW + 8, ty(hi))
+  ctx.fillText(`+${lo.toFixed(1)}°`, PAD.left + plotW + 8, ty(lo))
 }
 
 /** The one-line summary above the charts. */

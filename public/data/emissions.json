@@ -1,0 +1,45 @@
+{
+  "measure": "Gigatonnes of CO₂ released by vegetation fires, per year",
+  "method": "MODIS fire radiative power → radiative energy → dry matter burned → CO₂, with the series scaled so its 2003–2016 mean meets the published GFED figure. An order of magnitude, not an independent measurement.",
+  "calibratedTo": {
+    "source": "GFED4.1s, van der Werf et al. 2017",
+    "annualGtCo2": 7.3
+  },
+  "comparison": {
+    "label": "Fossil fuels and industry",
+    "annualGtCo2": 37
+  },
+  "uncertaintyFactor": 2,
+  "from": 2003,
+  "to": 2026,
+  "partial": [
+    2026
+  ],
+  "builtAt": "2026-09-20T09:40:43.765Z",
+  "years": {
+    "2003": 8.264,
+    "2004": 8.089,
+    "2005": 7.83,
+    "2006": 7.283,
+    "2007": 8.121,
+    "2008": 7.192,
+    "2009": 6.567,
+    "2010": 7.275,
+    "2011": 7.503,
+    "2012": 7.948,
+    "2013": 6.176,
+    "2014": 6.615,
+    "2015": 7.123,
+    "2016": 6.212,
+    "2017": 6.981,
+    "2018": 6.403,
+    "2019": 6.982,
+    "2020": 6.736,
+    "2021": 7.375,
+    "2022": 5.41,
+    "2023": 7.896,
+    "2024": 7.251,
+    "2025": 5.292,
+    "2026": 3.343
+  }
+}

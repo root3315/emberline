@@ -223,6 +223,7 @@
             <div class="legend" id="world-legend"></div>
           </header>
           <div class="contrib"><canvas id="world-years"></canvas></div>
+          <p class="note note--tight" id="world-temp-note" hidden></p>
         </div>
       </section>
 
@@ -355,6 +356,30 @@
             Download this series as CSV
           </button>
         </div>
+      <!--
+        What the fires do, after the map has said where they are.
+
+        The page answers "where" and "when" well and said nothing at all about
+        "so what", which is the question the whole subject rests on. One
+        computed figure carries the weight — the carbon this year's burning
+        released — and the mechanisms sit under it as four short lines rather
+        than an essay, because a reader who wanted an essay would not be
+        looking at a map.
+      -->
+      <section class="band" id="impact">
+        <header class="band__head">
+          <div>
+            <h2 data-i18n="impactTitle">What the burning does</h2>
+            <p class="note" data-i18n="impactNote"></p>
+          </div>
+        </header>
+
+        <p class="impact__lead" id="impact-lead"></p>
+        <p class="note note--tight" id="impact-caveat"></p>
+
+        <ul class="impact__list" id="impact-list"></ul>
+
+        <p class="note note--tight impact__sources" id="impact-sources"></p>
       </section>
     </main>
 

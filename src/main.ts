@@ -30,6 +30,7 @@ import {
   type WorldYear,
 } from './core/world'
 import { drawWorldSeason, drawWorldYears, worldHeadline, type WorldTotal } from './ui/world-panel'
+import { loadClimate, loadEmissions, type EmissionsFile } from './core/emissions'
 import { daysInYear, dayOfYear, yearOf } from './core/grid'
 import {
   MIN_RATIO_SAMPLES,
@@ -148,6 +149,11 @@ const els = {
   worldYearsHeadline: $('world-years-headline'),
   mapRange: $('map-range'),
   mapPeriod: $('map-period'),
+  worldTempNote: $('world-temp-note'),
+  impactLead: $('impact-lead'),
+  impactCaveat: $('impact-caveat'),
+  impactList: $<HTMLUListElement>('impact-list'),
+  impactSources: $('impact-sources'),
   mapDays: $('map-days'),
   mapYearValue: $<HTMLOutputElement>('map-year-value'),
   mapYearPrev: $<HTMLButtonElement>('map-year-prev'),
@@ -414,7 +420,20 @@ function showMapProbe(hit: MapProbe | null): void {
  * on screen as empty headings reads like a broken page, so they come and go
  * with the dataset.
  */
-const dataSections = [...document.querySelectorAll<HTMLElement>('.band')].filter((el) => el.id !== 'calendar')
+/**
+ * The bands that come and go with a dataset.
+ *
+ * Two do not. The calendar has always been exempt; the consequences band is
+ * the other, because what fires do to the climate is true of a region, of the
+ * planet and of a city alike — its one figure is global and its four lines are
+ * physics. Hiding it with the region panels left it visible only in the one
+ * scope it was least about.
+ */
+const ALWAYS_ON = new Set(['calendar', 'impact'])
+
+const dataSections = [...document.querySelectorAll<HTMLElement>('.band')].filter(
+  (el) => !ALWAYS_ON.has(el.id),
+)
 const heroSection = document.querySelector<HTMLElement>('.hero')!
 
 function showDataSections(visible: boolean): void {
@@ -505,6 +524,7 @@ function render(): void {
 
   drawContrib(els.contribCanvas, contribData(ds))
   renderMap(ds)
+  renderImpact()
 
   renderHero(ds)
   renderModeExplain()
@@ -2208,7 +2228,17 @@ function renderWorldPanels(): void {
           to: String(totals[totals.length - 1]?.year ?? ''),
         })
       : worldHeadline(idx.totals, state.year)
-  drawWorldYears(els.worldYears, totals, state.year)
+  /**
+   * The temperature only against the planet's own bars.
+   *
+   * A global anomaly beside one country's fire counts would be two unrelated
+   * curves sharing an axis and inviting exactly the reading the caption
+   * spends three lines forbidding.
+   */
+  const temps = days ? undefined : (climate ?? undefined)
+  drawWorldYears(els.worldYears, totals, state.year, temps)
+  els.worldTempNote.hidden = !temps
+  if (temps) els.worldTempNote.textContent = t('tempNote')
 
   els.worldLegend.innerHTML = ''
   for (const [key, colour] of [
@@ -2225,6 +2255,7 @@ function renderWorldPanels(): void {
 
   els.yearValue.textContent = String(state.year)
   paintRangeLabel()
+  renderImpact()
   const i = idx.totals.findIndex((d) => d.year === state.year)
   els.yearPrev.disabled = i <= 0
   els.yearNext.disabled = i < 0 || i >= idx.totals.length - 1
@@ -2244,6 +2275,76 @@ function renderWorldPanels(): void {
  */
 function showCalendar(world = worldScope): void {
   document.getElementById('calendar')!.hidden = world && worldPlace !== null && placeDays === null
+}
+
+/**
+ * What the burning does, with the one computed figure that says it.
+ *
+ * The estimate is the planet's whatever area is open: a region's own share of
+ * global emissions is not something this method can honestly split out, and
+ * pretending otherwise would be the worst kind of precision. So the number is
+ * global, the year follows the year on screen, and the caption says both.
+ */
+let emissions: EmissionsFile | null = null
+/** Global temperature anomaly by year, drawn beside the planet's bars. */
+let climate: Map<number, number> | null = null
+
+function renderImpact(): void {
+  const est = emissions
+
+  if (est) {
+    const gt = est.years[String(state.year)]
+    if (gt) {
+      const lead = document.createElement('span')
+      const [head, tail] = t('impactLead', {
+        year: String(state.year),
+        share: `${Math.round((gt / est.comparison.annualGtCo2) * 100)}%`,
+      }).split('{co2}')
+      const strong = document.createElement('b')
+      strong.textContent = `${gt.toFixed(1)} ${t('unitGt')}`
+      lead.append(document.createTextNode(head ?? ''), strong, document.createTextNode(tail ?? ''))
+      // A year still running has months to come, and its figure would
+      // otherwise read as a collapse in burning rather than as a calendar.
+      if (est.partial?.includes(state.year)) {
+        const part = document.createElement('i')
+        part.textContent = ' ' + t('impactPartial')
+        lead.append(part)
+      }
+      els.impactLead.replaceChildren(lead)
+    } else {
+      els.impactLead.textContent = t('impactLeadNone', { year: String(state.year) })
+    }
+    els.impactCaveat.textContent = t('impactCaveat', {
+      gfed: String(est.calibratedTo.annualGtCo2),
+      from: String(est.from),
+    })
+    els.impactCaveat.hidden = false
+  } else {
+    // The file has not arrived, or was never built. The mechanisms below
+    // stand on their own, so only the figure is withheld.
+    els.impactLead.textContent = ''
+    els.impactCaveat.hidden = true
+  }
+
+  els.impactList.replaceChildren(
+    ...(
+      [
+        ['impactCo2', 'impactCo2Body'],
+        ['impactSoot', 'impactSootBody'],
+        ['impactSink', 'impactSinkBody'],
+        ['impactLoop', 'impactLoopBody'],
+      ] as const
+    ).map(([head, body]) => {
+      const li = document.createElement('li')
+      const b = document.createElement('b')
+      b.textContent = t(head)
+      const span = document.createElement('span')
+      span.textContent = t(body)
+      li.append(b, span)
+      return li
+    }),
+  )
+  els.impactSources.textContent = t('impactSources')
 }
 
 /** The planet replaces the region's panels rather than sitting beside them. */
@@ -2808,7 +2909,19 @@ async function boot(): Promise<void> {
   applyStaticStrings()
   fillAoiOptions()
   paintRangeLabel()
+  renderImpact()
   wire()
+
+  // Two small files, each redrawing what it belongs to once it lands.
+  void loadEmissions().then((got) => {
+    emissions = got
+    renderImpact()
+  })
+  void loadClimate().then((got) => {
+    if (!got) return
+    climate = new Map(Object.entries(got.years).map(([y, v]) => [Number(y), v]))
+    if (worldScope) renderWorldPanels()
+  })
 
   window.addEventListener('hashchange', applyUrl)
 
