@@ -77,18 +77,48 @@ const HEAT_STEPS = 48
  * the interface has a sharp corner.
  */
 function rect(out: string[], x: number, y: number, w: number, h: number, radius = 1.6): void {
-  const r = Math.max(0, Math.min(radius, w / 2, h / 2))
+  roundedRect(out, x, y, w, h, radius, radius, radius, radius)
+}
+
+/**
+ * The same, with each corner set independently.
+ *
+ * Needed by the sensor rail, where a run of years is drawn one row at a time
+ * but has to read as a single thread: only the very top of the first row and
+ * the very bottom of the last may curve. Rounding all four corners of those
+ * two rows — which is what a single radius does — puts a curve against the
+ * square edge of its neighbour and pinches the rail two rows in, which is the
+ * opposite of the intent.
+ */
+function roundedRect(
+  out: string[],
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  tl: number,
+  tr: number,
+  br: number,
+  bl: number,
+): void {
+  const cap = (r: number) => Math.max(0, Math.min(r, w / 2, h / 2))
+  const a = cap(tl)
+  const b = cap(tr)
+  const c = cap(br)
+  const d = cap(bl)
   const n = (v: number) => v.toFixed(2)
-  if (r < 0.15) {
+  if (a < 0.15 && b < 0.15 && c < 0.15 && d < 0.15) {
     out.push('M' + n(x) + ' ' + n(y) + 'h' + n(w) + 'v' + n(h) + 'h' + n(-w) + 'z')
     return
   }
+  const arc = (r: number, dx: number, dy: number) =>
+    r < 0.15 ? '' : 'a' + n(r) + ' ' + n(r) + ' 0 0 1 ' + n(dx) + ' ' + n(dy)
   out.push(
-    'M' + n(x + r) + ' ' + n(y) +
-      'h' + n(w - 2 * r) + 'a' + n(r) + ' ' + n(r) + ' 0 0 1 ' + n(r) + ' ' + n(r) +
-      'v' + n(h - 2 * r) + 'a' + n(r) + ' ' + n(r) + ' 0 0 1 ' + n(-r) + ' ' + n(r) +
-      'h' + n(-(w - 2 * r)) + 'a' + n(r) + ' ' + n(r) + ' 0 0 1 ' + n(-r) + ' ' + n(-r) +
-      'v' + n(-(h - 2 * r)) + 'a' + n(r) + ' ' + n(r) + ' 0 0 1 ' + n(r) + ' ' + n(-r) + 'z',
+    'M' + n(x + a) + ' ' + n(y) +
+      'h' + n(w - a - b) + arc(b, b, b) +
+      'v' + n(h - b - c) + arc(c, -c, c) +
+      'h' + n(-(w - c - d)) + arc(d, -d, -d) +
+      'v' + n(-(h - d - a)) + arc(a, a, -a) + 'z',
   )
 }
 
@@ -179,6 +209,21 @@ export class Ribbon {
     const barX = width - GUTTER_RIGHT + 12
     text(barX, 13, t('yearTotal'), rgba(inkTertiary, 0.9), 'start', 'rb-label')
 
+    /**
+     * Whether each instrument was up, per row — the rail's whole content.
+     *
+     * Kept as a plain grid rather than a first/last pair per lane. A pair only
+     * describes one unbroken run, and a record with a quiet year in the middle
+     * has two: the gap row would take a curve on one side while the run it
+     * interrupts stayed square, which is the pinch this rounding exists to
+     * avoid. Reading the neighbours instead caps every run correctly however
+     * many there are.
+     */
+    const laneOn = [0, 1].map((lane) => {
+      const mask = lane === 0 ? MODIS_MASK : VIIRS_MASK
+      return model.years.map((y) => ((model.sensorsByYear.get(y) ?? 0) & mask) !== 0)
+    })
+
     const totalMax = Math.max(1, ...model.years.map((y) => model.totals.get(y) ?? 0))
     const fromDoyLimit = this.limitFor(model.observedFrom)
     const toDoyLimit = this.limitFor(model.observedTo)
@@ -195,6 +240,16 @@ export class Ribbon {
     const railOff: string[] = []
     const barBg: string[] = []
     const barFill: string[][] = Array.from({ length: HEAT_STEPS + 1 }, () => [])
+    /**
+     * The selected year's bar, kept apart from the rest.
+     *
+     * Bars are batched by heat step into one path each, so a per-row opacity
+     * cannot be expressed inside a batch — which is how the selected year
+     * quietly lost the extra brightness it had on canvas. It is the only cue
+     * in the right-hand gutter, so it gets a path of its own.
+     */
+    const barSelected: string[] = []
+    let selectedStep = 0
     const selectedBg: string[] = []
 
     model.years.forEach((year, i) => {
@@ -220,9 +275,23 @@ export class Ribbon {
       const mask = model.sensorsByYear.get(year) ?? 0
       const laneH = rowH + ROW_GAP
       const lanes: boolean[] = [(mask & MODIS_MASK) !== 0, (mask & VIIRS_MASK) !== 0]
+      /**
+       * Curve where the instrument's own run begins and ends — not where the
+       * ribbon does.
+       *
+       * The rail is drawn a row at a time but has to read as one thread. VIIRS
+       * arrives in 2012, so capping at the ribbon's first row leaves its top a
+       * square stump twelve rows down; capping every row leaves a curve butted
+       * against a flat edge at each join, pinching the rail. Only the two ends
+       * of the actual run get a radius.
+       */
       lanes.forEach((on, lane) => {
         const lx = GUTTER_LEFT - RAIL_W + lane * 9
-        rect(on ? railOn[lane][1] : railOff, lx, y - ROW_GAP / 2, 5, laneH, 0)
+        const col = laneOn[lane]
+        // A run ends wherever the neighbour differs — or the ribbon does.
+        const capTop = col[i - 1] === on ? 0 : 2.5
+        const capBottom = col[i + 1] === on ? 0 : 2.5
+        roundedRect(on ? railOn[lane][1] : railOff, lx, y - ROW_GAP / 2, 5, laneH, capTop, capTop, capBottom, capBottom)
       })
 
       if (isSelected) rect(selectedBg, x0 - 3, y - 1, plotW + 6, rowH + 2, 5)
@@ -248,7 +317,12 @@ export class Ribbon {
         rect(buckets[step], x, y, w, rowH)
 
         if (value > 0 && value > model.clim.p90[doy] && model.clim.p90[doy] > 0) {
-          rect(ringPath, x + 0.5, y + 0.5, w - 1, rowH - 1)
+          // Inset by a fraction rather than a flat pixel. The cell width has a
+          // floor of 0.6, so on a phone `w - 1` goes negative and the ring is
+          // emitted as a backwards rectangle — drawn beside its own day instead
+          // of around it, on every day above the ninetieth percentile.
+          const inset = Math.min(0.5, w * 0.25)
+          rect(ringPath, x + inset, y + 0.5, w - inset * 2, rowH - 1)
         }
       }
 
@@ -262,7 +336,8 @@ export class Ribbon {
       if (total > 0) {
         const bw = Math.max(2, (total / totalMax) * TOTAL_BAR_W)
         const step = Math.round((0.55 + 0.4 * (total / totalMax)) * HEAT_STEPS)
-        rect(barFill[step], barX, barY, bw, barH, 2.5)
+        rect(isSelected ? barSelected : barFill[step], barX, barY, bw, barH, 2.5)
+        if (isSelected) selectedStep = step
       }
     })
 
@@ -286,8 +361,11 @@ export class Ribbon {
     }
     if (barBg.length) add(`<path d="${barBg.join('')}" fill="${rgba(inkTertiary, 0.12)}"/>`)
     barFill.forEach((path, step) => {
-      if (path.length) add(`<path d="${path.join('')}" fill="${rgba(heat(step / HEAT_STEPS), 0.9)}"/>`)
+      if (path.length) add(`<path d="${path.join('')}" fill="${rgba(heat(step / HEAT_STEPS), 0.82)}"/>`)
     })
+    if (barSelected.length) {
+      add(`<path d="${barSelected.join('')}" fill="${rgba(heat(selectedStep / HEAT_STEPS), 1)}"/>`)
+    }
 
     // Footer: the record span, stated once, in the same ink as the axis.
     const footY = HEAD + model.years.length * (rowH + ROW_GAP) + 13
@@ -302,6 +380,9 @@ export class Ribbon {
     )
 
     this.svg.innerHTML = out.join('')
+    // The host reserves a placeholder height until this point; from here the
+    // element sizes itself to however many years there actually are.
+    this.host.dataset.drawn = '1'
   }
 
   private limitFor(iso: string): number {

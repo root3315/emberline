@@ -1,0 +1,28 @@
+{
+  // The build scripts, which the main config does not cover.
+  //
+  // `tsconfig.json` includes only `src`, `tests` and `vite.config.ts`, so
+  // everything under `scripts/` — including the archive collector, the most
+  // intricate code in the project — was never typechecked at all. A run of
+  // `tsc --noEmit` reported success while `build-archive.ts` held an undefined
+  // identifier, a call to a function that was never imported, and an
+  // unterminated string literal. Each one surfaced only when the script was
+  // actually executed, one at a time, minutes apart.
+  //
+  // Separate from the main config rather than merged into it because these are
+  // Node programs: they need `@types/node` and none of `vite/client`'s DOM
+  // globals, and the app needs the reverse.
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "types": ["node"],
+    "lib": ["ES2022"],
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "allowJs": true,
+    "checkJs": false,
+    // The collector reads `process.env.X` all over, which is
+    // `string | undefined` under this flag and is handled with `??` anyway.
+    "noUncheckedIndexedAccess": false
+  },
+  "include": ["scripts"]
+}

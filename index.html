@@ -27,10 +27,32 @@
         </div>
 
         <div class="bar__controls">
-          <label class="field">
+          <!--
+            A combobox rather than a <select>: the list now holds the planet
+            twice over as well as the regions, and a native dropdown offers no
+            way to type at it. The <select> stays in the markup, hidden, so the
+            URL router, the language switch and anything else that reads a
+            value keep working against one source of truth.
+          -->
+          <div class="field picker" id="picker">
             <span class="field__label" data-i18n="areaOfInterest">Area</span>
-            <select id="aoi" class="select"></select>
-          </label>
+            <button type="button" class="select picker__button" id="picker-button" aria-haspopup="listbox" aria-expanded="false">
+              <span id="picker-current"></span>
+            </button>
+            <div class="picker__pop" id="picker-pop" hidden>
+              <input
+                class="input picker__search"
+                id="picker-search"
+                type="search"
+                autocomplete="off"
+                spellcheck="false"
+                data-i18n-placeholder="pickerSearch"
+              />
+              <ul class="picker__list" id="picker-list" role="listbox"></ul>
+              <p class="picker__empty" id="picker-empty" hidden data-i18n="pickerEmpty"></p>
+            </div>
+            <select id="aoi" class="sr-only" tabindex="-1" aria-hidden="true"></select>
+          </div>
 
           <fieldset class="segmented" id="mode">
             <legend class="sr-only" data-i18n="seriesMode">Series</legend>
@@ -175,14 +197,77 @@
         </div>
       </section>
 
-      <section class="band band--split">
+      <!--
+        The planet, when the planet is what is selected.
+        Hidden in region mode; the region panels are hidden in its place.
+      -->
+      <section class="band band--split" id="world-band" hidden>
+        <div class="band__col" id="world-season-col">
+          <header class="band__head band__head--tight">
+            <div>
+              <h2 data-i18n="worldSeasonTitle">When the planet burns</h2>
+              <p class="note" id="world-headline"></p>
+            </div>
+          </header>
+          <div class="cycle"><canvas id="world-season"></canvas></div>
+          <p class="note note--tight" data-i18n="worldSeasonNote"></p>
+        </div>
+
+        <div class="band__col">
+          <header class="band__head band__head--tight">
+            <div>
+              <h3 class="subhead subhead--plain" data-i18n="worldYearsTitle">Year by year</h3>
+              <p class="note" id="world-years-headline" hidden></p>
+              <p class="note" data-i18n="worldYearsNote"></p>
+            </div>
+            <div class="legend" id="world-legend"></div>
+          </header>
+          <div class="contrib"><canvas id="world-years"></canvas></div>
+        </div>
+      </section>
+
+      <section class="band band--split" id="map-band">
         <div class="band__col band__col--narrow">
           <header class="band__head band__head--tight">
             <div>
               <h2 data-i18n="sectionMap">Where it burns</h2>
               <p class="note" id="map-note"></p>
             </div>
-          </header>
+                      </header>
+          <div class="map-period" id="map-period">
+            <fieldset class="segmented map-range" id="map-range">
+              <legend class="sr-only" data-i18n="rangeLegend">Period</legend>
+              <label>
+                <input type="radio" name="map-range" value="year" checked />
+                <span id="range-year-label" data-i18n="rangeYear">This year</span>
+              </label>
+              <label>
+                <input type="radio" name="map-range" value="now" />
+                <span data-i18n="rangeNow">Right now</span>
+              </label>
+            </fieldset>
+            <div class="yearpick" id="map-yearpick">
+              <button type="button" class="ghost-btn" id="map-year-prev" aria-label="Previous year">&#8249;</button>
+              <output class="yearpick__value" id="map-year-value">—</output>
+              <button type="button" class="ghost-btn" id="map-year-next" aria-label="Next year">&#8250;</button>
+            </div>
+            <fieldset class="segmented map-days" id="map-days" hidden>
+              <legend class="sr-only" data-i18n="nowDaysLegend">How far back</legend>
+              <label>
+                <input type="radio" name="map-days" value="1" />
+                <span data-i18n="nowDay1">Last day</span>
+              </label>
+              <label>
+                <input type="radio" name="map-days" value="3" />
+                <span data-i18n="nowDay3">3 days</span>
+              </label>
+              <label>
+                <input type="radio" name="map-days" value="7" checked />
+                <span data-i18n="nowDay7">7 days</span>
+              </label>
+            </fieldset>
+          </div>
+
           <div class="map">
             <div class="map__canvas" id="map"></div>
             <div class="map__probe" id="map-probe" hidden></div>

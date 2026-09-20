@@ -45,6 +45,24 @@ export const AOIS: readonly Aoi[] = [
   },
 ]
 
+/**
+ * The whole planet, for the archive pull only.
+ *
+ * Deliberately not in `AOIS`: that list is what the region picker is built
+ * from, and the world is not a region you compare against the others — it is
+ * the source the global pyramid is folded out of. FIRMS treats this bbox and
+ * its own `world` keyword identically, and a bbox is one less special case.
+ */
+export const WORLD: Aoi = {
+  id: 'world',
+  name: { en: 'World', ru: 'Весь мир' },
+  blurb: {
+    en: 'Every detection on Earth, the source for the global pyramid.',
+    ru: 'Все засечки на планете — источник для глобальной пирамиды.',
+  },
+  bounds: { west: -180, south: -90, east: 180, north: 90 },
+}
+
 export function aoiById(id: string): Aoi | undefined {
   return AOIS.find((a) => a.id === id)
 }

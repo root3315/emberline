@@ -88,10 +88,22 @@ export function drawContrib(canvas: HTMLCanvasElement, data: ContribYear[]): voi
   ctx.textAlign = 'center'
   ctx.textBaseline = 'alphabetic'
   const every = Math.ceil((data.length * 30) / Math.max(plotW, 1))
+  const at = (i: number) => PAD.left + i * step + step / 2
+  const last = data.length - 1
+  /**
+   * The newest year always gets its label; whatever would collide with it does
+   * not.
+   *
+   * Thinning by position alone printed both whenever the record did not end on
+   * a multiple of the step — "2025" over "2026" — and dropping the last one
+   * instead would remove the single label a reader looks for first. So the
+   * last is reserved and the ruled ones give way to it.
+   */
   data.forEach((d, i) => {
-    if (i % every !== 0 && i !== data.length - 1) return
+    const x = at(i)
+    if (i !== last && (i % every !== 0 || at(last) - x < 30)) return
     ctx.fillStyle = rgba(inkTertiary, 0.8)
-    ctx.fillText(String(d.year), PAD.left + i * step + step / 2, HEIGHT - 8)
+    ctx.fillText(String(d.year), x, HEIGHT - 8)
   })
 }
 

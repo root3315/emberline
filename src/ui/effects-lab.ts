@@ -630,6 +630,27 @@ let running = false
 export function runLabEffect(kind: LabEffect): void {
   if (running) return
   const root = document.documentElement
+
+  /**
+   * The same reduced-motion bail-out the real transition has.
+   *
+   * Not only courtesy. The stylesheet kills every animation on the transition
+   * pseudo-elements under reduced motion, including the `vt-hold` keyframe
+   * that exists solely to keep the transition open long enough for the clip to
+   * be attached — so on such a machine every candidate here would hit the
+   * exact race that keyframe was added to prevent. `burnTransition` has always
+   * checked; this entry point was written later and did not.
+   */
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    // Lands on day, like every other path here. Toggling instead would send a
+    // reduced-motion reader who is already on the light theme *into* the dark
+    // one and leave them there, so alternate clicks would flip back and forth
+    // and no two candidates could be compared — which is the only thing the
+    // lab is for.
+    root.dataset.theme = 'day'
+    return
+  }
+
   if (root.dataset.theme !== 'night') root.dataset.theme = 'night'
 
   const swap = () => {

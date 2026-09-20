@@ -214,12 +214,37 @@ let running = false
  * stable so nothing shifts, and the reader gets an effect with no seams in it
  * rather than a broken one they are free to scroll during.
  */
+/**
+ * How many holds are outstanding, so the page is only released by the last.
+ *
+ * Each hold used to snapshot `overflow` and restore that literal value. The
+ * `running` guard normally keeps there from being two, but it is cleared by
+ * `transition.finished`, and the browser can end a view transition for reasons
+ * of its own — the document being hidden, another transition starting — while
+ * the canvas loop is still running with the page held. A second transition
+ * getting through then captures `'hidden'` as the value to put back, and the
+ * page is left unscrollable for the rest of the session with nothing on screen
+ * to explain it.
+ *
+ * Counting makes the pairing correct however many overlap, and the saved value
+ * is the one from before any of them.
+ */
+let holds = 0
+let heldOverflow = ''
+
 function holdPage(): () => void {
   const root = document.documentElement
-  const was = root.style.overflow
+  if (holds === 0) heldOverflow = root.style.overflow
+  holds++
   root.style.overflow = 'hidden'
+
+  let released = false
   return () => {
-    root.style.overflow = was
+    // Idempotent: a caller that releases twice must not uncount someone else.
+    if (released) return
+    released = true
+    holds--
+    if (holds === 0) root.style.overflow = heldOverflow
   }
 }
 

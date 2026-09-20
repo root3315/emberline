@@ -228,20 +228,36 @@ canvas {
     background-color var(--t-fast) var(--ease-out);
 }
 
+/*
+ * One chevron, drawn once.
+ *
+ * It used to be two triangular gradients butted together. That is the usual
+ * trick and it is only sound at whole-pixel scaling: on a 1.25× display each
+ * 5px half rounds to its own number of device pixels, the two halves land a
+ * fraction apart, and the arrow renders as two overlapping arrowheads. A
+ * single stroked path cannot come apart, whatever the scale.
+ *
+ * As a data URI it cannot read a custom property, so the colour is written in
+ * twice — once here and once under the daylight theme below — matching
+ * `--ink-tertiary` in each.
+ */
 .select {
   min-width: 216px;
   padding-right: var(--s-8);
   appearance: none;
-  background-image: linear-gradient(45deg, transparent 50%, var(--ink-tertiary) 50%),
-    linear-gradient(135deg, var(--ink-tertiary) 50%, transparent 50%);
-  background-position:
-    calc(100% - 17px) 16px,
-    calc(100% - 12px) 16px;
-  background-size:
-    5px 5px,
-    5px 5px;
+  background-image: var(--chevron);
+  background-position: calc(100% - 13px) center;
+  background-size: 10px 10px;
   background-repeat: no-repeat;
   cursor: pointer;
+}
+
+:root {
+  --chevron: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 10'><path d='M2 4l3 3 3-3' fill='none' stroke='hsl(30 9%25 60%25)' stroke-width='1.4' stroke-linecap='round' stroke-linejoin='round'/></svg>");
+}
+
+:root[data-theme='day'] {
+  --chevron: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 10'><path d='M2 4l3 3 3-3' fill='none' stroke='hsl(28 8%25 36%25)' stroke-width='1.4' stroke-linecap='round' stroke-linejoin='round'/></svg>");
 }
 
 .select--small {
@@ -502,6 +518,17 @@ canvas {
   align-items: start;
 }
 
+/*
+ * One column left standing should use the whole row.
+ *
+ * A searched place drops the monthly chart — its ribbon answers the same
+ * question a day at a time — and without this the remaining chart stayed
+ * squeezed into 1.45fr with an empty column beside it.
+ */
+.band--split:has(> .band__col[hidden]) {
+  grid-template-columns: minmax(0, 1fr);
+}
+
 .band__col {
   min-width: 0;
 }
@@ -573,7 +600,26 @@ canvas {
 }
 
 #ribbon-svg {
-  min-height: 240px; /* placeholder until the ribbon sizes itself to its years */
+  /*
+   * Reserve space before the first paint, and only until then.
+   *
+   * A flat `min-height` is wrong: the height the ribbon computes goes on the
+   * <svg> inside, while the floor sits on this host and cannot be overridden
+   * from there. A short record — five years is about 135px — kept the full 240
+   * and left a hundred pixels of dead space under the chart for ever.
+   *
+   * Keying it off the presence of an <svg> is wrong too, and was the first
+   * attempt: the ribbon inserts its <svg> in the constructor, before any data
+   * exists, so the reservation collapsed on the first layout and the page
+   * jumped when the cube arrived — exactly what it was there to prevent. The
+   * attribute below is set at the end of the first real draw, which is the
+   * moment the element can size itself.
+   */
+  min-height: 240px;
+}
+
+#ribbon-svg[data-drawn] {
+  min-height: 0;
 }
 
 /*
@@ -1459,6 +1505,50 @@ canvas {
 }
 
 /*
+ * The period sits above the map, the base map below it.
+ *
+ * Above, because it changes what the map *is* — a year of the archive or the
+ * last week — and the reader should meet that choice before the picture rather
+ * than under it. The base map is decoration by comparison and stays where it
+ * was. Narrow, too: two options, and it should not read as the primary control
+ * of the page.
+ */
+/*
+ * Period and year, together, above the map.
+ *
+ * The year used to be pickable only from the calendar's rows, which is fine
+ * when the calendar is on screen and useless when it is not — a reader looking
+ * at the map had to scroll back up and hunt for a row. The two controls belong
+ * side by side because they answer one question between them: which slice of
+ * time the picture is of.
+ */
+.map-period {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--s-3);
+  margin-bottom: var(--s-3);
+}
+
+.map-range {
+  width: fit-content;
+}
+
+/*
+ * One control at a time on the right: the year when the map is showing a year,
+ * how far back when it is showing the snapshot. They answer the same question
+ * for their own period and would only compete for attention side by side.
+ */
+.map-period[data-range='now'] .yearpick {
+  display: none;
+}
+
+.map-days {
+  width: fit-content;
+}
+
+/*
  * Leaflet ships its own chrome. Rather than fight it, re-skin it with the
  * project's tokens so the controls belong to this page and not to a demo.
  */
@@ -1597,4 +1687,103 @@ canvas {
   ::view-transition-new(root) {
     animation: none !important;
   }
+}
+
+
+/* ------------------------------------------------------------------ picker
+ *
+ * The area chooser, once the list outgrew a native <select>.
+ *
+ * It borrows `.select` for the closed state so the control is the same object
+ * it always was — same height, same border, same caret — and only the open
+ * panel is new. That panel is deliberately plain: a search field and a list,
+ * on the same surface and edge tokens as every other raised thing here, with
+ * no shadow heavier than the map's own controls. A chooser that announced
+ * itself would be the loudest element on a page whose subject is a calendar.
+ */
+
+.picker {
+  position: relative;
+}
+
+.picker__button {
+  display: flex;
+  align-items: center;
+  text-align: left;
+  cursor: pointer;
+}
+
+.picker__button:hover {
+  border-color: var(--edge-strong);
+}
+
+.picker__pop {
+  position: absolute;
+  z-index: 60;
+  top: calc(100% + 6px);
+  left: 0;
+  width: max(272px, 100%);
+  padding: var(--s-2);
+  border: 1px solid var(--edge-strong);
+  border-radius: var(--r-panel);
+  background: var(--ash-raised);
+  box-shadow: 0 18px 40px rgb(0 0 0 / 0.45);
+}
+
+.picker__search {
+  width: 100%;
+  margin-bottom: var(--s-2);
+}
+
+.picker__list {
+  max-height: 46vh;
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;
+  list-style: none;
+}
+
+.picker__opt {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  width: 100%;
+  padding: 7px var(--s-3);
+  border: 0;
+  border-radius: var(--r-control);
+  background: none;
+  color: var(--ink-primary);
+  font: inherit;
+  font-size: var(--t-body);
+  text-align: left;
+  cursor: pointer;
+}
+
+.picker__opt:hover,
+.picker__opt[data-active='1'] {
+  background: var(--ash-input);
+}
+
+.picker__opt[aria-selected='true'] {
+  color: var(--ember);
+}
+
+/* The second line: what the option actually is, in the ink used for notes. */
+.picker__hint {
+  color: var(--ink-tertiary);
+  font-size: var(--t-micro);
+}
+
+/* A rule between the places and the planet — they are different in kind. */
+.picker__opt--world {
+  margin-top: var(--s-2);
+  border-top: 1px solid var(--edge-soft);
+  border-radius: 0 0 var(--r-control) var(--r-control);
+  padding-top: var(--s-3);
+}
+
+.picker__empty {
+  margin: var(--s-3) var(--s-3) var(--s-2);
+  color: var(--ink-tertiary);
+  font-size: var(--t-micro);
 }

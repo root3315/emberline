@@ -11,3 +11,11 @@ dist
 .wrangler
 /shots
 *.local
+
+# The global pyramid: a gigabyte of generated binaries, rebuildable from the
+# cache by scripts/build-world-*.ts. Git stores each version of a gzipped
+# binary whole, so committing it once costs a gigabyte and rebuilding it later
+# costs another — the history would grow by the size of the data every time a
+# fold changed. The four bundled region cubes stay tracked: they are three
+# megabytes and the site is not much without them.
+/public/data/world/
