@@ -66,6 +66,20 @@
             </label>
           </fieldset>
 
+          <!--
+            The way out, where a way out is looked for.
+
+            The forecast page hides the picker and the mode switch, because
+            neither has anything to act on there — which left the header
+            with no navigation at all and the only exit at the foot of a
+            column three screens down. This takes its place, and only its
+            place: on the record's own pages it is not there.
+          -->
+          <a class="ghost-btn bar__back" id="bar-back" href="#/" hidden>
+            <span aria-hidden="true">&#8249;</span>
+            <span data-i18n="futureBack">Back to the record</span>
+          </a>
+
           <div class="bar__toggles">
             <button type="button" class="ghost-btn" id="lang" aria-label="Switch language">RU</button>
             <button type="button" class="ghost-btn" id="theme" aria-label="Switch theme">

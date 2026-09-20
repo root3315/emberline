@@ -163,6 +163,7 @@ const els = {
   ctaWhen: $('cta-when'),
   ctaLine: $('cta-line'),
   ctaGlobe: $<HTMLCanvasElement>('cta-globe'),
+  barBack: $<HTMLAnchorElement>('bar-back'),
   rampLow: $('ramp-low'),
   rampHigh: $('ramp-high'),
   status: $('status'),
@@ -633,6 +634,15 @@ const futureSections = FUTURE_SECTIONS.map((id) => document.getElementById(id)!)
 /** True while the forecast page is open rather than the record. */
 let futureScope = false
 
+/**
+ * Where "back" goes: the last address the record was at.
+ *
+ * Sending the reader to a fixed route would drop whatever they had open —
+ * a region, a year, a searched place — and make the forecast a one-way
+ * door. Remembered on the way in, used on the way out.
+ */
+let lastRecord = ''
+
 /** Built on the first visit to the forecast page, and kept turning after. */
 let globe: GlobeHandle | null = null
 
@@ -734,7 +744,12 @@ function statInto(list: HTMLElement, label: string, value: string, note: string)
  * than not having it.
  */
 function showFutureLayout(on: boolean): void {
+  if (on && !futureScope && location.hash && location.hash !== '#/future') {
+    lastRecord = location.hash
+  }
   futureScope = on
+  els.barBack.hidden = !on
+  els.barBack.href = lastRecord || '#/'
   pickerField.hidden = on
   els.mode.hidden = on
   heroSection.hidden = on
@@ -805,6 +820,9 @@ async function renderFuture(): Promise<void> {
     )
 
     void showGlobe()
+
+    const back = document.querySelector<HTMLAnchorElement>('.future__back')
+    if (back) back.href = lastRecord || '#/'
 
     els.futureMapNote.textContent = t('futureMapNote')
     renderMapForecast(null, null, 'future')
@@ -3482,11 +3500,34 @@ function applyUrl(): void {
   }
 
   /*
-   * Leaving the forecast page puts the map back where it came from before
-   * anything else runs, so whatever draws next finds it in its own column
-   * at its own size.
+   * Leaving the forecast page puts the map back in its own column before
+   * anything else runs, so whatever draws next finds it at its own size.
+   *
+   * And then the record is drawn again from scratch rather than revealed.
+   * Someone who arrived straight at #/future has never had it rendered —
+   * the sections behind the forecast are empty — and the usual path only
+   * redraws when the chosen area changes, which after a direct link it has
+   * not. Unhiding empty bands is worse than a moment of loading.
    */
-  if (futureScope) showFutureLayout(false)
+  if (futureScope) {
+    showFutureLayout(false)
+    /*
+     * And the period goes back with it.
+     *
+     * The forecast page sets the map to "next week" so its own map draws
+     * the right thing. Leaving without undoing that returned the reader to
+     * #/punjab/forecast — the record's page showing the forecast — when
+     * the link they pressed said "back to the record". The link the reader
+     * came in on wins if it asks for a period; otherwise it is the year.
+     */
+    if (!wanted.now && !wanted.forecast) setRange('year')
+    const area = wanted.place ? placeValueOf(wanted.place) : (wanted.aoi ?? els.aoi.value)
+    picker.setValue(area, wanted.place?.name)
+    void goTo(area, wanted.year).finally(() => {
+      applyingUrl = false
+    })
+    return
+  }
 
   if (wanted.mode && wanted.mode !== state.mode) {
     state.mode = wanted.mode

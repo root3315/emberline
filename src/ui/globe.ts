@@ -52,11 +52,13 @@ export interface GlobeHandle {
 /**
  * A turn every ninety seconds: present, and never the thing you watch.
  *
- * Subtracted from the central meridian rather than added, which is the
- * direction the Earth actually turns. A point at a fixed longitude drifts
- * right — eastward, with north up — only while the meridian under the
- * middle of the disc moves west. Added, the planet span backwards, which
- * almost nobody names and everybody feels.
+ * It drifts west, which is not the way the Earth turns. Eastward was tried
+ * — it is the honest direction, and a point at a fixed longitude moves
+ * right only while the meridian under the middle of the disc moves west —
+ * and it was worse to look at here, because the eye reads the continents
+ * coming from the right and Africa, which is where next week's fires are,
+ * spent most of the cycle leaving rather than arriving. The drag still
+ * follows the cursor either way; that one is not a preference.
  */
 const SPIN = (Math.PI * 2) / 90_000
 const TILT = 0.38 // radians, so the north is a little toward us
@@ -186,6 +188,20 @@ export function mountGlobe(canvas: HTMLCanvasElement, land: LandMask): GlobeHand
     const cx = width / 2
     const cy = height / 2
 
+    /*
+     * How hard the limb darkens depends on what colour the ocean is.
+     *
+     * Multiplying the colour toward black is what a sphere does to light,
+     * and against the night theme's near-black ocean it reads as exactly
+     * that. Against the day theme's near-white one the same multiplication
+     * turns the rim into a mid grey, and the planet stops looking like a
+     * ball lit from the front and starts looking like a smudge. A light
+     * ocean gets a fraction of the shading, which is enough to round the
+     * edge without dirtying it.
+     */
+    const bright = (ocean[0] * 0.299 + ocean[1] * 0.587 + ocean[2] * 0.114) / 255
+    const depth = bright > 0.5 ? 0.15 : 0.55
+
     for (let y = 0; y < height; y++) {
       const dy = y - cy
       for (let x = 0; x < width; x++) {
@@ -195,7 +211,7 @@ export function mountGlobe(canvas: HTMLCanvasElement, land: LandMask): GlobeHand
         if (d <= radius) {
           // Limb darkening: the edge of a sphere turns away from us.
           const t = d / radius
-          const shade = 1 - 0.55 * t * t
+          const shade = 1 - depth * t * t
           data[i] = ocean[0] * shade
           data[i + 1] = ocean[1] * shade
           data[i + 2] = ocean[2] * shade
@@ -243,7 +259,7 @@ export function mountGlobe(canvas: HTMLCanvasElement, land: LandMask): GlobeHand
     raf = requestAnimationFrame(draw)
     const dt = Math.min(now - last, 60)
     last = now
-    if (spinning && !dragging && !still.matches) lon0 -= SPIN * dt
+    if (spinning && !dragging && !still.matches) lon0 += SPIN * dt
     if (!base || !frame || radius <= 0) return
 
     frame.data.set(base.data)

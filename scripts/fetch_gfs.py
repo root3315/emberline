@@ -46,11 +46,16 @@ import numpy as np
 warnings.filterwarnings("ignore")
 
 HORIZON = int(sys.argv[1]) if len(sys.argv) > 1 else 7
+# The grid has to be the one the training half was read on, or the model
+# learns from one field and is asked about another. ERA5 comes off the
+# public mirror at a degree and a half, so that is what this matches; the
+# GRIB files on disk are a quarter degree and are re-reduced, not refetched.
+DEG_ARG = float(sys.argv[2]) if len(sys.argv) > 2 else 1.5
 CELLS = "models/weather-cells.npz"
 OUT = f"models/weather-forecast-{HORIZON}d.npz"
 SCRATCH = Path("models/gfs")
 
-WEATHER_DEG = 1.0
+WEATHER_DEG = DEG_ARG
 STEP_HOURS = 3
 FILTER = "https://nomads.ncep.noaa.gov/cgi-bin/filter_gfs_0p25.pl"
 GFS_ROWS, GFS_COLS = 721, 1440  # 0.25 degrees, latitude 90 down to -90
@@ -145,7 +150,15 @@ def read_step(path: Path) -> dict[str, np.ndarray]:
 
 
 def main() -> None:
-    cells = np.load(CELLS)
+    # The cached points belong to whatever grid they were built on, so a
+    # change of resolution has to throw them away rather than reuse them.
+    cached = Path(CELLS)
+    if cached.exists():
+        got = np.load(cached)
+        if abs(float(got.get("deg", 1.0)) - WEATHER_DEG) > 1e-6:
+            cached.unlink()
+
+    cells = weather_points()
     key = cells["key"]
     cycle, label = newest_cycle()
     print(f"GFS cycle {label}, {HORIZON} days, {STEP_HOURS}-hourly")

@@ -1890,6 +1890,14 @@ canvas {
  * A band that is not about the selected area says so, quietly, before the
  * reader has to work it out from the prose.
  */
+.bar__back {
+  display: inline-flex;
+  gap: var(--s-2);
+  align-items: center;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
 .scope-tag {
   margin: 0 0 var(--s-2);
   font-size: var(--t-caption);
