@@ -182,6 +182,7 @@ const els = {
   aboutImportance: $<HTMLCanvasElement>('about-importance'),
   aboutImportanceLegend: $('about-importance-legend'),
   aboutWeather: $<HTMLCanvasElement>('about-weather'),
+  aboutWeatherRaw: $('about-weather-raw'),
   aboutCalib: $<HTMLCanvasElement>('about-calib'),
   impactBars: $<HTMLCanvasElement>('impact-bars'),
   impactBarsNote: $('impact-bars-note'),
@@ -916,7 +917,10 @@ async function drawModelCharts(): Promise<void> {
   const model = await loadModelCard()
   if (!model) return
 
-  drawImportance(els.aboutImportance, model.importance)
+  drawImportance(
+    els.aboutImportance,
+    model.importance.map((w) => ({ ...w, name: w.name[getLang()] })),
+  )
   els.aboutImportanceLegend.innerHTML = ''
   for (const [key, colour] of [
     ['aboutLegendArchive', '--ink-muted'],
@@ -952,6 +956,14 @@ async function drawModelCharts(): Promise<void> {
       ],
       '%',
     )
+    // The bars show the margin; the raw scores belong under them, because
+    // the first question anyone asks of a percentage is "of what".
+    els.aboutWeatherRaw.textContent = t('aboutWeatherRaw', {
+      withAp: model.scores.model.toFixed(3),
+      withoutAp: model.without?.model.toFixed(3) ?? '—',
+      withRoc: model.scores.rocAuc.toFixed(3),
+      withoutRoc: model.without?.rocAuc.toFixed(3) ?? '—',
+    })
   }
   if (model.reliability.length) {
     drawCalibration(

@@ -1405,6 +1405,35 @@ canvas {
 
 /* ============================================================ colophon */
 
+/*
+ * What a link looks like, said once.
+ *
+ * Until now the site had no plain links at all — every clickable thing was
+ * a button or a control — so nothing ever set the colour, and the first
+ * two ordinary anchors on the page arrived in browser blue with a purple
+ * visited state and a hard underline. Against a warm near-black page that
+ * is the single loudest thing on it.
+ *
+ * Leaflet's attribution is excluded: it styles its own, and overriding it
+ * makes the map's small print louder than the map.
+ */
+.page a:not([class]),
+.colophon a {
+  color: var(--ink-secondary);
+  text-decoration: none;
+  border-bottom: 1px solid var(--edge-strong);
+  padding-bottom: 1px;
+  transition:
+    color var(--t-fast) var(--ease-out),
+    border-color var(--t-fast) var(--ease-out);
+}
+
+.page a:not([class]):hover,
+.colophon a:hover {
+  color: var(--ember);
+  border-bottom-color: var(--ember);
+}
+
 .colophon {
   padding-bottom: var(--s-10);
 }
@@ -1983,6 +2012,38 @@ canvas {
  * notes as everywhere else, because a page explaining the site should look
  * like the site.
  */
+/*
+ * The about page breathes wider than the record does.
+ *
+ * Every band here is a separate argument — the problem, what was built,
+ * the model, how to check it — and they are read one after another rather
+ * than scanned together. The record's 72 pixels between bands is right for
+ * panels that belong to one view and too tight for chapters.
+ */
+#about-problem,
+#about-built,
+#about-model,
+#about-check {
+  /* The spacing scale stops at 40px, which is a gap between panels. These
+     are chapters, and they want roughly twice that. */
+  margin-top: calc(var(--s-10) + var(--s-5));
+  padding-top: calc(var(--s-10) + var(--s-5));
+}
+
+@media (max-width: 860px) {
+  #about-problem,
+  #about-built,
+  #about-model,
+  #about-check {
+    margin-top: var(--s-8);
+    padding-top: var(--s-8);
+  }
+}
+
+.about-hero {
+  padding-bottom: calc(var(--s-10) + var(--s-5));
+}
+
 .about-hero .hero__answer {
   max-width: 22ch;
 }
@@ -2032,7 +2093,24 @@ canvas {
 }
 
 .about__chart {
-  margin-top: var(--s-4);
+  margin-top: var(--s-5);
+}
+
+/* The long importance chart wants to be alone on its stretch of page. */
+.about__chart--tall {
+  margin-top: var(--s-6);
+}
+
+#about-model .subhead {
+  margin-top: var(--s-10);
+}
+
+#about-model .about__model .subhead {
+  margin-top: var(--s-6);
+}
+
+#about-model .about__model-num .subhead:first-child {
+  margin-top: 0;
 }
 
 .about__chart canvas {
@@ -2046,7 +2124,8 @@ canvas {
 
 /* The two short charts share a row and their own breathing space. */
 .about__pair {
-  margin-top: var(--s-10);
+  margin-top: var(--s-4);
+  gap: var(--s-10);
 }
 
 .about__pair .subhead:first-child {
@@ -2059,10 +2138,16 @@ canvas {
   }
 }
 
+/*
+ * Narrow enough that five cards fit on one row at full width.
+ *
+ * At 260px the fifth wrapped alone under four, which reads as an
+ * afterthought rather than as the fifth of five.
+ */
 .about__list {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-  gap: var(--s-6) var(--s-8);
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 208px), 1fr));
+  gap: var(--s-6) var(--s-6);
   margin: 0;
   padding: 0;
   list-style: none;
@@ -2112,9 +2197,10 @@ canvas {
 .colophon__links {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--s-5);
-  margin: var(--s-4) 0 0;
+  gap: var(--s-6);
+  margin: var(--s-5) 0 0;
   font-size: var(--t-small);
+  font-weight: 500;
 }
 
 .bar__about {

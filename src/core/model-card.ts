@@ -7,7 +7,9 @@
  */
 
 export interface Weight {
-  name: string
+  /** Both languages travel with the number: the chart draws onto a canvas
+   *  and cannot fall back to the page's `data-i18n` sweep. */
+  name: { en: string; ru: string }
   kind: string
   drop: number
 }

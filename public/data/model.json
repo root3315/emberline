@@ -19,102 +19,162 @@
   },
   "importance": [
     {
-      "name": "How often it burns at this time of year",
+      "name": {
+        "en": "How often it burns at this time of year",
+        "ru": "Как часто здесь горит в это время года"
+      },
       "kind": "archive",
       "drop": 0.4394
     },
     {
-      "name": "How often this cell burns at all",
+      "name": {
+        "en": "How often this cell burns at all",
+        "ru": "Как часто эта ячейка горит вообще"
+      },
       "kind": "archive",
       "drop": 0.1014
     },
     {
-      "name": "Latitude",
+      "name": {
+        "en": "Latitude",
+        "ru": "Широта"
+      },
       "kind": "archive",
       "drop": 0.0636
     },
     {
-      "name": "Neighbours burning above their normal",
+      "name": {
+        "en": "Neighbours burning above their normal",
+        "ru": "Соседи горят выше своей нормы"
+      },
       "kind": "archive",
       "drop": 0.0329
     },
     {
-      "name": "Rain forecast for the week",
+      "name": {
+        "en": "Rain forecast for the week",
+        "ru": "Дождь по прогнозу на неделю"
+      },
       "kind": "weather",
       "drop": 0.0309
     },
     {
-      "name": "Burned here in the last fortnight",
+      "name": {
+        "en": "Burned here in the last fortnight",
+        "ru": "Горело здесь за две недели"
+      },
       "kind": "archive",
       "drop": 0.0298
     },
     {
-      "name": "How this year is running so far",
+      "name": {
+        "en": "How this year is running so far",
+        "ru": "Как идёт год к этому дню"
+      },
       "kind": "archive",
       "drop": 0.0163
     },
     {
-      "name": "How hot the week will get",
+      "name": {
+        "en": "How hot the week will get",
+        "ru": "Насколько будет жарко"
+      },
       "kind": "weather",
       "drop": 0.016
     },
     {
-      "name": "Neighbours burning in the last three days",
+      "name": {
+        "en": "Neighbours burning in the last three days",
+        "ru": "Соседи горели за три дня"
+      },
       "kind": "archive",
       "drop": 0.0108
     },
     {
-      "name": "Burned here in the last week",
+      "name": {
+        "en": "Burned here in the last week",
+        "ru": "Горело здесь за неделю"
+      },
       "kind": "archive",
       "drop": 0.0097
     },
     {
-      "name": "Dry days forecast in the week",
+      "name": {
+        "en": "Dry days forecast in the week",
+        "ru": "Сухих дней по прогнозу"
+      },
       "kind": "weather",
       "drop": 0.0067
     },
     {
-      "name": "Days with any fire in the last month",
+      "name": {
+        "en": "Days with any fire in the last month",
+        "ru": "Дней с огнём за месяц"
+      },
       "kind": "archive",
       "drop": 0.0066
     },
     {
-      "name": "Neighbours burning yesterday",
+      "name": {
+        "en": "Neighbours burning yesterday",
+        "ru": "Соседи горели вчера"
+      },
       "kind": "archive",
       "drop": 0.006
     },
     {
-      "name": "Time of year",
+      "name": {
+        "en": "Time of year",
+        "ru": "Время года"
+      },
       "kind": "archive",
       "drop": 0.0059
     },
     {
-      "name": "Burned here in the last three days",
+      "name": {
+        "en": "Burned here in the last three days",
+        "ru": "Горело здесь за три дня"
+      },
       "kind": "archive",
       "drop": 0.0057
     },
     {
-      "name": "Burned here yesterday",
+      "name": {
+        "en": "Burned here yesterday",
+        "ru": "Горело здесь вчера"
+      },
       "kind": "archive",
       "drop": 0.0052
     },
     {
-      "name": "Low vegetation: grass, crops",
+      "name": {
+        "en": "Low vegetation: grass, crops",
+        "ru": "Низкая растительность: трава, пашня"
+      },
       "kind": "ground",
       "drop": 0.0039
     },
     {
-      "name": "High vegetation: forest",
+      "name": {
+        "en": "High vegetation: forest",
+        "ru": "Высокая растительность: лес"
+      },
       "kind": "ground",
       "drop": 0.0024
     },
     {
-      "name": "How hard the wind will blow",
+      "name": {
+        "en": "How hard the wind will blow",
+        "ru": "Насколько сильный ветер"
+      },
       "kind": "weather",
       "drop": 0.0024
     },
     {
-      "name": "Neighbours burning in the last week",
+      "name": {
+        "en": "Neighbours burning in the last week",
+        "ru": "Соседи горели за неделю"
+      },
       "kind": "archive",
       "drop": 0.0016
     }

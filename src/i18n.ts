@@ -256,6 +256,7 @@ const en: Dict = {
   aboutWeatherWith: 'With the weather',
   aboutWeatherWithout: 'Archive only',
   aboutWeatherBase: 'The season alone',
+  aboutWeatherRaw: 'In full: {withAp} against {withoutAp} average precision, {withRoc} against {withoutRoc} ROC AUC.',
   aboutCalibTitle: 'Does 85% mean 85%',
   aboutCalibNote:
     'Group the cells the model gave about the same chance, and count how many burned. On the line means the number meant what it said. A model can rank perfectly and still be wrong about how sure it is, and average precision cannot show that.',
@@ -583,6 +584,7 @@ const ru: Dict = {
   aboutWeatherWith: 'С погодой',
   aboutWeatherWithout: 'Только архив',
   aboutWeatherBase: 'Один сезон',
+  aboutWeatherRaw: 'В цифрах: {withAp} против {withoutAp} средней точности, {withRoc} против {withoutRoc} ROC AUC.',
   aboutCalibTitle: 'Значит ли 85% именно 85%',
   aboutCalibNote:
     'Сгруппируйте ячейки, которым модель дала примерно один шанс, и посчитайте, сколько сгорело. На линии — значит число значило то, что говорило. Модель может ранжировать идеально и при этом врать о своей уверенности, а средняя точность этого не показывает.',

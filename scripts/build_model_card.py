@@ -34,41 +34,42 @@ WET = Path(f"models/fire-{HORIZON}d.json")
 DRY = Path(f"models/fire-{HORIZON}d-dry.json")
 OUT = Path("public/data/model.json")
 
-# Friendly names, so the chart does not make a reader learn our variables.
+# Friendly names in both languages, so the chart does not make a reader
+# learn our variable names — or read English on a Russian page.
 # Anything not named here is dropped: the tail of a permutation importance
 # is noise, and a chart of thirty bars where eighteen are indistinguishable
 # from zero teaches nobody anything.
-NAMES = {
-    "clim": ("How often it burns at this time of year", "archive"),
-    "cell_rate": ("How often this cell burns at all", "archive"),
-    "ring_anom_30d": ("Neighbours burning above their normal", "archive"),
-    "own_14d": ("Burned here in the last fortnight", "archive"),
-    "ytd_anom": ("How this year is running so far", "archive"),
-    "lat": ("Latitude", "archive"),
-    "ring_3d": ("Neighbours burning in the last three days", "archive"),
-    "own_7d": ("Burned here in the last week", "archive"),
-    "ring_7d": ("Neighbours burning in the last week", "archive"),
-    "own_3d": ("Burned here in the last three days", "archive"),
-    "ring_1d": ("Neighbours burning yesterday", "archive"),
-    "own_1d": ("Burned here yesterday", "archive"),
-    "active_30d": ("Days with any fire in the last month", "archive"),
-    "anom_30d": ("This cell burning above its normal", "archive"),
-    "clim_ring": ("Whether the region is in season", "archive"),
-    "since_last": ("Days since it last burned", "archive"),
-    "lastyear_14d": ("The same fortnight a year ago", "archive"),
-    "tile_anom_30d": ("The wider region above its normal", "archive"),
-    "oni": ("El Nino", "archive"),
-    "doy_sin": ("Time of year", "archive"),
-    "doy_cos": ("Time of year", "archive"),
-    "own_30d": ("Burned here in the last month", "archive"),
-    "own_90d": ("Burned here in the last season", "archive"),
-    "ring_30d": ("Neighbours burning in the last month", "archive"),
-    "w_rain": ("Rain forecast for the week", "weather"),
-    "w_tmax": ("How hot the week will get", "weather"),
-    "w_dry": ("Dry days forecast in the week", "weather"),
-    "w_wind": ("How hard the wind will blow", "weather"),
-    "veg_low": ("Low vegetation: grass, crops", "ground"),
-    "veg_high": ("High vegetation: forest", "ground"),
+NAMES: dict[str, tuple[str, str, str]] = {
+    "clim": ("How often it burns at this time of year", "Как часто здесь горит в это время года", "archive"),
+    "cell_rate": ("How often this cell burns at all", "Как часто эта ячейка горит вообще", "archive"),
+    "ring_anom_30d": ("Neighbours burning above their normal", "Соседи горят выше своей нормы", "archive"),
+    "own_14d": ("Burned here in the last fortnight", "Горело здесь за две недели", "archive"),
+    "ytd_anom": ("How this year is running so far", "Как идёт год к этому дню", "archive"),
+    "lat": ("Latitude", "Широта", "archive"),
+    "ring_3d": ("Neighbours burning in the last three days", "Соседи горели за три дня", "archive"),
+    "own_7d": ("Burned here in the last week", "Горело здесь за неделю", "archive"),
+    "ring_7d": ("Neighbours burning in the last week", "Соседи горели за неделю", "archive"),
+    "own_3d": ("Burned here in the last three days", "Горело здесь за три дня", "archive"),
+    "ring_1d": ("Neighbours burning yesterday", "Соседи горели вчера", "archive"),
+    "own_1d": ("Burned here yesterday", "Горело здесь вчера", "archive"),
+    "active_30d": ("Days with any fire in the last month", "Дней с огнём за месяц", "archive"),
+    "anom_30d": ("This cell burning above its normal", "Эта ячейка выше своей нормы", "archive"),
+    "clim_ring": ("Whether the region is in season", "В сезоне ли район", "archive"),
+    "since_last": ("Days since it last burned", "Дней с последнего пожара", "archive"),
+    "lastyear_14d": ("The same fortnight a year ago", "Те же две недели год назад", "archive"),
+    "tile_anom_30d": ("The wider region above its normal", "Весь район выше нормы", "archive"),
+    "oni": ("El Nino", "Эль-Ниньо", "archive"),
+    "doy_sin": ("Time of year", "Время года", "archive"),
+    "doy_cos": ("Time of year", "Время года", "archive"),
+    "own_30d": ("Burned here in the last month", "Горело здесь за месяц", "archive"),
+    "own_90d": ("Burned here in the last season", "Горело здесь за сезон", "archive"),
+    "ring_30d": ("Neighbours burning in the last month", "Соседи горели за месяц", "archive"),
+    "w_rain": ("Rain forecast for the week", "Дождь по прогнозу на неделю", "weather"),
+    "w_tmax": ("How hot the week will get", "Насколько будет жарко", "weather"),
+    "w_dry": ("Dry days forecast in the week", "Сухих дней по прогнозу", "weather"),
+    "w_wind": ("How hard the wind will blow", "Насколько сильный ветер", "weather"),
+    "veg_low": ("Low vegetation: grass, crops", "Низкая растительность: трава, пашня", "ground"),
+    "veg_high": ("High vegetation: forest", "Высокая растительность: лес", "ground"),
 }
 
 
@@ -77,10 +78,17 @@ def main() -> None:
     dry = json.loads(DRY.read_text(encoding="utf-8")) if DRY.exists() else None
 
     ranked = [f for f in wet.get("importance", []) if f["ap_drop"] > 0.0015]
+    # Both languages travel with the number. The page draws the labels on a
+    # canvas, so it cannot fall back to `data-i18n`, and keeping the names
+    # here means one file to edit when a feature is renamed rather than one
+    # here and two in the dictionary.
     features = [
         {
-            "name": NAMES.get(f["feature"], (f["feature"], "archive"))[0],
-            "kind": NAMES.get(f["feature"], (f["feature"], "archive"))[1],
+            "name": {
+                "en": NAMES.get(f["feature"], (f["feature"],))[0],
+                "ru": NAMES.get(f["feature"], (f["feature"], f["feature"]))[1],
+            },
+            "kind": NAMES.get(f["feature"], (f["feature"], f["feature"], "archive"))[2],
             "drop": round(f["ap_drop"], 4),
         }
         for f in ranked
