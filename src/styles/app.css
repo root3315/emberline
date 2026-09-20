@@ -123,13 +123,33 @@ canvas {
   margin-inline: auto;
 }
 
+/*
+ * The header floats rather than spanning the window.
+ *
+ * A full-width bar with a rule under it divides the page into a chrome
+ * strip and a content strip, and on a wide screen the two ends of it are a
+ * metre apart with nothing between them. Detached, it becomes one object
+ * the width of the reading column, resting over the page: the eye reads it
+ * as a control panel rather than as the top edge of the site.
+ *
+ * The blur is what keeps it from being a card lying on top. The page moves
+ * visibly underneath, which is the whole reason it can afford to be opaque
+ * enough to read against a burning map.
+ */
 .bar {
   position: sticky;
-  top: 0;
+  top: var(--s-3);
   z-index: 40;
-  background: color-mix(in srgb, var(--ash-void) 86%, transparent);
-  backdrop-filter: blur(14px) saturate(1.2);
-  border-bottom: 1px solid var(--edge-soft);
+  margin: var(--s-3) auto 0;
+  width: min(100% - var(--s-8), 1180px);
+  border: 1px solid var(--edge);
+  border-radius: var(--r-panel);
+  background: color-mix(in srgb, var(--ash-raised) 72%, transparent);
+  backdrop-filter: blur(18px) saturate(1.3);
+  -webkit-backdrop-filter: blur(18px) saturate(1.3);
+  box-shadow:
+    0 1px 0 0 color-mix(in srgb, var(--ink-primary) 4%, transparent) inset,
+    0 10px 30px -18px rgb(0 0 0 / 0.55);
 }
 
 .bar__inner {
@@ -138,7 +158,30 @@ canvas {
   gap: var(--s-4);
   align-items: center;
   justify-content: space-between;
-  padding-block: var(--s-3);
+  padding: var(--s-2) var(--s-4);
+}
+
+/*
+ * Nothing scrolled to should land underneath the floating bar.
+ *
+ * It sits over the page rather than above it, so a heading brought into
+ * view by a link or by `scrollIntoView` arrives behind seventy pixels of
+ * frosted glass. The margin is the bar's height plus the gap it floats in.
+ */
+.band,
+.hero,
+[id] {
+  scroll-margin-top: calc(73px + var(--s-6));
+}
+
+@media (max-width: 720px) {
+  .bar {
+    top: 0;
+    margin-top: 0;
+    width: 100%;
+    border-width: 0 0 1px;
+    border-radius: 0;
+  }
 }
 
 .brand {
@@ -189,8 +232,9 @@ canvas {
   gap: var(--s-2);
 }
 
+/* The bar floats over this rather than above it, so the top is tighter. */
 .page {
-  padding-block: var(--s-8) var(--s-10);
+  padding-block: var(--s-6) var(--s-10);
 }
 
 /* ============================================================ controls */
@@ -328,7 +372,16 @@ canvas {
   outline-offset: 1px;
 }
 
+/*
+ * Some of these are links.
+ *
+ * `.ghost-btn` was written for <button>, which has no underline to inherit,
+ * and the rule is quietly wrong the moment it lands on an <a>: the site's
+ * link styling draws a line through the middle of the label and the control
+ * reads as a mistake. Said once here rather than patched per link.
+ */
 .ghost-btn {
+  text-decoration: none;
   display: inline-flex;
   align-items: center;
   justify-content: center;

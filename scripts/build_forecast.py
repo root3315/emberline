@@ -43,6 +43,11 @@ ONI_FILE = "models/oni.json"
 OUT_BIN = f"public/data/world/forecast-{HORIZON}d.bin"
 OUT_JSON = "public/data/forecast.json"
 
+WEATHER = f"models/weather-forecast-{HORIZON}d.npz"
+WEATHER_STATIC = "models/weather-static.npz"
+WEATHER_DEG = 1.5
+DRY_MM = 1.0
+
 EPOCH = date(2003, 1, 1)
 LAST = date(2026, 9, 19)
 TRAIN_ERA = (2003, 2018)
@@ -56,6 +61,48 @@ from train_fire_model import (  # noqa: E402
     ring_of,
     window,
 )
+
+
+def weather_table() -> dict | None:
+    """
+    The forecast weather, reduced to the six columns the model was trained
+    on, laid out so a cell index reads straight off it.
+
+    The training half of this came from a reanalysis of weeks that had
+    already happened; this is a real forecast of a week that has not. They
+    are the same quantities on the same grid, which is the most that can be
+    arranged, and the difference between them is why the page calls the
+    skill figure an upper bound.
+    """
+    try:
+        got = np.load(WEATHER)
+        fixed = np.load(WEATHER_STATIC)
+    except FileNotFoundError:
+        print("  no weather forecast; the model will be asked without it")
+        return None
+
+    wide = int(360 / WEATHER_DEG)
+    tall = int(180 / WEATHER_DEG)
+    rain = np.asarray(got["precipitation_sum"], dtype=np.float32)
+
+    table = np.full((tall * wide, 6), np.nan, dtype=np.float32)
+    key = np.asarray(got["key"], dtype=np.int64)
+    table[key, 0] = np.nanmax(np.asarray(got["temperature_2m_max"], dtype=np.float32), axis=1)
+    table[key, 1] = np.nansum(rain, axis=1)
+    table[key, 2] = np.nanmax(np.asarray(got["wind_speed_10m_max"], dtype=np.float32), axis=1)
+    table[key, 3] = (rain < DRY_MM).sum(axis=1)
+
+    # The static fields are (longitude, latitude) counting longitude up from
+    # Greenwich; the table is keyed from the date line, so the columns are
+    # rolled rather than the lookups being special-cased.
+    veg_low = np.asarray(fixed["low_vegetation_cover"], dtype=np.float32)
+    veg_high = np.asarray(fixed["high_vegetation_cover"], dtype=np.float32)
+    for n, field in enumerate((veg_low, veg_high), start=4):
+        rolled = np.roll(field, wide // 2, axis=0)  # Greenwich-first -> date-line-first
+        table[:, n] = rolled.T.reshape(-1)[: tall * wide]
+
+    print(f"  weather: {key.size:,} squares, {got['days'][0]} to {got['days'][-1]}")
+    return {"table": table, "wide": wide, "tall": tall}
 
 
 def main() -> None:
@@ -75,8 +122,10 @@ def main() -> None:
     oni = {tuple(int(x) for x in k.split("-")): v for k, v in json.load(open(ONI_FILE)).items()}
     oni_now = oni.get(((EPOCH + timedelta(days=today)).year, (EPOCH + timedelta(days=today)).month), 0.0)
 
+    weather = weather_table() if len(names) > 24 else None
+
     tiles = sorted(idx["tiles"].items())
-    print(f"{len(tiles)} tiles, forecast from day {LAST} over {HORIZON}d")
+    print(f"{len(tiles)} tiles, forecast from day {LAST} over {HORIZON}d, {len(names)} features")
 
     # Pass one: the planet's last month, so the ring is exact across seams.
     recent = np.zeros((rows * cols, RECENT), dtype=np.uint16)
@@ -192,6 +241,21 @@ def main() -> None:
         f[:, 21] = np.log1p(t30) - np.log1p(tile_clim30[doy0])
         f[:, 22] = np.log1p(ytd_now[cells]) - np.log1p(ytd_clim[cells])
         f[:, 23] = oni_now
+
+        if weather is not None:
+            #
+            # The same six columns, in the same order, from a forecast
+            # rather than from the record. A cell with no weather square —
+            # which should not happen, since the squares were chosen to
+            # cover every cell that has ever burned — is left at zero
+            # rather than dropped, so the map keeps its coverage.
+            #
+            lat = (ty * step - 90) + (cells // side + 0.5) * deg
+            lon = (tx * step - 180) + (cells % side + 0.5) * deg
+            wr = np.clip(((lat + 90) / WEATHER_DEG).astype(np.int32), 0, weather["tall"] - 1)
+            wc = np.clip(((lon + 180) / WEATHER_DEG).astype(np.int32), 0, weather["wide"] - 1)
+            block = weather["table"][wr * weather["wide"] + wc]
+            f[:, 24:] = np.nan_to_num(block, nan=0.0)
 
         raw = model.predict_proba(f)[:, 1]
         eps = 1e-9

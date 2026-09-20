@@ -41,10 +41,23 @@ import sys
 # The horizon is a command-line argument so the same fitting code serves the
 # week, the month and the season without a copy of itself per horizon.
 HORIZON = int(sys.argv[1]) if len(sys.argv) > 1 else 7
-FEATURES_NPZ = f"models/features-{HORIZON}d.npz"
-OUT_MODEL = f"models/fire-{HORIZON}d.pkl"
-OUT_META = f"models/fire-{HORIZON}d.json"
-REPORT = "docs/model-report.md"
+
+# One definition of the year ranges, in the script that makes the samples.
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from train_fire_model import ERAS as _ERAS  # noqa: E402
+
+ERAS = [_ERAS[i] for i in (0, 1, 2)]
+
+# `dry` fits the same rows without the weather columns. Two models on one
+# set of samples is the only way to say what the weather is worth; two
+# models on two sets of samples says nothing at all.
+DRY = "dry" in sys.argv[2:]
+TAG = "-dry" if DRY else ""
+
+FEATURES_NPZ = f"models/features-{HORIZON}d{TAG}.npz"
+OUT_MODEL = f"models/fire-{HORIZON}d{TAG}.pkl"
+OUT_META = f"models/fire-{HORIZON}d{TAG}.json"
+REPORT = f"docs/model-report{TAG}.md"
 
 TRAIN_POS_RATE_NOTE = "one positive in four, by construction"
 
@@ -170,7 +183,11 @@ def main() -> None:
         "target": f"at least one MODIS detection in the cell over the next {HORIZON} days",
         "grid_degrees": 0.25,
         "population": "cells with at least one MODIS detection in 2003-2026",
-        "splits": {"train": "2003-2018", "validate": "2019-2021", "test": "2022-2026"},
+        # Read from the feature builder rather than written out here. The
+        # literal was left behind when the splits moved to fit the weather
+        # record, and a model card that names the wrong test years is worse
+        # than one that names none.
+        "splits": {k: f"{lo}-{hi}" for k, (lo, hi) in zip(("train", "validate", "test"), ERAS)},
         "test_base_rate": true_rate,
         "scores": scores,
         "reliability": [

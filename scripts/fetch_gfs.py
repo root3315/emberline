@@ -38,7 +38,7 @@ import time
 import urllib.error
 import urllib.request
 import warnings
-from datetime import datetime, timedelta, timezone
+from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 
 import numpy as np
@@ -59,6 +59,52 @@ WEATHER_DEG = DEG_ARG
 STEP_HOURS = 3
 FILTER = "https://nomads.ncep.noaa.gov/cgi-bin/filter_gfs_0p25.pl"
 GFS_ROWS, GFS_COLS = 721, 1440  # 0.25 degrees, latitude 90 down to -90
+
+
+def weather_points() -> dict:
+    """
+    Every weather square holding a fire cell that has ever burned.
+
+    Built once and cached beside the grid it was built on, because walking
+    the daily cube to find them reads a gigabyte off the disk and the answer
+    only changes when the archive grows or the resolution moves.
+    """
+    cached = Path(CELLS)
+    if cached.exists():
+        with np.load(cached) as got:
+            return {k: got[k] for k in got.files}
+
+    import json
+
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+    from train_fire_model import load_tile
+
+    idx = json.loads(Path("public/data/world/days-index.json").read_text(encoding="utf-8"))
+    side, cols, deg = idx["tileCells"], idx["cols"], idx["degrees"]
+    n_days = (date(2026, 9, 19) - date(2003, 1, 1)).days + 1
+    wide = int(360 / WEATHER_DEG)
+
+    keys: set[int] = set()
+    for name, groups in sorted(idx["tiles"].items()):
+        tx, ty = (int(v) for v in name.split("-"))
+        grid = load_tile(tx, ty, groups, n_days, side)
+        if grid is None:
+            continue
+        ever = np.where(grid.max(axis=1) > 0)[0]
+        if ever.size:
+            lat = -90 + ((ever // side) + ty * side + 0.5) * deg
+            lon = -180 + ((ever % side) + tx * side + 0.5) * deg
+            r = np.clip(((lat + 90) / WEATHER_DEG).astype(np.int32), 0, int(180 / WEATHER_DEG) - 1)
+            c = np.clip(((lon + 180) / WEATHER_DEG).astype(np.int32), 0, wide - 1)
+            keys.update((r * wide + c).tolist())
+        del grid
+
+    key = np.array(sorted(keys), dtype=np.uint32)
+    lat = (-90 + (key // wide + 0.5) * WEATHER_DEG).astype(np.float32)
+    lon = (-180 + (key % wide + 0.5) * WEATHER_DEG).astype(np.float32)
+    out = {"key": key, "lat": lat, "lon": lon, "deg": np.float32(WEATHER_DEG)}
+    np.savez_compressed(cached, **out)
+    return out
 
 
 def newest_cycle() -> tuple[datetime, str]:
@@ -154,8 +200,11 @@ def main() -> None:
     # change of resolution has to throw them away rather than reuse them.
     cached = Path(CELLS)
     if cached.exists():
-        got = np.load(cached)
-        if abs(float(got.get("deg", 1.0)) - WEATHER_DEG) > 1e-6:
+        with np.load(cached) as got:
+            # Read the grid it was built on, then let the handle go: Windows
+            # refuses to unlink a file numpy still has mapped.
+            stale = abs(float(got["deg"]) if "deg" in got else 1.0) - WEATHER_DEG
+        if abs(stale) > 1e-6:
             cached.unlink()
 
     cells = weather_points()
