@@ -1,0 +1,127 @@
+/*
+ * The showcase's own layout.
+ *
+ * Nothing here restyles a component: every control, band and chart on this
+ * page is the product's, unchanged, because a showcase that dresses things
+ * up is showing something the site does not have. These rules only place
+ * the exhibits and label them.
+ */
+
+.show__page {
+  max-width: 1180px;
+  margin-inline: auto;
+  padding-inline: var(--s-4);
+}
+
+/* ---------------------------------------------------------------- globe */
+
+.show__globe-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(260px, 360px);
+  gap: var(--s-8);
+  align-items: start;
+}
+
+.show__globe-box {
+  max-width: 520px;
+}
+
+.show__globe canvas {
+  cursor: pointer;
+}
+
+.show__pick {
+  padding: var(--s-5);
+  border: 1px solid var(--edge-soft);
+  border-radius: var(--r-card);
+  background: var(--ash-raised);
+}
+
+.show__pick-map {
+  margin-top: var(--s-5);
+}
+
+.show__pick-map canvas {
+  display: block;
+  width: 100%;
+  border: 1px solid var(--edge-soft);
+  border-radius: var(--r-tight);
+  background: var(--ash-void);
+}
+
+@media (max-width: 860px) {
+  .show__globe-row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* ------------------------------------------------------------- swatches */
+
+.show__swatches {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 150px), 1fr));
+  gap: var(--s-3);
+  margin: var(--s-5) 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.show__swatches li {
+  display: grid;
+  gap: 2px;
+  font-family: var(--font-mono);
+  font-size: var(--t-caption);
+  color: var(--ink-tertiary);
+}
+
+/*
+ * A ring on every chip, including the ones that match the page.
+ *
+ * Half these colours are the background by definition, and without an
+ * outline the swatch for `ash-void` is an invisible rectangle labelled
+ * `ash-void` — which is funny once and useless afterwards.
+ */
+.show__chip {
+  height: 40px;
+  border-radius: var(--r-tight);
+  box-shadow: inset 0 0 0 1px var(--edge-strong);
+}
+
+.show__swatches small {
+  color: var(--ink-muted);
+}
+
+/* ------------------------------------------------------------ controls */
+
+.show__controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-3);
+  align-items: center;
+  margin-bottom: var(--s-6);
+}
+
+.show__type-row {
+  margin: 0 0 var(--s-2);
+  line-height: 1.25;
+  color: var(--ink-primary);
+}
+
+.show__type-row small {
+  font-family: var(--font-mono);
+  font-size: var(--t-caption);
+  color: var(--ink-muted);
+}
+
+/* ---------------------------------------------------------------- ring */
+
+.show__ring {
+  max-width: 480px;
+  margin-top: var(--s-5);
+}
+
+.show__ring canvas {
+  display: block;
+  width: 100%;
+  aspect-ratio: 1;
+}

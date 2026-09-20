@@ -1,0 +1,143 @@
+/*
+ * Candidate palettes, for looking at side by side.
+ *
+ * The product ships two: `night` and `day`. These three are here to be
+ * judged against them on real content rather than on swatches, which is
+ * the only way to tell whether a palette works — a set of colours can look
+ * handsome in a row and fall apart the moment a map is drawn on it.
+ *
+ * Each one redefines the same tokens and nothing else. No rule anywhere in
+ * the site names a colour directly, so a theme is entirely a matter of
+ * these declarations, and a candidate that needs a component changed to
+ * work is a candidate that has already failed.
+ *
+ * Loaded only by the showcase. Nothing in the product imports this file.
+ */
+
+/* ── Abyss ────────────────────────────────────────────────────────────────
+ *
+ * Night taken colder and deeper. The surfaces lose their warmth so the
+ * fire has nothing to compete with; on a map of burning this makes the
+ * ember read hotter without the ember itself changing. The risk, and the
+ * reason to look at it on a real page, is that the cool grey can turn
+ * clinical — a dashboard rather than a record of something burning.
+ */
+:root[data-theme='abyss'] {
+  --ash-void: hsl(220 22% 5%);
+  --ash-base: hsl(220 20% 7%);
+  --ash-raised: hsl(220 18% 10%);
+  --ash-panel: hsl(220 18% 12%);
+  --ash-lifted: hsl(220 16% 15%);
+  --ash-input: hsl(220 22% 6%);
+
+  --ink-primary: hsl(210 24% 94%);
+  --ink-secondary: hsl(212 14% 74%);
+  --ink-tertiary: hsl(212 11% 62%);
+  --ink-muted: hsl(212 10% 52%);
+
+  --edge: hsl(210 30% 88% / 0.1);
+  --edge-soft: hsl(210 30% 88% / 0.06);
+  --edge-strong: hsl(210 30% 88% / 0.18);
+  --edge-focus: hsl(31 92% 58% / 0.55);
+
+  --heat-00: hsl(220 20% 9%);
+  --heat-15: hsl(8 55% 22%);
+  --heat-35: hsl(10 74% 34%);
+  --heat-55: hsl(20 84% 47%);
+  --heat-75: hsl(30 92% 57%);
+  --heat-90: hsl(40 96% 68%);
+  --heat-100: hsl(48 100% 84%);
+
+  --ember: var(--heat-75);
+  --ember-dim: hsl(30 58% 44%);
+  --ember-glow: hsl(30 92% 58% / 0.2);
+
+  --sensor-modis: hsl(199 62% 62%);
+  --sensor-viirs: hsl(30 90% 60%);
+  --sensor-both: hsl(272 44% 70%);
+}
+
+/* ── Paper ────────────────────────────────────────────────────────────────
+ *
+ * Day pushed toward print: warmer stock, blacker ink, and a ramp that
+ * starts at the paper's own colour so a quiet cell is genuinely empty
+ * rather than faintly tinted. Made for a projector and for whoever prints
+ * this out, both of which lose the dark themes entirely.
+ */
+:root[data-theme='paper'] {
+  --ash-void: hsl(38 34% 91%);
+  --ash-base: hsl(38 40% 95%);
+  --ash-raised: hsl(40 44% 98%);
+  --ash-panel: hsl(0 0% 100%);
+  --ash-lifted: hsl(38 32% 96%);
+  --ash-input: hsl(38 26% 93%);
+
+  --ink-primary: hsl(24 30% 9%);
+  --ink-secondary: hsl(24 16% 24%);
+  --ink-tertiary: hsl(24 11% 33%);
+  --ink-muted: hsl(24 9% 40%);
+
+  --edge: hsl(24 26% 12% / 0.16);
+  --edge-soft: hsl(24 26% 12% / 0.09);
+  --edge-strong: hsl(24 26% 12% / 0.28);
+  --edge-focus: hsl(12 82% 44% / 0.6);
+
+  --heat-00: hsl(38 40% 95%);
+  --heat-15: hsl(32 62% 80%);
+  --heat-35: hsl(22 78% 62%);
+  --heat-55: hsl(14 80% 48%);
+  --heat-75: hsl(8 82% 38%);
+  --heat-90: hsl(4 78% 29%);
+  --heat-100: hsl(358 70% 20%);
+
+  --ember: hsl(12 84% 42%);
+  --ember-dim: hsl(16 50% 56%);
+  --ember-glow: hsl(12 84% 42% / 0.14);
+
+  --sensor-modis: hsl(205 66% 38%);
+  --sensor-viirs: hsl(20 84% 42%);
+  --sensor-both: hsl(278 42% 44%);
+}
+
+/* ── Carbon ───────────────────────────────────────────────────────────────
+ *
+ * No hue in the surfaces at all. Everything grey, and the only colour on
+ * the page is the fire itself — which is the most severe version of the
+ * argument this site makes, and the one most likely to look like every
+ * other dark dashboard. Worth having in the comparison for exactly that
+ * reason: it is the null hypothesis about warmth.
+ */
+:root[data-theme='carbon'] {
+  --ash-void: hsl(0 0% 5%);
+  --ash-base: hsl(0 0% 7%);
+  --ash-raised: hsl(0 0% 10%);
+  --ash-panel: hsl(0 0% 12%);
+  --ash-lifted: hsl(0 0% 16%);
+  --ash-input: hsl(0 0% 6%);
+
+  --ink-primary: hsl(0 0% 96%);
+  --ink-secondary: hsl(0 0% 74%);
+  --ink-tertiary: hsl(0 0% 60%);
+  --ink-muted: hsl(0 0% 48%);
+
+  --edge: hsl(0 0% 100% / 0.1);
+  --edge-soft: hsl(0 0% 100% / 0.055);
+  --edge-strong: hsl(0 0% 100% / 0.2);
+  --edge-focus: hsl(16 96% 56% / 0.6);
+
+  --heat-00: hsl(0 0% 9%);
+  --heat-15: hsl(6 70% 20%);
+  --heat-35: hsl(10 86% 32%);
+  --heat-55: hsl(18 94% 45%);
+  --heat-75: hsl(26 98% 55%);
+  --heat-90: hsl(38 100% 66%);
+  --heat-100: hsl(50 100% 86%);
+
+  --ember: var(--heat-75);
+  --ember-dim: hsl(26 60% 42%);
+  --ember-glow: hsl(26 98% 55% / 0.22);
+
+  --sensor-modis: hsl(200 70% 60%);
+  --sensor-viirs: hsl(26 96% 58%);
+  --sensor-both: hsl(276 48% 70%);
+}

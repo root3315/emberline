@@ -34,7 +34,7 @@
  */
 
 import { isLand, type LandMask } from '../core/land'
-import { heat, heatScale, varColor, type Rgb } from './paint'
+import { heat, heatScale, rgba, varColor, type Rgb } from './paint'
 
 export interface GlobeFire {
   lat: number
@@ -43,10 +43,25 @@ export interface GlobeFire {
   p: number
 }
 
+export interface GlobePick {
+  lat: number
+  lon: number
+  p: number
+}
+
 export interface GlobeHandle {
   setFires(fires: GlobeFire[]): void
+  /** Turn the planet until a point faces the reader, and close in on it. */
+  flyTo(lat: number, lon: number, zoom?: number): void
+  /** Back to the whole sphere, turning by itself again. */
+  reset(): void
   retheme(): void
   destroy(): void
+}
+
+export interface GlobeOptions {
+  /** Called with the nearest fire when the reader clicks one. */
+  onPick?: (pick: GlobePick | null) => void
 }
 
 /**
@@ -63,6 +78,17 @@ export interface GlobeHandle {
 const SPIN = (Math.PI * 2) / 90_000
 const TILT = 0.38 // radians, so the north is a little toward us
 const MAX_DPR = 1.75
+
+/** Long enough to read as travel, short enough not to be a wait. */
+const FLY_MS = 950
+
+/** The shorter way round a circle, so a flight never takes the long way. */
+function shortest(from: number, to: number): number {
+  let d = (to - from) % (Math.PI * 2)
+  if (d > Math.PI) d -= Math.PI * 2
+  if (d < -Math.PI) d += Math.PI * 2
+  return d
+}
 
 interface Point {
   sinLat: number
@@ -87,14 +113,42 @@ function project(p: Point, sinLat0: number, cosLat0: number, sinLon0: number, co
   return { cosC, x, y }
 }
 
-export function mountGlobe(canvas: HTMLCanvasElement, land: LandMask): GlobeHandle {
+export function mountGlobe(
+  canvas: HTMLCanvasElement,
+  land: LandMask,
+  options: GlobeOptions = {},
+): GlobeHandle {
   const ctx = canvas.getContext('2d', { alpha: true })!
+
+  /*
+   * Two layers rather than one buffer.
+   *
+   * The ocean and its halo used to be baked into the same ImageData the
+   * land and fires were written into, which was cheap while the globe
+   * never changed size: build it once, memcpy it each frame. Zooming
+   * breaks that — the disc's radius changes, so the baked ocean would
+   * have to be rebuilt every frame, a quarter of a million pixels at
+   * sixty frames a second.
+   *
+   * So the ocean is now ordinary canvas drawing, which scales for free,
+   * and the land and fires go into a transparent layer of their own that
+   * is composited over it. One `drawImage` a frame, and the zoom costs
+   * nothing.
+   */
+  const layer = document.createElement('canvas')
+  const layerCtx = layer.getContext('2d', { alpha: true })!
+  let pixels: ImageData | null = null
+
   let width = 0
   let height = 0
   let radius = 0
   let dot = 1
-  let base: ImageData | null = null
-  let frame: ImageData | null = null
+
+  /** 1 is the whole sphere; larger closes in on whatever faces us. */
+  let zoom = 1
+  let flight:
+    | { lon: number; lat: number; zoom: number; lon0: number; lat0: number; zoom0: number; from: number }
+    | null = null
 
   let lon0 = -0.35 // start over Africa, where next week's fires are
   let lat0 = TILT
@@ -175,58 +229,59 @@ export function mountGlobe(canvas: HTMLCanvasElement, land: LandMask): GlobeHand
   }
 
   /**
-   * Ocean and air, rendered once.
+   * Ocean and air, drawn rather than baked.
    *
-   * The disc darkens toward its edge because a sphere does, and a ring of
-   * ember sits just outside it — thin, and the only place on the page where
-   * a glow is allowed, because a planet does have an atmosphere.
+   * A radial gradient from the middle of the disc to its limb does what
+   * the per-pixel shading did, in one fill, and it follows the radius
+   * wherever the zoom puts it. The halo outside is a second gradient,
+   * thin, and the only glow anywhere on this site — a planet does have an
+   * atmosphere.
    */
-  function buildBase(): void {
-    if (width <= 0 || height <= 0) return
-    base = ctx.createImageData(width, height)
-    const data = base.data
-    const cx = width / 2
-    const cy = height / 2
-
+  function drawOcean(cx: number, cy: number, r: number): void {
     /*
      * How hard the limb darkens depends on what colour the ocean is.
      *
-     * Multiplying the colour toward black is what a sphere does to light,
-     * and against the night theme's near-black ocean it reads as exactly
-     * that. Against the day theme's near-white one the same multiplication
-     * turns the rim into a mid grey, and the planet stops looking like a
-     * ball lit from the front and starts looking like a smudge. A light
-     * ocean gets a fraction of the shading, which is enough to round the
-     * edge without dirtying it.
+     * Multiplying toward black is what a sphere does to light, and against
+     * the night theme's near-black ocean it reads as exactly that. Against
+     * the day theme's near-white one the same multiplication turns the rim
+     * into a mid grey and the planet becomes a smudge on paper. A light
+     * ocean gets a fraction of the shading.
      */
     const bright = (ocean[0] * 0.299 + ocean[1] * 0.587 + ocean[2] * 0.114) / 255
     const depth = bright > 0.5 ? 0.15 : 0.55
+    const edge: Rgb = [
+      ocean[0] * (1 - depth),
+      ocean[1] * (1 - depth),
+      ocean[2] * (1 - depth),
+      1,
+    ]
 
-    for (let y = 0; y < height; y++) {
-      const dy = y - cy
-      for (let x = 0; x < width; x++) {
-        const dx = x - cx
-        const d = Math.hypot(dx, dy)
-        const i = (y * width + x) * 4
-        if (d <= radius) {
-          // Limb darkening: the edge of a sphere turns away from us.
-          const t = d / radius
-          const shade = 1 - depth * t * t
-          data[i] = ocean[0] * shade
-          data[i + 1] = ocean[1] * shade
-          data[i + 2] = ocean[2] * shade
-          data[i + 3] = 255
-        } else if (d < radius + 14) {
-          const fall = 1 - (d - radius) / 14
-          const a = fall * fall * 70
-          data[i] = rim[0]
-          data[i + 1] = rim[1]
-          data[i + 2] = rim[2]
-          data[i + 3] = a
-        }
-      }
-    }
-    frame = ctx.createImageData(width, height)
+    /*
+     * The air first, the ocean over it.
+     *
+     * A radial gradient that starts at radius r still paints everything
+     * inside r with its first stop, so filling a disc of r+16 with the
+     * halo washed thirty per cent of ember across the whole planet and
+     * turned it pink. Painting the halo first and dropping the opaque
+     * ocean on top leaves only the ring outside the sphere showing, which
+     * is the part that was ever wanted.
+     */
+    const air = ctx.createRadialGradient(cx, cy, r, cx, cy, r + 16)
+    air.addColorStop(0, rgba(rim, 0.3))
+    air.addColorStop(1, rgba(rim, 0))
+    ctx.beginPath()
+    ctx.arc(cx, cy, r + 16, 0, Math.PI * 2)
+    ctx.fillStyle = air
+    ctx.fill()
+
+    const fill = ctx.createRadialGradient(cx, cy, 0, cx, cy, r)
+    fill.addColorStop(0, rgba(ocean))
+    fill.addColorStop(0.7, rgba(ocean))
+    fill.addColorStop(1, rgba(edge))
+    ctx.beginPath()
+    ctx.arc(cx, cy, r, 0, Math.PI * 2)
+    ctx.fillStyle = fill
+    ctx.fill()
   }
 
   function resize(): void {
@@ -246,9 +301,12 @@ export function mountGlobe(canvas: HTMLCanvasElement, land: LandMask): GlobeHand
     // continents came out as a grey haze rather than a stipple.
     dot = dpr > 1.3 ? 2 : 1
 
+    layer.width = width
+    layer.height = height
+    pixels = layerCtx.createImageData(width, height)
+
     readTheme()
     buildLand()
-    buildBase()
   }
 
   function draw(now: number): void {
@@ -259,13 +317,43 @@ export function mountGlobe(canvas: HTMLCanvasElement, land: LandMask): GlobeHand
     raf = requestAnimationFrame(draw)
     const dt = Math.min(now - last, 60)
     last = now
-    if (spinning && !dragging && !still.matches) lon0 += SPIN * dt
-    if (!base || !frame || radius <= 0) return
 
-    frame.data.set(base.data)
-    const data = frame.data
+    /*
+     * A flight takes the wheel from the idle spin.
+     *
+     * Easing the central meridian toward the target rather than jumping
+     * keeps the reader's place on the sphere: they can see which way the
+     * planet turned and therefore where they have arrived. A jump would
+     * be the same picture with the context thrown away.
+     */
+    if (flight) {
+      const t = Math.min(1, (now - flight.from) / FLY_MS)
+      const e = t * t * (3 - 2 * t)
+      lon0 = flight.lon0 + shortest(flight.lon0, flight.lon) * e
+      lat0 = flight.lat0 + (flight.lat - flight.lat0) * e
+      zoom = flight.zoom0 + (flight.zoom - flight.zoom0) * e
+      if (t >= 1) flight = null
+    } else if (spinning && !dragging && !still.matches && zoom <= 1.01) {
+      lon0 += SPIN * dt
+    }
+
+    if (!pixels || radius <= 0) return
+
     const cx = width / 2
     const cy = height / 2
+    const r = radius * zoom
+
+    // ---- the ocean and its air, straight onto the canvas -----------------
+    ctx.clearRect(0, 0, width, height)
+    ctx.save()
+    ctx.beginPath()
+    ctx.arc(cx, cy, Math.min(radius + 16, r + 16), 0, Math.PI * 2)
+    ctx.clip()
+    drawOcean(cx, cy, r)
+    ctx.restore()
+
+    const data = pixels.data
+    data.fill(0)
 
     const sinLat0 = Math.sin(lat0)
     const cosLat0 = Math.cos(lat0)
@@ -276,8 +364,8 @@ export function mountGlobe(canvas: HTMLCanvasElement, land: LandMask): GlobeHand
     for (const p of landPoints) {
       const { cosC, x, y } = project(p, sinLat0, cosLat0, sinLon0, cosLon0)
       if (cosC <= 0.02) continue
-      const px = (cx + x * radius) | 0
-      const py = (cy - y * radius) | 0
+      const px = (cx + x * r) | 0
+      const py = (cy - y * r) | 0
       if (px < 0 || py < 0 || px + dot >= width || py + dot >= height) continue
       const a = 0.35 + 0.65 * cosC
       for (let oy = 0; oy < dot; oy++) {
@@ -296,8 +384,8 @@ export function mountGlobe(canvas: HTMLCanvasElement, land: LandMask): GlobeHand
     for (const f of fires) {
       const { cosC, x, y } = project(f, sinLat0, cosLat0, sinLon0, cosLon0)
       if (cosC <= 0.02) continue
-      const px = (cx + x * radius) | 0
-      const py = (cy - y * radius) | 0
+      const px = (cx + x * r) | 0
+      const py = (cy - y * r) | 0
       if (px < 1 || py < 1 || px >= width - 1 || py >= height - 1) continue
 
       /*
@@ -325,7 +413,18 @@ export function mountGlobe(canvas: HTMLCanvasElement, land: LandMask): GlobeHand
       }
     }
 
-    ctx.putImageData(frame, 0, 0)
+    /*
+     * The land and the fires are pixels; the ocean under them is not.
+     * `putImageData` would replace what is underneath rather than sit on
+     * it, so the pixel layer goes to its own canvas and is composited.
+     */
+    layerCtx.putImageData(pixels, 0, 0)
+    ctx.save()
+    ctx.beginPath()
+    ctx.arc(cx, cy, r, 0, Math.PI * 2)
+    ctx.clip()
+    ctx.drawImage(layer, 0, 0)
+    ctx.restore()
   }
 
   /** Screen blending, so overlapping fires build up rather than replace. */
@@ -353,6 +452,7 @@ export function mountGlobe(canvas: HTMLCanvasElement, land: LandMask): GlobeHand
    */
   function onDown(e: PointerEvent): void {
     dragging = true
+    flight = null
     lastX = e.clientX
     lastY = e.clientY
     canvas.style.cursor = 'grabbing'
@@ -382,6 +482,73 @@ export function mountGlobe(canvas: HTMLCanvasElement, land: LandMask): GlobeHand
     window.removeEventListener('pointercancel', onUp)
   }
 
+  /**
+   * The fire nearest the click, if one is close enough to have been meant.
+   *
+   * Everything is projected anyway on the frame the click lands in, so
+   * this repeats that arithmetic rather than caching screen positions
+   * that would be stale the moment the planet turned. Twenty-five
+   * thousand multiplications to answer a click is nothing.
+   */
+  function pickAt(clientX: number, clientY: number): GlobePick | null {
+    const box = canvas.getBoundingClientRect()
+    const scale = width / box.width
+    const px = (clientX - box.left) * scale
+    const py = (clientY - box.top) * scale
+    const cx = width / 2
+    const cy = height / 2
+    const r = radius * zoom
+
+    const sinLat0 = Math.sin(lat0)
+    const cosLat0 = Math.cos(lat0)
+    const sinLon0 = Math.sin(lon0)
+    const cosLon0 = Math.cos(lon0)
+
+    let best: Fire | null = null
+    let bestD = (18 * width) / 460 // a finger's worth, scaled to the canvas
+
+    for (const f of fires) {
+      const { cosC, x, y } = project(f, sinLat0, cosLat0, sinLon0, cosLon0)
+      if (cosC <= 0.02) continue
+      const d = Math.hypot(cx + x * r - px, cy - y * r - py)
+      // Ties go to the likelier fire: clusters are dense and the reader
+      // is aiming at the bright one.
+      if (d < bestD || (d < bestD * 1.2 && best && f.p > best.p)) {
+        bestD = Math.min(bestD, d)
+        best = f
+      }
+    }
+    if (!best) return null
+    return {
+      lat: (Math.asin(best.sinLat) * 180) / Math.PI,
+      lon: (Math.atan2(best.sinLon, best.cosLon) * 180) / Math.PI,
+      p: best.p,
+    }
+  }
+
+  function onClick(e: PointerEvent): void {
+    if (!options.onPick) return
+    const pick = pickAt(e.clientX, e.clientY)
+    options.onPick(pick)
+    if (pick) fly(pick.lat, pick.lon, 2.4)
+  }
+
+  function fly(lat: number, lon: number, to: number): void {
+    flight = {
+      lon: -((lon * Math.PI) / 180),
+      lat: (lat * Math.PI) / 180,
+      zoom: to,
+      lon0,
+      lat0,
+      zoom0: zoom,
+      from: performance.now(),
+    }
+    if (!raf) {
+      last = performance.now()
+      raf = requestAnimationFrame(draw)
+    }
+  }
+
   const observer = new ResizeObserver(() => resize())
   if (canvas.parentElement) observer.observe(canvas.parentElement)
 
@@ -408,6 +575,7 @@ export function mountGlobe(canvas: HTMLCanvasElement, land: LandMask): GlobeHand
   canvas.style.cursor = 'grab'
   canvas.style.touchAction = 'pan-y'
   canvas.addEventListener('pointerdown', onDown)
+  canvas.addEventListener('click', onClick as EventListener)
 
   resize()
   raf = requestAnimationFrame(draw)
@@ -422,15 +590,29 @@ export function mountGlobe(canvas: HTMLCanvasElement, land: LandMask): GlobeHand
         phase: (i * 2.399963) % (Math.PI * 2),
       }))
     },
+    flyTo(lat: number, lon: number, to = 2.4): void {
+      fly(lat, lon, to)
+    },
+    reset(): void {
+      flight = {
+        lon: lon0,
+        lat: TILT,
+        zoom: 1,
+        lon0,
+        lat0,
+        zoom0: zoom,
+        from: performance.now(),
+      }
+    },
     retheme(): void {
       readTheme()
-      buildBase()
     },
     destroy(): void {
       cancelAnimationFrame(raf)
       observer.disconnect()
       watcher.disconnect()
       canvas.removeEventListener('pointerdown', onDown)
+      canvas.removeEventListener('click', onClick as EventListener)
       onUp()
     },
   }

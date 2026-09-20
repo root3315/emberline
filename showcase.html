@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="ru" data-theme="night">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex" />
+    <title>Emberline — витрина</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;700;800&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    />
+  </head>
+  <body class="show">
+    <!--
+      Not part of the product. Vite builds `index.html` alone, so this page
+      exists on the dev server and never reaches `dist`.
+
+      Its job is judgement: every palette against the same real content,
+      every chart drawn from the same real data, in one scroll. A colour
+      set can look handsome as a row of swatches and fall apart the moment
+      a map of burning is drawn on it, and the only way to find that out
+      is to draw the map.
+    -->
+    <header class="bar">
+      <div class="bar__inner">
+        <div class="brand">
+          <span class="brand__mark" aria-hidden="true"></span>
+          <span class="brand__text">
+            <strong>Витрина</strong>
+            <span>Палитры и компоненты на настоящих данных</span>
+          </span>
+        </div>
+        <fieldset class="segmented" id="theme-pick">
+          <legend class="sr-only">Палитра</legend>
+          <label><input type="radio" name="t" value="night" checked /><span>Ночь</span></label>
+          <label><input type="radio" name="t" value="day" /><span>День</span></label>
+          <label><input type="radio" name="t" value="abyss" /><span>Бездна</span></label>
+          <label><input type="radio" name="t" value="paper" /><span>Бумага</span></label>
+          <label><input type="radio" name="t" value="carbon" /><span>Уголь</span></label>
+        </fieldset>
+      </div>
+    </header>
+
+    <main class="page show__page">
+      <section class="hero">
+        <p class="hero__where" id="show-where">витрина</p>
+        <h1 class="hero__answer">Пять палитр, одни и те же данные.</h1>
+        <p class="hero__aside">
+          Переключайте палитру сверху. Всё ниже перерисовывается из тех же файлов,
+          что раздаёт сайт, — так видно, что палитра делает с картой огня, а не
+          с квадратиками образцов.
+        </p>
+      </section>
+
+      <!--
+        The globe is the piece worth judging hardest: it is the only thing
+        here that is lit rather than coloured, and a palette that cannot
+        hold a planet against its own background has failed.
+      -->
+      <section class="band show__globe">
+        <header class="band__head band__head--wide">
+          <div><h2>Планета, по которой можно ткнуть</h2></div>
+          <p class="note band__head-note">
+            Точки — прогноз на ближайшую неделю. Нажмите любую: планета повернётся
+            к ней и приблизится, а справа появится, что это за место. Тяните, чтобы
+            вращать вручную; двойной клик — назад к целому шару.
+          </p>
+        </header>
+
+        <div class="show__globe-row">
+          <figure class="globe show__globe-box">
+            <canvas id="show-globe"></canvas>
+          </figure>
+          <aside class="show__pick" id="show-pick">
+            <p class="note" id="show-pick-empty">Ещё ничего не выбрано.</p>
+            <dl class="metrics metrics--about" id="show-pick-facts" hidden></dl>
+            <div class="show__pick-map" id="show-pick-map" hidden>
+              <canvas id="show-zoom"></canvas>
+              <p class="note note--tight" id="show-zoom-note"></p>
+            </div>
+          </aside>
+        </div>
+      </section>
+
+      <section class="band">
+        <header class="band__head band__head--wide">
+          <div><h2>Шкала огня</h2></div>
+          <p class="note band__head-note">
+            Семь опорных цветов, между которыми всё интерполируется. Это
+            единственная шкала на сайте: календарь, карта, глобус и кольцо
+            берут цвет отсюда.
+          </p>
+        </header>
+        <div class="ramp" aria-hidden="true"></div>
+        <p class="ramp__labels"><span>горел однажды</span><span>горит часто</span></p>
+        <ul class="show__swatches" id="show-swatches"></ul>
+      </section>
+
+      <section class="band band--split">
+        <div class="band__col">
+          <h3 class="subhead">Поверхности и текст</h3>
+          <ul class="show__swatches" id="show-surfaces"></ul>
+        </div>
+        <div class="band__col">
+          <h3 class="subhead">Управление</h3>
+          <div class="show__controls">
+            <button type="button" class="btn">Основная кнопка</button>
+            <button type="button" class="ghost-btn">Призрачная</button>
+            <button type="button" class="ghost-btn" disabled>Выключенная</button>
+            <fieldset class="segmented">
+              <legend class="sr-only">Пример</legend>
+              <label><input type="radio" name="demo" checked /><span>Сведено</span></label>
+              <label><input type="radio" name="demo" /><span>Как снято</span></label>
+            </fieldset>
+          </div>
+          <h3 class="subhead">Типографика</h3>
+          <div class="show__type" id="show-type"></div>
+        </div>
+      </section>
+
+      <section class="band">
+        <header class="band__head band__head--wide">
+          <div><h2>Огненный год</h2></div>
+          <p class="note band__head-note">
+            Двадцать семь колец, по одному на год. Самая требовательная к палитре
+            картинка на сайте: если шкала плохая, здесь это видно сразу.
+          </p>
+        </header>
+        <div class="show__ring"><canvas id="show-ring"></canvas></div>
+      </section>
+
+      <section class="band band--split">
+        <div class="band__col">
+          <h3 class="subhead">На что опирается модель</h3>
+          <div class="about__chart about__chart--tall"><canvas id="show-importance"></canvas></div>
+        </div>
+        <div class="band__col">
+          <h3 class="subhead">Калибровка</h3>
+          <div class="calib"><canvas id="show-calib"></canvas></div>
+        </div>
+      </section>
+    </main>
+
+    <script type="module" src="/src/showcase.ts"></script>
+  </body>
+</html>
