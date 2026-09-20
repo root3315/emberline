@@ -19,3 +19,4 @@ dist
 # fold changed. The four bundled region cubes stay tracked: they are three
 # megabytes and the site is not much without them.
 /public/data/world/
+models/
