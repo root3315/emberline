@@ -1853,3 +1853,259 @@ canvas {
   color: var(--ink-tertiary);
   font-size: var(--t-micro);
 }
+
+/* ============================================================== forecast */
+
+/*
+ * The door to the forecast, at the foot of the record.
+ *
+ * It is the only call to action on the page and it earns its weight by
+ * standing alone: a band with nothing else in it, the question on the left
+ * and the way through on the right. Making it a card with a border would
+ * have made it an advertisement.
+ */
+.cta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-6);
+  align-items: center;
+  justify-content: space-between;
+}
+
+.cta__text {
+  min-width: 0;
+  flex: 1 1 32ch;
+}
+
+.cta__text h2 {
+  font-size: var(--t-h2);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.cta__btn {
+  flex: 0 0 auto;
+}
+
+/*
+ * The forecast's own map is taller than the one beside the record, because
+ * here it is the whole point rather than one panel of four.
+ */
+.future__slot {
+  position: relative;
+}
+
+.future__slot .map {
+  aspect-ratio: 21 / 9;
+}
+
+@media (max-width: 720px) {
+  .future__slot .map {
+    aspect-ratio: 4 / 3;
+  }
+}
+
+/*
+ * A guess should not be drawn as sharply as a measurement.
+ *
+ * The record's cells have hard edges because a satellite really did see
+ * those fires. These are probabilities, so the canvas is blurred by a
+ * fraction of a cell: close enough to read the pattern, soft enough that
+ * nobody mistakes it for an observation.
+ */
+.future__slot .map canvas {
+  filter: blur(1.5px);
+}
+
+.future__back {
+  margin-top: var(--s-6);
+}
+
+/* ---------------------------------------------------------- risk list */
+
+.risk {
+  display: grid;
+  gap: 1px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.risk__row {
+  display: grid;
+  grid-template-columns: 2.2ch minmax(0, 1fr) minmax(60px, 12vw) 4.5ch;
+  gap: var(--s-4);
+  align-items: center;
+  padding: var(--s-2) var(--s-2) var(--s-2) 0;
+  border-bottom: 1px solid var(--edge-soft);
+}
+
+.risk__row:last-child {
+  border-bottom: 0;
+}
+
+.risk__rank {
+  font-family: var(--font-mono);
+  font-size: var(--t-caption);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  color: var(--ink-muted);
+}
+
+.risk__name {
+  overflow: hidden;
+  font-size: var(--t-body);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  color: var(--ink-primary);
+}
+
+.risk__where {
+  margin-left: var(--s-2);
+  font-family: var(--font-mono);
+  font-size: var(--t-caption);
+  color: var(--ink-muted);
+}
+
+.risk__bar {
+  height: 6px;
+  border-radius: var(--r-pill);
+  background: var(--ash-lifted);
+  overflow: hidden;
+}
+
+.risk__bar i {
+  display: block;
+  width: calc(var(--p) * 100%);
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--heat-35), var(--heat-75));
+}
+
+.risk__p {
+  font-family: var(--font-mono);
+  font-size: var(--t-small);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  color: var(--ink-secondary);
+}
+
+/*
+ * On a phone the four columns cannot all have their say.
+ *
+ * "Northern Province, Zambia 99% · -10.6, 29.6" does not fit beside a bar
+ * and a count in four hundred pixels, and truncating it takes the numbers
+ * off the end first — the part a reader came for. So the row becomes two:
+ * the name and its figures on top, the bar spanning underneath.
+ */
+@media (max-width: 560px) {
+  .risk__row {
+    grid-template-columns: 2.2ch minmax(0, 1fr) 4.5ch;
+    row-gap: var(--s-2);
+    padding-block: var(--s-3);
+    align-items: start;
+  }
+
+  /*
+   * Placed by hand rather than by source order.
+   *
+   * Letting the bar span the row pushed the count onto a third line, under
+   * the rank, where it read as a number belonging to nothing. Naming the
+   * cells keeps the row a row: rank, place, count across the top, and the
+   * bar underneath where there is width for it.
+   */
+  .risk__rank {
+    grid-area: 1 / 1 / 2 / 2;
+  }
+
+  .risk__name {
+    grid-area: 1 / 2 / 2 / 3;
+    white-space: normal;
+  }
+
+  .risk__p {
+    grid-area: 1 / 3 / 2 / 4;
+  }
+
+  .risk__bar {
+    grid-area: 2 / 2 / 3 / 4;
+  }
+
+  .risk__where {
+    display: block;
+    margin-left: 0;
+  }
+}
+
+/* ------------------------------------------------------- calibration */
+
+.calib {
+  aspect-ratio: 3 / 2;
+  max-height: 340px;
+}
+
+.calib canvas {
+  width: 100%;
+  height: 100%;
+}
+
+/*
+ * Four rows, one of them ours. The bar is what makes the comparison quick:
+ * the numbers are close together and a column of near-identical figures
+ * hides exactly the thing the section exists to show.
+ */
+.skill {
+  display: grid;
+  gap: var(--s-3);
+  margin: 0;
+}
+
+.skill__row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 5ch;
+  gap: var(--s-2) var(--s-3);
+  align-items: baseline;
+}
+
+.skill__row dt {
+  font-size: var(--t-small);
+  color: var(--ink-secondary);
+}
+
+.skill__row dd {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: var(--t-body);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  color: var(--ink-secondary);
+}
+
+.skill__bar {
+  grid-column: 1 / -1;
+  height: 4px;
+  border-radius: var(--r-pill);
+  background: var(--ash-lifted);
+  overflow: hidden;
+}
+
+.skill__bar i {
+  display: block;
+  width: calc(var(--p) * 100%);
+  height: 100%;
+  border-radius: inherit;
+  background: var(--ink-muted);
+}
+
+.skill__row[data-ours='yes'] dt {
+  font-weight: 600;
+  color: var(--ink-primary);
+}
+
+.skill__row[data-ours='yes'] dd {
+  color: var(--ink-primary);
+}
+
+.skill__row[data-ours='yes'] .skill__bar i {
+  background: var(--ember);
+}

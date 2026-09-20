@@ -361,6 +361,8 @@
             Download this series as CSV
           </button>
         </div>
+      </section>
+
       <!--
         What the fires do, after the map has said where they are.
 
@@ -385,6 +387,77 @@
         <ul class="impact__list" id="impact-list"></ul>
 
         <p class="note note--tight impact__sources" id="impact-sources"></p>
+      </section>
+
+      <!--
+        The door to the forecast.
+
+        It sits at the foot of the record on purpose: everything above is
+        what happened, and the one thing below is what might. Putting it in
+        the header would have promised that the site is about prediction,
+        which it is not — prediction is the last and least certain thing it
+        has to say.
+      -->
+      <section class="band cta" id="future-cta">
+        <div class="cta__text">
+          <h2 data-i18n="ctaTitle">Next week</h2>
+          <p class="note" data-i18n="ctaNote"></p>
+        </div>
+        <a class="btn cta__btn" href="#/future" data-i18n="ctaButton">What happens next week</a>
+      </section>
+
+      <section class="hero" id="future-hero" hidden>
+        <p class="hero__where" id="future-where"></p>
+        <h1 class="hero__answer" id="future-answer"></h1>
+        <p class="hero__aside" id="future-aside"></p>
+        <dl class="hero__stats" id="future-stats"></dl>
+      </section>
+
+      <section class="band" id="future-map" hidden>
+        <header class="band__head band__head--tight">
+          <div>
+            <h2 data-i18n="futureMapTitle">Where it may burn</h2>
+            <p class="note" id="future-map-note"></p>
+          </div>
+        </header>
+        <!-- The live map is moved in here, not rebuilt: one Leaflet, one state. -->
+        <div class="future__slot" id="future-map-slot"></div>
+        <div class="ramp" aria-hidden="true"></div>
+        <p class="ramp__labels">
+          <span data-i18n="rampUnlikely">unlikely</span>
+          <span data-i18n="rampLikely">near certain</span>
+        </p>
+      </section>
+
+      <section class="band" id="future-risk" hidden>
+        <header class="band__head">
+          <div>
+            <h2 data-i18n="futureRiskTitle">Twenty places to watch</h2>
+            <p class="note" data-i18n="futureRiskNote"></p>
+          </div>
+        </header>
+        <ol class="risk" id="future-risk-list"></ol>
+      </section>
+
+      <section class="band band--split" id="future-trust" hidden>
+        <div class="band__col">
+          <header class="band__head band__head--tight">
+            <div>
+              <h2 data-i18n="futureTrustTitle">How much to believe it</h2>
+              <p class="note" data-i18n="futureTrustNote"></p>
+            </div>
+          </header>
+          <div class="calib"><canvas id="calib-canvas"></canvas></div>
+          <p class="note note--tight" id="calib-caption"></p>
+        </div>
+        <div class="band__col">
+          <h3 class="subhead" data-i18n="futureSkillHead">Measured against</h3>
+          <dl class="skill" id="future-skill"></dl>
+          <p class="note note--tight" id="future-skill-note"></p>
+          <a class="ghost-btn ghost-btn--wide future__back" href="#/world/2026/harmonized" data-i18n="futureBack">
+            Back to the record
+          </a>
+        </div>
       </section>
     </main>
 

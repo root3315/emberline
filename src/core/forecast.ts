@@ -29,6 +29,36 @@ export interface ForecastSkill {
   rocAuc: number
 }
 
+/**
+ * One place worth naming, and how likely it is to burn.
+ *
+ * Named at build time rather than in the browser: twenty reverse lookups
+ * once, instead of twenty for every reader.
+ */
+export interface Hotspot {
+  lat: number
+  lon: number
+  p: number
+  /** Cells within two degrees that are also more likely than not to burn. */
+  near: number
+  name: { ru: string; en: string }
+}
+
+/**
+ * One rung of the calibration ladder.
+ *
+ * `said` is what the model claimed for this group of cells and `burned` is
+ * what happened to them. The pair is the whole audit: a model can rank
+ * perfectly and still be wrong about how sure it is.
+ */
+export interface Reliability {
+  from: number
+  to: number
+  n: number
+  said: number
+  burned: number
+}
+
 export interface ForecastMeta {
   horizonDays: number
   degrees: number
@@ -45,6 +75,9 @@ export interface ForecastMeta {
   skill: ForecastSkill
   tested: string
   target: string
+  /** Absent from an older build; the page copes without them. */
+  hotspots?: Hotspot[]
+  reliability?: Reliability[]
 }
 
 export interface ForecastCell {

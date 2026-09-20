@@ -32,6 +32,7 @@ import {
 import { drawWorldSeason, drawWorldYears, worldHeadline, type WorldTotal } from './ui/world-panel'
 import { loadClimate, loadEmissions, type EmissionsFile } from './core/emissions'
 import { loadForecast, type ForecastCell, type ForecastMeta } from './core/forecast'
+import { drawCalibration } from './ui/calibration'
 import { daysInYear, dayOfYear, yearOf } from './core/grid'
 import {
   MIN_RATIO_SAMPLES,
@@ -143,6 +144,18 @@ const els = {
   sensitivityNote: $('sensitivity-note'),
   provenance: $('provenance'),
   mapCaveat: $('map-caveat'),
+  futureHero: $('future-hero'),
+  futureWhere: $('future-where'),
+  futureAnswer: $('future-answer'),
+  futureAside: $('future-aside'),
+  futureStats: $('future-stats'),
+  futureMapNote: $('future-map-note'),
+  futureMapSlot: $('future-map-slot'),
+  futureRiskList: $('future-risk-list'),
+  calibCanvas: $<HTMLCanvasElement>('calib-canvas'),
+  calibCaption: $('calib-caption'),
+  futureSkill: $('future-skill'),
+  futureSkillNote: $('future-skill-note'),
   rampLow: $('ramp-low'),
   rampHigh: $('ramp-high'),
   status: $('status'),
@@ -594,10 +607,270 @@ function showMapProbe(hit: MapProbe | null): void {
  */
 const ALWAYS_ON = new Set(['calendar', 'impact'])
 
+/**
+ * The forecast's own bands, which the record's layout must not touch.
+ *
+ * `dataSections` is every band that a change of area shows or hides. These
+ * four answer to the route instead: three belong to the forecast page and
+ * the fourth is the door to it, which is the one thing on the record's page
+ * that should disappear once the reader has gone through.
+ */
+const FUTURE_SECTIONS = ['future-cta', 'future-map', 'future-risk', 'future-trust']
+
 const dataSections = [...document.querySelectorAll<HTMLElement>('.band')].filter(
-  (el) => !ALWAYS_ON.has(el.id),
+  (el) => !ALWAYS_ON.has(el.id) && !FUTURE_SECTIONS.includes(el.id),
 )
+
+const futureSections = FUTURE_SECTIONS.map((id) => document.getElementById(id)!)
+
+/** True while the forecast page is open rather than the record. */
+let futureScope = false
 const heroSection = document.querySelector<HTMLElement>('.hero')!
+
+/*
+ * Where the map normally lives, remembered before anything moves it.
+ *
+ * The forecast page shows the same Leaflet instance, wider. Building a
+ * second one would mean two tile caches, two view states and two things to
+ * keep in step; moving the one we have costs a call to tell it the box
+ * changed size.
+ */
+const mapShell = els.mapEl.parentElement!
+const mapShellHome = mapShell.parentElement!
+const mapShellAfter = mapShell.nextElementSibling
+
+/**
+ * Where the model's reading of the record starts, for the sentence that
+ * says so.
+ *
+ * A year rather than a count of years: a reader can check "since 2003"
+ * against the rest of the site, and neither language has to decline it.
+ */
+const FUTURE_SINCE = 2003
+
+const calendarSection = document.getElementById('calendar')!
+const impactSection = document.getElementById('impact')!
+const pickerField = document.getElementById('picker')!
+
+/**
+ * Our own dictionary's markup, turned into nodes rather than innerHTML.
+ *
+ * The strings carry <em> and <b> because the sentence needs emphasis in
+ * different places in each language, and only the translator knows where.
+ * Parsing them here keeps the interpolated values — counts, dates — out of
+ * anything that could be read as markup.
+ */
+function markup(text: string): DocumentFragment {
+  const frag = document.createDocumentFragment()
+  const parts = text.split(/(<em>.*?<\/em>|<b>.*?<\/b>)/g)
+  for (const part of parts) {
+    const tag = /^<(em|b)>(.*)<\/\1>$/s.exec(part)
+    if (tag) {
+      const node = document.createElement(tag[1])
+      node.textContent = tag[2]
+      frag.append(node)
+    } else if (part) {
+      frag.append(document.createTextNode(part))
+    }
+  }
+  return frag
+}
+
+/** One figure in a hero's row of figures, for either hero. */
+function statInto(list: HTMLElement, label: string, value: string, note: string): void {
+  const wrap = document.createElement('div')
+  const dt = document.createElement('dt')
+  dt.textContent = label
+  const dd = document.createElement('dd')
+  dd.textContent = value
+  if (note) {
+    const small = document.createElement('small')
+    small.textContent = note
+    dd.append(' ', small)
+  }
+  wrap.append(dt, dd)
+  list.append(wrap)
+}
+
+/**
+ * Swap the record's layout for the forecast's, or back.
+ *
+ * The picker and the raw/harmonised switch go with it: neither has anything
+ * to act on here. Leaving a control on screen that changes nothing is worse
+ * than not having it.
+ */
+function showFutureLayout(on: boolean): void {
+  futureScope = on
+  pickerField.hidden = on
+  els.mode.hidden = on
+  heroSection.hidden = on
+  calendarSection.hidden = on
+  impactSection.hidden = on
+  for (const section of dataSections) section.hidden = on || section.hidden
+  if (on) for (const section of dataSections) section.hidden = true
+
+  els.futureHero.hidden = !on
+  for (const section of futureSections) {
+    // The door is only on the record's side of it.
+    section.hidden = section.id === 'future-cta' ? on : !on
+  }
+
+  if (on) els.futureMapSlot.append(mapShell)
+  else mapShellHome.insertBefore(mapShell, mapShellAfter)
+  invalidateMapSize(true)
+}
+
+/** The forecast page, filled from the one file the model ships. */
+async function renderFuture(): Promise<void> {
+  const token = ++loadToken
+  status(t('worldLoading'), 'busy')
+  try {
+    forecast ??= await loadForecast()
+    if (token !== loadToken) return
+    const got = forecast
+    if (!got) {
+      status(t('forecastMissing'), 'error')
+      return
+    }
+    const { meta } = got
+
+    worldScope = true
+    worldPlace = null
+    worldNow = false
+    worldForecast = true
+    showFutureLayout(true)
+
+    els.futureWhere.textContent = t('futureWhere', {
+      from: meta.from,
+      to: meta.to,
+      asOf: meta.asOf,
+    })
+    els.futureAnswer.replaceChildren(
+      markup(t('futureAnswer', { cells: formatNumber(meta.cells) })),
+    )
+    els.futureAside.replaceChildren(
+      markup(t('futureAside', { since: String(FUTURE_SINCE), to: meta.to })),
+    )
+
+    els.futureStats.innerHTML = ''
+    statInto(els.futureStats, t('futureStatCells'), formatNumber(meta.cells), t('cellsUnit'))
+    const spread = [...(meta.hotspots ?? [])].sort((a, b) => b.near - a.near)[0]
+    if (spread)
+      statInto(
+        els.futureStats,
+        t('futureStatTop'),
+        String(spread.near),
+        spread.name[getLang()] ?? '',
+      )
+    statInto(els.futureStats, t('futureStatTested'), meta.tested, '')
+    statInto(
+      els.futureStats,
+      t('futureStatSkill'),
+      `${meta.skill.model.toFixed(2)} / ${meta.skill.climatology.toFixed(2)}`,
+      '',
+    )
+
+    els.futureMapNote.textContent = t('futureMapNote')
+    renderMapForecast(null, null, 'future')
+    renderRisk()
+    renderTrust()
+    writeUrl()
+    status('')
+  } catch (err) {
+    console.error('[emberline] forecast page failed', err)
+    status(t('worldFailed'), 'error')
+  }
+}
+
+/**
+ * The twenty named places, ordered by how much ground is at stake.
+ *
+ * Not by probability, although that is how they were chosen. In late
+ * September every one of them sits between ninety-seven and a hundred per
+ * cent, because the places that burn every year are all burning at once —
+ * so a bar drawn from that number is twenty identical bars, and sorting by
+ * it puts 99 above 98 as though the difference meant something.
+ *
+ * What separates them by two orders of magnitude is the size of the
+ * neighbourhood that is also at risk: two cells around Al Jufra, two
+ * hundred and thirty around Zambia's Western Province. One hot cell and a
+ * front three hundred kilometres wide are not the same warning, and that is
+ * what the list is sorted and drawn by.
+ */
+function renderRisk(): void {
+  const spots = [...(forecast?.meta.hotspots ?? [])].sort((a, b) => b.near - a.near)
+  els.futureRiskList.innerHTML = ''
+  const lang = getLang()
+  const widest = Math.max(1, ...spots.map((s) => s.near))
+
+  spots.forEach((spot, i) => {
+    const row = document.createElement('li')
+    row.className = 'risk__row'
+
+    const rank = document.createElement('span')
+    rank.className = 'risk__rank'
+    rank.textContent = String(i + 1)
+
+    const name = document.createElement('span')
+    name.className = 'risk__name'
+    const label = spot.name[lang] || `${spot.lat.toFixed(1)}, ${spot.lon.toFixed(1)}`
+    name.textContent = label
+    const where = document.createElement('span')
+    where.className = 'risk__where'
+    // A byte of probability cannot really say "certain", so it does not.
+    where.textContent = `${Math.min(99, Math.round(spot.p * 100))}% · ${spot.lat.toFixed(1)}, ${spot.lon.toFixed(1)}`
+    name.append(where)
+
+    const bar = document.createElement('span')
+    bar.className = 'risk__bar'
+    const fill = document.createElement('i')
+    fill.style.setProperty('--p', String(spot.near / widest))
+    bar.append(fill)
+
+    const value = document.createElement('span')
+    value.className = 'risk__p'
+    value.textContent = String(spot.near)
+
+    row.append(rank, name, bar, value)
+    els.futureRiskList.append(row)
+  })
+}
+
+/** The audit: the calibration curve, and what the model is worth against. */
+function renderTrust(): void {
+  const meta = forecast?.meta
+  if (!meta) return
+
+  if (meta.reliability?.length) drawCalibration(els.calibCanvas, meta.reliability)
+  els.calibCaption.textContent = t('calibCaption')
+
+  const rows: Array<[string, number, boolean]> = [
+    [t('skillModel'), meta.skill.model, true],
+    [t('skillClimatology'), meta.skill.climatology, false],
+    [t('skillPersistence'), meta.skill.persistence, false],
+    [t('skillRandom'), meta.skill.baseRate, false],
+  ]
+  const best = Math.max(...rows.map(([, v]) => v))
+
+  els.futureSkill.innerHTML = ''
+  for (const [label, value, ours] of rows) {
+    const row = document.createElement('div')
+    row.className = 'skill__row'
+    if (ours) row.dataset.ours = 'yes'
+    const dt = document.createElement('dt')
+    dt.textContent = label
+    const dd = document.createElement('dd')
+    dd.textContent = value.toFixed(2)
+    const bar = document.createElement('span')
+    bar.className = 'skill__bar'
+    const fill = document.createElement('i')
+    fill.style.setProperty('--p', String(value / best))
+    bar.append(fill)
+    row.append(dt, dd, bar)
+    els.futureSkill.append(row)
+  }
+  els.futureSkillNote.textContent = t('futureSkillNote', { tested: meta.tested })
+}
 
 function showDataSections(visible: boolean): void {
   heroSection.hidden = !visible
@@ -2839,6 +3112,15 @@ function switchLang(lang: Lang): void {
   applyStaticStrings()
   fillAoiOptions()
   paintRangeLabel()
+  /*
+   * The forecast page builds its own sentences, place names and table rows
+   * in script, so the sweep over `data-i18n` leaves all of them in the old
+   * language. `rerender` speaks for the record and has nothing to say here.
+   */
+  if (futureScope) {
+    void renderFuture()
+    return
+  }
   rerender()
 }
 
@@ -2987,6 +3269,8 @@ interface UrlState {
   now?: boolean
   /** `#/punjab/forecast/raw` — the model's week, in the same slot. */
   forecast?: boolean
+  /** `#/future` — the forecast's own page, which has no area and no year. */
+  future?: boolean
   mode?: Mode
 }
 
@@ -3003,6 +3287,14 @@ function readUrl(): UrlState {
    * box rather than re-asking the geocoder means the link resolves to the same
    * view for ever, even if the service renames the place or goes away.
    */
+  /*
+   * The forecast page is a place in the site, not a state of the map, so it
+   * gets a route of its own with nothing in it. An area and a year would
+   * both be lies: it is the whole planet, and the week after the archive
+   * ends.
+   */
+  if (parts[0] === 'future') return { future: true }
+
   if (parts[0] === 'place' && parts.length >= 3) {
     const nums = parts[2].split(',').map(Number)
     if (nums.length === 4 && nums.every(Number.isFinite)) {
@@ -3040,6 +3332,10 @@ function placeValueOf(place: { name: string; bounds: Bounds }): string {
 
 /** Replace rather than push: the back button should leave the page, not undo a click. */
 function writeUrl(): void {
+  if (futureScope) {
+    if (location.hash !== '#/future') history.replaceState(null, '', '#/future')
+    return
+  }
   // The planet has no dataset, but it does have a year, and a link to it
   // should come back to the same year rather than to whatever region was
   // loaded last.
@@ -3060,6 +3356,19 @@ function applyUrl(): void {
   const wanted = readUrl()
   if (applyingUrl) return
   applyingUrl = true
+
+  if (wanted.future) {
+    if (!futureScope) void renderFuture().finally(() => (applyingUrl = false))
+    else applyingUrl = false
+    return
+  }
+
+  /*
+   * Leaving the forecast page puts the map back where it came from before
+   * anything else runs, so whatever draws next finds it in its own column
+   * at its own size.
+   */
+  if (futureScope) showFutureLayout(false)
 
   if (wanted.mode && wanted.mode !== state.mode) {
     state.mode = wanted.mode
@@ -3196,8 +3505,18 @@ async function boot(): Promise<void> {
       })
     }
   }
+  /*
+   * A link straight to the forecast page skips the record entirely.
+   *
+   * The picker is still given a sensible area first, so that pressing "back
+   * to the record" lands somewhere rather than on an empty page.
+   */
   const startId = wanted.place ? placeValueOf(wanted.place) : (wanted.aoi ?? AOIS[0].id)
   picker.setValue(startId, wanted.place?.name)
+  if (wanted.future) {
+    await renderFuture()
+    return
+  }
   await goTo(startId, wanted.year)
 }
 

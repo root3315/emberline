@@ -237,6 +237,42 @@ const en: Dict = {
   colophon:
     'Fire detections from NASA FIRMS (MODIS and VIIRS). These mark burning at the moment a satellite passed overhead, not the area burned. Built for the NASA Space Apps Challenge 2026.',
   provenanceFirms: 'NASA FIRMS — MODIS C6.1 and VIIRS C2 active fire products, retrieved via the FIRMS area API',
+  ctaTitle: 'And then?',
+  ctaNote:
+    'Everything above already happened. One thing has not: a model trained on the whole record puts a number on the week ahead, and says plainly how often that number has been right.',
+  ctaButton: 'What happens next week',
+
+  futureWhere: '{from} to {to} \u00b7 built {asOf}',
+  futureAnswer: 'Somewhere in <em>{cells}</em> squares, the next seven days carry a real chance of fire.',
+  futureAside:
+    'A gradient-boosted model reads this archive <b>back to {since}</b> \u2014 where it has burned, how recently, what the season usually does, how far this year sits from its own normal \u2014 and gives every 25 km cell the chance that the 1 km sensor sees a fire there before {to}.',
+  futureStatCells: 'Cells at risk',
+  futureStatTop: 'Widest front',
+  futureStatTested: 'Scored on',
+  futureStatSkill: 'Against the season',
+
+  futureMapTitle: 'Where it may burn',
+  futureMapNote:
+    'Brighter is likelier. This is a chance, not a count: a pale cell may still burn and a bright one may not. It is drawn softer than the record above, because it is a guess and should not look like a measurement.',
+
+  futureRiskTitle: 'Twenty places to watch',
+  futureRiskNote:
+    'The likeliest cells, kept apart so the list names twenty places rather than one place twenty times. All twenty are above 97%, which is why the bar shows something else: how many cells within two degrees are also more likely than not to burn. One hot cell and a front three hundred kilometres wide are not the same warning. Names come from OpenStreetMap at build time.',
+
+  futureTrustTitle: 'How much to believe it',
+  futureTrustNote:
+    'A forecast that cannot be checked is decoration. Everything below was scored on years the model never saw while it was learning.',
+  calibCaption:
+    'Each dot is a group of cells the model gave about the same chance. On the line means the chance was right. Ours sit just above it: when it says 85%, about 89% burn \u2014 it is slightly too cautious, which is the safer way to be wrong.',
+  futureSkillHead: 'Measured against',
+  skillModel: 'This model',
+  skillClimatology: 'The season alone',
+  skillPersistence: 'It burned last week',
+  skillRandom: 'Picking at random',
+  futureSkillNote:
+    'Average precision on {tested}. The season alone is a hard baseline and we beat it only narrowly, which is the honest result: without daily weather, most of what is knowable about the coming week is simply what time of year it is.',
+  futureBack: 'Back to the record',
+
   provenanceLine:
     '{provenance}. {days} days of record, {detections} detections, {dropped} rows dropped as volcanoes, gas flares or offshore sources.',
 }
@@ -468,6 +504,42 @@ const ru: Dict = {
   colophon:
     'Засечки огня из NASA FIRMS (MODIS и VIIRS). Они отмечают горение в момент пролёта спутника, а не выгоревшую площадь. Сделано для NASA Space Apps Challenge 2026.',
   provenanceFirms: 'NASA FIRMS — продукты активных пожаров MODIS C6.1 и VIIRS C2, получены через area API FIRMS',
+  ctaTitle: 'А дальше?',
+  ctaNote:
+    'Всё выше уже случилось. Одно — нет: модель, обученная на всём архиве, ставит число на ближайшую неделю и честно говорит, как часто это число сбывалось.',
+  ctaButton: 'Что будет на следующей неделе',
+
+  futureWhere: 'с {from} по {to} · считано {asOf}',
+  futureAnswer: 'В <em>{cells}</em> квадратах ближайшие семь дней несут реальный шанс пожара.',
+  futureAside:
+    'Модель градиентного бустинга читает архив <b>с {since} года</b> — где горело, как давно, что обычно делает сезон, насколько этот год отошёл от своей нормы — и даёт каждой ячейке 25 км вероятность того, что километровый сенсор увидит там огонь до {to}.',
+  futureStatCells: 'Ячеек в зоне риска',
+  futureStatTop: 'Самый широкий фронт',
+  futureStatTested: 'Проверено на',
+  futureStatSkill: 'Против сезона',
+
+  futureMapTitle: 'Где может загореться',
+  futureMapNote:
+    'Ярче — вероятнее. Это шанс, а не количество: бледная ячейка всё равно может загореться, а яркая — нет. Рисуется мягче, чем архив выше, потому что это догадка и она не должна выглядеть как измерение.',
+
+  futureRiskTitle: 'Двадцать мест, за которыми стоит следить',
+  futureRiskNote:
+    'Самые вероятные ячейки, разнесённые друг от друга — чтобы в списке было двадцать разных мест, а не одно место двадцать раз. Все двадцать выше 97%, поэтому полоска показывает другое: сколько ячеек в радиусе двух градусов тоже скорее загорятся, чем нет. Одна горячая точка и фронт в триста километров — разные новости. Названия — из OpenStreetMap, подставлены при сборке.',
+
+  futureTrustTitle: 'Насколько ей можно верить',
+  futureTrustNote:
+    'Прогноз, который нельзя проверить, — это украшение. Всё ниже посчитано на годах, которых модель при обучении не видела.',
+  calibCaption:
+    'Каждая точка — группа ячеек, которым модель дала примерно одинаковый шанс. На линии — значит шанс был верный. Наши лежат чуть выше: когда модель говорит 85%, горит около 89% — она слегка перестраховывается, и это безопасная сторона ошибки.',
+  futureSkillHead: 'С чем сравниваем',
+  skillModel: 'Эта модель',
+  skillClimatology: 'Один только сезон',
+  skillPersistence: 'Горело на прошлой неделе',
+  skillRandom: 'Случайный выбор',
+  futureSkillNote:
+    'Средняя точность на {tested}. Один только сезон — очень сильная база, и мы обходим её совсем немного. Это честный результат: без суточной погоды предсказуемо в ближайшей неделе почти только то, какое сейчас время года.',
+  futureBack: 'Назад к архиву',
+
   provenanceLine:
     '{provenance}. {days} дней ряда, {detections} засечек, {dropped} строк отброшено как вулканы, газовые факелы и офшорные источники.',
 }
