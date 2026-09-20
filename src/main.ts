@@ -232,6 +232,9 @@ const els = {
   colophon: $('colophon-text'),
   metrics: $<HTMLDListElement>('metrics'),
   mapFacts: $<HTMLDListElement>('map-facts'),
+  worst: $('worst'),
+  worstList: $('worst-list'),
+  worstNote: $('worst-note'),
   sensorSplit: $('sensor-split'),
   yearsBody: $<HTMLTableSectionElement>('years-body'),
   concentration: $('concentration'),
@@ -1360,6 +1363,7 @@ function render(): void {
 
   drawContrib(els.contribCanvas, contribData(ds))
   renderMap(ds)
+  renderWorst(ds)
   renderImpact()
 
   renderHero(ds)
@@ -1381,6 +1385,7 @@ function render(): void {
   // for. The figures under the map describe the archive too, so they go with
   // it when the period is the last week.
   els.mapFacts.hidden = worldScope || worldNow || worldForecast
+  els.worst.hidden = worldScope || worldNow || worldForecast
   if (!worldScope && !worldNow && !worldForecast) {
     const cells = ds.mapCells(state.year).length
     els.mapNote.textContent = t('mapNoteArchive', { cells: formatNumber(cells), km: ds.mapCellKm, years: state.year })
@@ -3150,6 +3155,55 @@ let emissions: EmissionsFile | null = null
 /** Global temperature anomaly by year, drawn beside the planet's bars. */
 let climate: Map<number, number> | null = null
 
+/**
+ * The five days that carried the year, for the area on screen.
+ *
+ * Fire is heavy-tailed to a degree that surprises people: in a bad season
+ * a single week can hold a quarter of the year. The map sums over time
+ * and so cannot show it, and the calendar shows it a cell at a time. Five
+ * rows and a share say it outright.
+ */
+function renderWorst(ds: Dataset): void {
+  const year = state.year
+  const days = ds.days.filter((d) => d.day.startsWith(String(year)) && d.activeCells > 0)
+  els.worst.hidden = days.length === 0
+  if (!days.length) return
+
+  const total = days.reduce((sum, d) => sum + d.activeCells, 0)
+  const top = [...days].sort((a, b) => b.activeCells - a.activeCells).slice(0, 5)
+  const peak = top[0].activeCells
+
+  els.worstList.innerHTML = ''
+  for (const day of top) {
+    const row = document.createElement('li')
+    row.className = 'worst__row'
+
+    const when = document.createElement('span')
+    when.className = 'worst__when'
+    when.textContent = formatDate(day.day)
+
+    const bar = document.createElement('span')
+    bar.className = 'worst__bar'
+    const fill = document.createElement('i')
+    fill.style.setProperty('--p', String(day.activeCells / peak))
+    bar.append(fill)
+
+    const n = document.createElement('span')
+    n.className = 'worst__n'
+    n.textContent = compact(day.activeCells)
+
+    row.append(when, bar, n)
+    els.worstList.append(row)
+  }
+
+  const share = top.reduce((sum, d) => sum + d.activeCells, 0) / Math.max(total, 1)
+  els.worstNote.textContent = t('worstNote', {
+    pct: `${Math.round(share * 100)}%`,
+    year: String(year),
+    days: String(days.length),
+  })
+}
+
 function renderImpact(): void {
   const est = emissions
 
@@ -3817,6 +3871,19 @@ function applyUrl(): void {
    * nothing: the forecast is cached and the globe is already mounted.
    */
   void showDoor()
+
+  /*
+   * A change of page starts at the top of it.
+   *
+   * These are separate pages sharing one document, so the browser has no
+   * navigation to restore a scroll position for: pressing "about the
+   * project" from halfway down the record dropped the reader halfway down
+   * the about page, in the middle of a sentence whose beginning they had
+   * never seen.
+   */
+  const here = aboutScope ? 'about' : futureScope ? 'future' : 'record'
+  const there = wanted.about ? 'about' : wanted.future ? 'future' : 'record'
+  if (here !== there) window.scrollTo(0, 0)
 
   if (wanted.about) {
     if (!aboutScope) void renderAbout().finally(() => (applyingUrl = false))

@@ -375,6 +375,18 @@
           </div>
 
           <p class="status" id="status" role="status" aria-live="polite"></p>
+          <!--
+            The column beside the map ran out after the source panel and
+            the download button, leaving half the band empty next to the
+            busiest picture on the page. These are the days the map is
+            mostly made of: the handful that carry a year.
+          -->
+          <section class="worst" id="worst" hidden>
+            <h3 class="subhead" data-i18n="worstTitle">The days that made the year</h3>
+            <ol class="worst__list" id="worst-list"></ol>
+            <p class="note note--tight" id="worst-note"></p>
+          </section>
+
           <button type="button" class="ghost-btn ghost-btn--wide" id="export" data-i18n="exportSeries">
             Download this series as CSV
           </button>

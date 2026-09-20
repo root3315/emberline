@@ -218,6 +218,8 @@ const en: Dict = {
   dropCsv: 'Drop a FIRMS CSV here, or click to choose',
   fileNote: 'Any archive download from FIRMS works. The file is read here and never uploaded.',
   exportSeries: 'Download this series as CSV',
+  worstTitle: 'The days that made the year',
+  worstNote: 'These five hold {pct} of everything {year} burned, across {days} days that burned at all. Fire is not spread through a season; it arrives in a handful of afternoons.',
 
   statusLoading: 'Loading…',
   statusFetching: 'Asking NASA…',
@@ -547,6 +549,8 @@ const ru: Dict = {
   dropCsv: 'Перетащите сюда CSV из FIRMS или нажмите для выбора',
   fileNote: 'Подойдёт любая выгрузка из FIRMS. Файл читается здесь и никуда не отправляется.',
   exportSeries: 'Скачать этот ряд в CSV',
+  worstTitle: 'Дни, из которых сложился год',
+  worstNote: 'Эти пять держат {pct} всего, что сгорело в {year} — из {days} дней, когда горело вообще. Огонь не размазан по сезону — он приходит за несколько дней.',
 
   statusLoading: 'Загружаю…',
   statusFetching: 'Спрашиваю NASA…',
