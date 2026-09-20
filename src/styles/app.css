@@ -1883,8 +1883,83 @@ canvas {
   letter-spacing: -0.02em;
 }
 
+/*
+ * A button that happens to be a link.
+ *
+ * `.btn` was written for <button>, which has no underline to inherit. On an
+ * <a> the site's link rule struck a line through the middle of the label
+ * and the whole thing read as a mistake.
+ */
 .cta__btn {
   flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  text-decoration: none;
+}
+
+/* ---------------------------------------------------------------- globe */
+
+.future-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(280px, 42%);
+  gap: var(--s-8);
+  align-items: center;
+}
+
+.future-hero__words {
+  min-width: 0;
+}
+
+/*
+ * The globe sets its own height from its width, so the hero does not jump
+ * while the land mask is still on its way.
+ */
+.globe {
+  position: relative;
+  margin: 0;
+  aspect-ratio: 1;
+  width: 100%;
+  /* A cap on the height alone left the box wider than it was tall, and the
+     planet sat in a rectangle of dead space. */
+  max-width: 460px;
+  justify-self: center;
+}
+
+.globe canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.globe__hint {
+  position: absolute;
+  inset: auto 0 0;
+  text-align: center;
+  font-size: var(--t-caption);
+  color: var(--ink-muted);
+  opacity: 0;
+  transition: opacity var(--t-base) var(--ease-out);
+  pointer-events: none;
+}
+
+.globe:hover .globe__hint,
+.globe:focus-within .globe__hint {
+  opacity: 1;
+}
+
+@media (max-width: 860px) {
+  .future-hero {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .globe {
+    order: -1;
+    max-height: 320px;
+  }
+}
+
+.risk__more {
+  margin-top: var(--s-5);
 }
 
 /*

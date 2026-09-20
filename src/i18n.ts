@@ -272,6 +272,9 @@ const en: Dict = {
   futureSkillNote:
     'Average precision on {tested}. The season alone is a hard baseline and we beat it only narrowly, which is the honest result: without daily weather, most of what is knowable about the coming week is simply what time of year it is.',
   futureBack: 'Back to the record',
+  globeHint: 'Drag to turn',
+  riskMore: 'Show {n} more',
+  riskLess: 'Show fewer',
 
   provenanceLine:
     '{provenance}. {days} days of record, {detections} detections, {dropped} rows dropped as volcanoes, gas flares or offshore sources.',
@@ -539,6 +542,9 @@ const ru: Dict = {
   futureSkillNote:
     'Средняя точность на {tested}. Один только сезон — очень сильная база, и мы обходим её совсем немного. Это честный результат: без суточной погоды предсказуемо в ближайшей неделе почти только то, какое сейчас время года.',
   futureBack: 'Назад к архиву',
+  globeHint: 'Потяните, чтобы повернуть',
+  riskMore: 'Показать ещё {n}',
+  riskLess: 'Свернуть',
 
   provenanceLine:
     '{provenance}. {days} дней ряда, {detections} засечек, {dropped} строк отброшено как вулканы, газовые факелы и офшорные источники.',

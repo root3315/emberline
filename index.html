@@ -406,11 +406,25 @@
         <a class="btn cta__btn" href="#/future" data-i18n="ctaButton">What happens next week</a>
       </section>
 
-      <section class="hero" id="future-hero" hidden>
-        <p class="hero__where" id="future-where"></p>
-        <h1 class="hero__answer" id="future-answer"></h1>
-        <p class="hero__aside" id="future-aside"></p>
-        <dl class="hero__stats" id="future-stats"></dl>
+      <!--
+        The planet, rather than a picture of one.
+
+        A flat map of a forecast reads as a chart; a turning globe reads as
+        a place. It is drawn from the same half-degree cells as everything
+        else here and it can be dragged, which is the only way to make the
+        far side an invitation rather than a thing being hidden.
+      -->
+      <section class="hero future-hero" id="future-hero" hidden>
+        <div class="future-hero__words">
+          <p class="hero__where" id="future-where"></p>
+          <h1 class="hero__answer" id="future-answer"></h1>
+          <p class="hero__aside" id="future-aside"></p>
+          <dl class="hero__stats" id="future-stats"></dl>
+        </div>
+        <figure class="globe">
+          <canvas id="globe-canvas" aria-label="Rotating globe of next week's fire probability"></canvas>
+          <figcaption class="globe__hint" data-i18n="globeHint">Drag to turn</figcaption>
+        </figure>
       </section>
 
       <section class="band" id="future-map" hidden>
@@ -437,6 +451,7 @@
           </div>
         </header>
         <ol class="risk" id="future-risk-list"></ol>
+        <button type="button" class="ghost-btn ghost-btn--wide risk__more" id="risk-more"></button>
       </section>
 
       <section class="band band--split" id="future-trust" hidden>

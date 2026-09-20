@@ -33,6 +33,8 @@ import { drawWorldSeason, drawWorldYears, worldHeadline, type WorldTotal } from 
 import { loadClimate, loadEmissions, type EmissionsFile } from './core/emissions'
 import { loadForecast, type ForecastCell, type ForecastMeta } from './core/forecast'
 import { drawCalibration } from './ui/calibration'
+import { loadLand } from './core/land'
+import { mountGlobe, type GlobeHandle } from './ui/globe'
 import { daysInYear, dayOfYear, yearOf } from './core/grid'
 import {
   MIN_RATIO_SAMPLES,
@@ -156,6 +158,8 @@ const els = {
   calibCaption: $('calib-caption'),
   futureSkill: $('future-skill'),
   futureSkillNote: $('future-skill-note'),
+  globeCanvas: $<HTMLCanvasElement>('globe-canvas'),
+  riskMore: $<HTMLButtonElement>('risk-more'),
   rampLow: $('ramp-low'),
   rampHigh: $('ramp-high'),
   status: $('status'),
@@ -625,6 +629,30 @@ const futureSections = FUTURE_SECTIONS.map((id) => document.getElementById(id)!)
 
 /** True while the forecast page is open rather than the record. */
 let futureScope = false
+
+/** Built on the first visit to the forecast page, and kept turning after. */
+let globe: GlobeHandle | null = null
+
+/**
+ * How many places the list shows before it is asked for the rest.
+ *
+ * Twenty rows arriving at once is a wall, and its tail — where the count
+ * falls to single figures — is the least interesting part given the most
+ * room. Eight is enough to see the shape and the gradient.
+ */
+const RISK_SHOWN = 8
+let riskAll = false
+
+/**
+ * The most the globe will draw, chosen by what a frame can afford.
+ *
+ * The forecast holds seventy-four thousand cells. Projecting all of them
+ * beside ninety thousand of land is more arithmetic than sixty frames a
+ * second will carry on a laptop, and at this size the faintest are a pixel
+ * nobody sees. The brightest twenty-five thousand look the same and cost a
+ * third as much.
+ */
+const GLOBE_CELLS = 25_000
 const heroSection = document.querySelector<HTMLElement>('.hero')!
 
 /*
@@ -770,6 +798,8 @@ async function renderFuture(): Promise<void> {
       '',
     )
 
+    void showGlobe()
+
     els.futureMapNote.textContent = t('futureMapNote')
     renderMapForecast(null, null, 'future')
     renderRisk()
@@ -780,6 +810,27 @@ async function renderFuture(): Promise<void> {
     console.error('[emberline] forecast page failed', err)
     status(t('worldFailed'), 'error')
   }
+}
+
+/**
+ * Bring the globe up, once, and give it this week's fires.
+ *
+ * It keeps turning rather than being torn down and rebuilt: rebuilding
+ * costs the land mask's projection every time, and a reader who comes back
+ * should find the planet where they left it.
+ */
+async function showGlobe(): Promise<void> {
+  if (!globe) {
+    const land = await loadLand()
+    if (!land) return
+    globe = mountGlobe(els.globeCanvas, land)
+  }
+  const cells = forecast?.cells ?? []
+  const shown =
+    cells.length > GLOBE_CELLS
+      ? [...cells].sort((a, b) => b.p - a.p).slice(0, GLOBE_CELLS)
+      : cells
+  globe.setFires(shown)
 }
 
 /**
@@ -798,10 +849,18 @@ async function renderFuture(): Promise<void> {
  * what the list is sorted and drawn by.
  */
 function renderRisk(): void {
-  const spots = [...(forecast?.meta.hotspots ?? [])].sort((a, b) => b.near - a.near)
+  const all = [...(forecast?.meta.hotspots ?? [])].sort((a, b) => b.near - a.near)
+  const spots = riskAll ? all : all.slice(0, RISK_SHOWN)
   els.futureRiskList.innerHTML = ''
   const lang = getLang()
-  const widest = Math.max(1, ...spots.map((s) => s.near))
+  // Measured against the widest of all twenty rather than of the eight on
+  // screen, so the bars do not stretch out when the list is folded away.
+  const widest = Math.max(1, ...all.map((s) => s.near))
+
+  els.riskMore.hidden = all.length <= RISK_SHOWN
+  els.riskMore.textContent = riskAll
+    ? t('riskLess')
+    : t('riskMore', { n: String(all.length - RISK_SHOWN) })
 
   spots.forEach((spot, i) => {
     const row = document.createElement('li')
@@ -3102,7 +3161,12 @@ function applyTheme(theme: 'night' | 'day'): void {
  * the effect instead of flashing through it.
  */
 function setTheme(theme: 'night' | 'day'): void {
-  burnTransition(() => applyTheme(theme), theme)
+  burnTransition(() => {
+    applyTheme(theme)
+    // The globe keeps its ocean and its halo in a buffer built once, so it
+    // has to be told; every other canvas is redrawn by `rerender`.
+    globe?.retheme()
+  }, theme)
 }
 
 function switchLang(lang: Lang): void {
@@ -3174,6 +3238,11 @@ function wire(): void {
   els.mapDays.addEventListener('change', (e) => {
     nowDays = Number((e.target as HTMLInputElement).value) || 7
     drawMap()
+  })
+
+  els.riskMore.addEventListener('click', () => {
+    riskAll = !riskAll
+    renderRisk()
   })
 
   els.lang.addEventListener('click', () => switchLang(getLang() === 'en' ? 'ru' : 'en'))
