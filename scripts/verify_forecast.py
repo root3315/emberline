@@ -125,24 +125,50 @@ def main() -> None:
     print(f"  cells that burned and were flagged: {int(hit.sum()):,}")
     print(f"  cells that burned and were not:     {missed:,}")
 
-    # ── calibration: only once the whole week is in ───────────────────────
-    if not whole:
-        print()
-        print("  calibration withheld: a part-week burns less than a whole one,")
-        print(f"  and only {elapsed} of 7 days have happened.")
-        return
-
+    # ── calibration ───────────────────────────────────────────────────────
+    #
+    # On a finished week the model's number and the observed rate are the
+    # same quantity and can be read side by side. On a part week they are
+    # not, and printing them together would be a lie in our favour or
+    # against us depending on the day.
+    #
+    # So a part week gets a third column instead: what the model's own
+    # seven-day number implies for the days that have actually elapsed, if
+    # fire arrives at a steady rate through the week. It does not — fires
+    # come in runs, and the first day of a window is not a seventh of it —
+    # so this is a sanity check on the order of magnitude and is labelled
+    # as one. It is still worth far more than withholding the comparison.
+    span = elapsed / 7.0
     print()
-    print("  the model said      cells      actually burned")
+    if whole:
+        print("  the model said      cells      actually burned")
+    else:
+        print(f"  the model said      cells    expected by day {elapsed}   actually burned")
+
     edges = [0.0, 0.02, 0.05, 0.1, 0.2, 0.4, 0.7, 1.01]
     for lo, hi in zip(edges, edges[1:]):
         band = (probs >= lo) & (probs < hi)
         if not band.any():
             continue
-        print(
-            f"    {lo:.2f}-{hi if hi <= 1 else 1:.2f}   {band.sum():>9,}"
-            f"   said {probs[band].mean():.3f}   burned {hit[band].mean():.3f}"
-        )
+        said = float(probs[band].mean())
+        seen = float(hit[band].mean())
+        if whole:
+            print(
+                f"    {lo:.2f}-{min(hi, 1):.2f}   {band.sum():>9,}"
+                f"   said {said:.3f}   burned {seen:.3f}"
+            )
+        else:
+            # 1 - (1 - p) ** (fraction of the week elapsed)
+            due = 1 - (1 - said) ** span
+            print(
+                f"    {lo:.2f}-{min(hi, 1):.2f}   {band.sum():>9,}"
+                f"        {due:.3f}              {seen:.3f}"
+            )
+
+    if not whole:
+        print()
+        print(f"  the third column assumes fire arrives evenly across the week,")
+        print(f"  which it does not. Run this again on {finish} for the real one.")
 
 
 if __name__ == "__main__":

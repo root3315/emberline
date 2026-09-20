@@ -75,6 +75,10 @@
             column three screens down. This takes its place, and only its
             place: on the record's own pages it is not there.
           -->
+          <a class="ghost-btn bar__about" id="bar-about" href="#/about" data-i18n="aboutLink">
+            About the project
+          </a>
+
           <a class="ghost-btn bar__back" id="bar-back" href="#/" hidden>
             <span aria-hidden="true">&#8249;</span>
             <span data-i18n="futureBack">Back to the record</span>
@@ -462,6 +466,72 @@
         else here and it can be dragged, which is the only way to make the
         far side an invitation rather than a thing being hidden.
       -->
+      <!--
+        The project, in its own words.
+
+        Everything else on this site answers a question about fire. This
+        answers questions about the site: what was actually built, out of
+        what, and how much of it can be checked by someone who does not
+        trust us. It is the page a judge with four minutes reads.
+      -->
+      <section class="hero about-hero" id="about-hero" hidden>
+        <p class="hero__where" data-i18n="aboutKicker">NASA Space Apps 2026</p>
+        <h1 class="hero__answer" id="about-answer"></h1>
+        <p class="hero__aside" data-i18n="aboutLede"></p>
+        <dl class="hero__stats" id="about-stats"></dl>
+      </section>
+
+      <section class="band band--split" id="about-problem" hidden>
+        <div class="band__col">
+          <header class="band__head band__head--tight">
+            <div><h2 data-i18n="aboutProblemTitle">The problem</h2></div>
+          </header>
+          <p class="about__body" data-i18n="aboutProblemBody"></p>
+        </div>
+        <div class="band__col">
+          <h3 class="subhead" data-i18n="aboutProblemAside">Why it matters</h3>
+          <p class="note" data-i18n="aboutProblemNote"></p>
+        </div>
+      </section>
+
+      <section class="band" id="about-built" hidden>
+        <header class="band__head">
+          <div>
+            <h2 data-i18n="aboutBuiltTitle">What was built</h2>
+            <p class="note" data-i18n="aboutBuiltNote"></p>
+          </div>
+        </header>
+        <ul class="about__list" id="about-built-list"></ul>
+      </section>
+
+      <section class="band band--split" id="about-model" hidden>
+        <div class="band__col">
+          <header class="band__head band__head--tight">
+            <div>
+              <h2 data-i18n="aboutModelTitle">The model</h2>
+              <p class="note" data-i18n="aboutModelNote"></p>
+            </div>
+          </header>
+          <p class="about__body" id="about-model-body"></p>
+          <a class="btn cta__btn" href="#/future" data-i18n="ctaButton">What happens next week</a>
+        </div>
+        <div class="band__col">
+          <h3 class="subhead" data-i18n="aboutModelNumbers">Measured</h3>
+          <dl class="metrics metrics--about" id="about-model-stats"></dl>
+          <p class="note note--tight" data-i18n="aboutModelCaveat"></p>
+        </div>
+      </section>
+
+      <section class="band" id="about-check" hidden>
+        <header class="band__head">
+          <div>
+            <h2 data-i18n="aboutCheckTitle">Check us</h2>
+            <p class="note" data-i18n="aboutCheckNote"></p>
+          </div>
+        </header>
+        <ul class="about__list" id="about-check-list"></ul>
+      </section>
+
       <section class="hero future-hero" id="future-hero" hidden>
         <div class="future-hero__words">
           <p class="hero__where" id="future-where"></p>
@@ -525,7 +595,13 @@
     </main>
 
     <footer class="colophon">
-      <div class="colophon__inner"><p id="colophon-text"></p></div>
+      <div class="colophon__inner">
+        <p id="colophon-text"></p>
+        <p class="colophon__links">
+          <a href="#/about" data-i18n="aboutLink">About the project</a>
+          <a href="#/future" data-i18n="ctaButton">What happens next week</a>
+        </p>
+      </div>
     </footer>
 
     <script type="module" src="/src/main.ts"></script>

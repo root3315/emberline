@@ -34,6 +34,7 @@ import { loadClimate, loadEmissions, type EmissionsFile } from './core/emissions
 import { loadForecast, type ForecastCell, type ForecastMeta } from './core/forecast'
 import { drawCalibration } from './ui/calibration'
 import { drawScaleBars } from './ui/scale-bars'
+import { aboutList } from './i18n'
 import { loadLand } from './core/land'
 import { mountGlobe, type GlobeFire, type GlobeHandle } from './ui/globe'
 import { daysInYear, dayOfYear, yearOf } from './core/grid'
@@ -165,6 +166,14 @@ const els = {
   ctaLine: $('cta-line'),
   ctaGlobe: $<HTMLCanvasElement>('cta-globe'),
   barBack: $<HTMLAnchorElement>('bar-back'),
+  barAbout: $<HTMLAnchorElement>('bar-about'),
+  aboutHero: $('about-hero'),
+  aboutAnswer: $('about-answer'),
+  aboutStats: $('about-stats'),
+  aboutBuiltList: $('about-built-list'),
+  aboutModelBody: $('about-model-body'),
+  aboutModelStats: $('about-model-stats'),
+  aboutCheckList: $('about-check-list'),
   impactBars: $<HTMLCanvasElement>('impact-bars'),
   impactBarsNote: $('impact-bars-note'),
   rampLow: $('ramp-low'),
@@ -628,11 +637,21 @@ const ALWAYS_ON = new Set(['calendar', 'impact'])
  */
 const FUTURE_SECTIONS = ['future-cta', 'future-map', 'future-risk', 'future-trust']
 
+/** The about page's bands, which belong to the route and not to the area. */
+const ABOUT_SECTIONS = ['about-problem', 'about-built', 'about-model', 'about-check']
+
 const dataSections = [...document.querySelectorAll<HTMLElement>('.band')].filter(
-  (el) => !ALWAYS_ON.has(el.id) && !FUTURE_SECTIONS.includes(el.id),
+  (el) =>
+    !ALWAYS_ON.has(el.id) &&
+    !FUTURE_SECTIONS.includes(el.id) &&
+    !ABOUT_SECTIONS.includes(el.id),
 )
 
 const futureSections = FUTURE_SECTIONS.map((id) => document.getElementById(id)!)
+const aboutSections = ABOUT_SECTIONS.map((id) => document.getElementById(id)!)
+
+/** True while the project's own page is open rather than the record. */
+let aboutScope = false
 
 /** True while the forecast page is open rather than the record. */
 let futureScope = false
@@ -695,6 +714,17 @@ const mapShellAfter = mapShell.nextElementSibling
  */
 const FUTURE_SINCE = 2003
 
+/**
+ * What the model card says, restated for the page that describes it.
+ *
+ * The test years travel with the forecast file, because they can change
+ * when the model is retrained. The other two do not travel, so they are
+ * written here next to a comment saying where to correct them: in
+ * `train_fire_model.py`, which is the one place that decides.
+ */
+const FEATURE_COUNT = 30
+const ABOUT_SPLITS = { train: '2003\u20132013', validate: '2014\u20132017' }
+
 const calendarSection = document.getElementById('calendar')!
 const impactSection = document.getElementById('impact')!
 const pickerField = document.getElementById('picker')!
@@ -746,6 +776,120 @@ function statInto(list: HTMLElement, label: string, value: string, note: string)
  * to act on here. Leaving a control on screen that changes nothing is worse
  * than not having it.
  */
+/**
+ * Swap the record's layout for the project's own page, or back.
+ *
+ * Same shape as the forecast's switch and for the same reason: the picker
+ * and the raw/reconciled toggle have nothing to act on here. The map stays
+ * where it lives — this page never shows it — so nothing is reparented and
+ * nothing has to be put back.
+ */
+function showAboutLayout(on: boolean): void {
+  if (on && !aboutScope && location.hash && location.hash !== '#/about') {
+    lastRecord = location.hash
+  }
+  aboutScope = on
+  pickerField.hidden = on
+  els.mode.hidden = on
+  els.barAbout.hidden = on
+  els.barBack.hidden = !on && !futureScope
+  els.barBack.href = lastRecord || '#/'
+
+  heroSection.hidden = on
+  calendarSection.hidden = on
+  impactSection.hidden = on
+  els.aboutHero.hidden = !on
+  for (const section of aboutSections) section.hidden = !on
+  if (on) {
+    for (const section of dataSections) section.hidden = true
+    for (const section of futureSections) section.hidden = true
+  }
+}
+
+/**
+ * Fill the project's page.
+ *
+ * Every number on it is read from the files the site already ships rather
+ * than typed into the copy, so a rebuild cannot leave the prose claiming
+ * something the data no longer says.
+ */
+async function renderAbout(): Promise<void> {
+  showAboutLayout(true)
+  els.aboutAnswer.textContent = t('aboutAnswer')
+
+  worldIndex ??= await loadWorldIndex().catch(() => null)
+  forecast ??= await loadForecast()
+  const meta = forecast?.meta
+
+  const totals = worldIndex?.totals ?? []
+  const detections = totals.reduce((sum, y) => sum + y.modis + y.viirs, 0)
+
+  els.aboutStats.innerHTML = ''
+  if (totals.length) {
+    statInto(
+      els.aboutStats,
+      t('aboutStatYears'),
+      String(totals.length),
+      `${totals[0].year}\u2013${totals[totals.length - 1].year}`,
+    )
+    statInto(els.aboutStats, t('aboutStatDetections'), compact(detections), '')
+  }
+  if (meta) {
+    statInto(els.aboutStats, t('aboutStatModel'), String(FEATURE_COUNT), '')
+    statInto(
+      els.aboutStats,
+      t('aboutStatCells'),
+      formatNumber(meta.cells),
+      t('cellsUnit'),
+    )
+  }
+
+  fillAboutList(els.aboutBuiltList, 'aboutBuiltList')
+  fillAboutList(els.aboutCheckList, 'aboutCheckList')
+
+  if (meta) {
+    const splits = ABOUT_SPLITS
+    els.aboutModelBody.textContent = t('aboutModelBody', {
+      features: String(FEATURE_COUNT),
+      train: splits.train,
+      validate: splits.validate,
+      test: meta.tested,
+    })
+    els.aboutModelStats.innerHTML = ''
+    aboutStat(t('skillModel'), meta.skill.model.toFixed(3))
+    aboutStat(t('skillClimatology'), meta.skill.climatology.toFixed(3))
+    aboutStat(t('skillPersistence'), meta.skill.persistence.toFixed(3))
+    aboutStat('ROC AUC', meta.skill.rocAuc.toFixed(3))
+  }
+  writeUrl()
+  status('')
+}
+
+function aboutStat(label: string, value: string): void {
+  const wrap = document.createElement('div')
+  const dt = document.createElement('dt')
+  dt.textContent = label
+  const dd = document.createElement('dd')
+  dd.textContent = value
+  wrap.append(dt, dd)
+  els.aboutModelStats.append(wrap)
+}
+
+function fillAboutList(host: HTMLElement, name: string): void {
+  host.innerHTML = ''
+  for (const [head, body] of aboutList(name)) {
+    const item = document.createElement('li')
+    const title = document.createElement('h3')
+    title.className = 'subhead subhead--plain'
+    title.textContent = head
+    const text = document.createElement('p')
+    text.className = 'note'
+    text.textContent = body
+    item.append(title, text)
+    host.append(item)
+  }
+}
+
 function showFutureLayout(on: boolean): void {
   if (on && !futureScope && location.hash && location.hash !== '#/future') {
     lastRecord = location.hash
@@ -3262,6 +3406,10 @@ function switchLang(lang: Lang): void {
    * language. `rerender` speaks for the record and has nothing to say here.
    */
   void showDoor()
+  if (aboutScope) {
+    void renderAbout()
+    return
+  }
   if (futureScope) {
     void renderFuture()
     return
@@ -3421,6 +3569,8 @@ interface UrlState {
   forecast?: boolean
   /** `#/future` — the forecast's own page, which has no area and no year. */
   future?: boolean
+  /** `#/about` — what this is and how to check it. */
+  about?: boolean
   mode?: Mode
 }
 
@@ -3444,6 +3594,9 @@ function readUrl(): UrlState {
    * ends.
    */
   if (parts[0] === 'future') return { future: true }
+
+  /* `#/about` — the project talking about itself. No area, no year. */
+  if (parts[0] === 'about') return { about: true }
 
   if (parts[0] === 'place' && parts.length >= 3) {
     const nums = parts[2].split(',').map(Number)
@@ -3482,6 +3635,10 @@ function placeValueOf(place: { name: string; bounds: Bounds }): string {
 
 /** Replace rather than push: the back button should leave the page, not undo a click. */
 function writeUrl(): void {
+  if (aboutScope) {
+    if (location.hash !== '#/about') history.replaceState(null, '', '#/about')
+    return
+  }
   if (futureScope) {
     if (location.hash !== '#/future') history.replaceState(null, '', '#/future')
     return
@@ -3517,6 +3674,14 @@ function applyUrl(): void {
    */
   void showDoor()
 
+  if (wanted.about) {
+    if (!aboutScope) void renderAbout().finally(() => (applyingUrl = false))
+    else applyingUrl = false
+    return
+  }
+  const leavingAbout = aboutScope
+  if (aboutScope) showAboutLayout(false)
+
   if (wanted.future) {
     if (!futureScope) void renderFuture().finally(() => (applyingUrl = false))
     else applyingUrl = false
@@ -3533,8 +3698,8 @@ function applyUrl(): void {
    * redraws when the chosen area changes, which after a direct link it has
    * not. Unhiding empty bands is worse than a moment of loading.
    */
-  if (futureScope) {
-    showFutureLayout(false)
+  if (futureScope || leavingAbout) {
+    if (futureScope) showFutureLayout(false)
     /*
      * And the period goes back with it.
      *
@@ -3696,6 +3861,10 @@ async function boot(): Promise<void> {
    */
   const startId = wanted.place ? placeValueOf(wanted.place) : (wanted.aoi ?? AOIS[0].id)
   picker.setValue(startId, wanted.place?.name)
+  if (wanted.about) {
+    await renderAbout()
+    return
+  }
   if (wanted.future) {
     await renderFuture()
     void showDoor()

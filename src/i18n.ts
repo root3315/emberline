@@ -239,6 +239,39 @@ const en: Dict = {
   provenanceFirms: 'NASA FIRMS — MODIS C6.1 and VIIRS C2 active fire products, retrieved via the FIRMS area API',
   ctaTitle: 'And then?',
   scopeGlobal: 'Worldwide',
+  aboutLink: 'About the project',
+  aboutKicker: 'NASA Space Apps 2026 \u00b7 Harmonization of MODIS and VIIRS Hot Spots',
+  aboutAnswer: 'Two satellites disagree about how much the world burns. This makes them agree.',
+  aboutLede:
+    'MODIS has watched since 2000 at a kilometre. VIIRS arrived in 2012 and sees several times as many fires over the same ground. Put the two together without thinking and the record shows a global surge in 2012 that never happened \u2014 an instrument being replaced, read as the planet catching fire.',
+  aboutStatYears: 'Years of record',
+  aboutStatDetections: 'Detections read',
+  aboutStatCells: 'Cells in the forecast',
+  aboutStatModel: 'Model features',
+
+  aboutProblemTitle: 'The problem',
+  aboutProblemBody:
+    'A fire detection is not a fire. It is one satellite pass finding one pixel hot enough to flag, and how many it flags depends on the pixel\u2019s size. The 375-metre sensor resolves small fires the 1-kilometre one averages away; over the same ground on the same day it reports several times as many. The ratio is not a constant \u2014 it is about 4 in dense cropland and over 13 in sparse bush \u2014 so a single global correction is the wrong answer too. It has to be measured per place.',
+  aboutProblemAside: 'Why it matters',
+  aboutProblemNote:
+    'Anyone asking "is it burning more than it used to" is asking a question the raw record cannot answer. Every trend through 2012 is contaminated by the instrument. Switch between "as recorded" and "reconciled" anywhere on this site and watch what happens to the years before 2012 \u2014 that difference is the whole problem, made visible.',
+
+  aboutBuiltTitle: 'What was built',
+  aboutBuiltNote:
+    'A static site: no server, no database, no account. Everything below is a file the browser fetches and draws.',
+
+  aboutModelTitle: 'The model',
+  aboutModelNote:
+    'A gradient-boosted classifier, trained on the archive and on the weather of the week it is asked about.',
+  aboutModelBody:
+    'It reads {features} things about every quarter-degree cell: how often it burns at this time of year, how recently it burned, what its neighbours are doing, how far the year is from its own normal, where ENSO stands \u2014 and the forecast weather of the week ahead, which is the half the fire archive cannot supply. Trained on {train}, tuned on {validate}, scored on {test}: years it had never seen. The weather roughly doubles its margin over the seasonal baseline.',
+  aboutModelNumbers: 'Measured',
+  aboutModelCaveat:
+    'One qualifier: the model learned from the weather that actually happened, and the live map runs on a forecast of it. The figures above are what is reachable if the weather forecast is right.',
+
+  aboutCheckTitle: 'Check us',
+  aboutCheckNote:
+    'Every claim on this site is either visible in the interface or reproducible from the code. Nothing rests on trusting the authors.',
   barFossil: 'Fossil fuels, a year',
   barFires: 'The planet burning, {year}',
   barNote: 'On one scale, so the share is a picture rather than a division. The fuel figure is a whole year; the fires are only the part of the year that has happened.',
@@ -514,6 +547,39 @@ const ru: Dict = {
   provenanceFirms: 'NASA FIRMS — продукты активных пожаров MODIS C6.1 и VIIRS C2, получены через area API FIRMS',
   ctaTitle: 'А дальше?',
   scopeGlobal: 'По всей планете',
+  aboutLink: 'О проекте',
+  aboutKicker: 'NASA Space Apps 2026 \u00b7 Сведение очагов MODIS и VIIRS',
+  aboutAnswer: 'Два спутника не согласны, сколько горит мир. Здесь они приведены к согласию.',
+  aboutLede:
+    'MODIS смотрит с 2000 года с километрового шага. VIIRS появился в 2012-м и видит на той же земле в несколько раз больше очагов. Сложите их не думая — и в ряду появится всплеск 2012 года, которого не было: смена прибора, прочитанная как загоревшаяся планета.',
+  aboutStatYears: 'Лет ряда',
+  aboutStatDetections: 'Засечек прочитано',
+  aboutStatCells: 'Ячеек в прогнозе',
+  aboutStatModel: 'Признаков у модели',
+
+  aboutProblemTitle: 'Задача',
+  aboutProblemBody:
+    'Засечка — это не пожар. Это один пролёт спутника, нашедший один пиксель достаточно горячим, и сколько таких пикселей найдётся, зависит от размера пикселя. Сенсор 375 м различает мелкие очаги, которые километровый усредняет до нуля. И отношение не постоянное — около 4 на густой пашне и больше 13 в редком кустарнике, — так что один общий коэффициент тоже неверен. Его надо мерить для каждого места отдельно.',
+  aboutProblemAside: 'Почему это важно',
+  aboutProblemNote:
+    'Любой, кто спрашивает «горит ли больше, чем раньше», задаёт вопрос, на который сырой ряд ответить не может. Любой тренд через 2012 год испорчен прибором. Переключите «как снято» и «сведено» где угодно на сайте и посмотрите на годы до 2012-го — эта разница и есть вся задача, показанная глазам.',
+
+  aboutBuiltTitle: 'Что сделано',
+  aboutBuiltNote:
+    'Статический сайт: ни сервера, ни базы, ни аккаунта. Всё ниже — файлы, которые браузер скачивает и рисует сам.',
+
+  aboutModelTitle: 'Модель',
+  aboutModelNote:
+    'Градиентный бустинг, обученный на архиве и на погоде той недели, о которой его спрашивают.',
+  aboutModelBody:
+    'Он читает {features} вещей про каждую ячейку в четверть градуса: как часто здесь горит в это время года, как давно горело, что делают соседи, насколько год отошёл от своей нормы, где сейчас Эль-Ниньо — и прогноз погоды на ближайшую неделю, то есть ту половину, которую архив пожаров дать не может. Обучение {train}, настройка {validate}, проверка {test} — годы, которых он не видел. Погода почти удваивает его перевес над сезонной базой.',
+  aboutModelNumbers: 'Измерено',
+  aboutModelCaveat:
+    'Одна оговорка: модель училась на погоде, которая была на самом деле, а живая карта идёт по прогнозу погоды. Цифры выше — это то, что достижимо, если прогноз погоды верен.',
+
+  aboutCheckTitle: 'Проверьте нас',
+  aboutCheckNote:
+    'Каждое утверждение на этом сайте либо видно в интерфейсе, либо воспроизводится из кода. Верить авторам не требуется нигде.',
   barFossil: 'Ископаемое топливо за год',
   barFires: 'Пожары планеты, {year}',
   barNote: 'На одной шкале — чтобы доля была картинкой, а не делением в уме. Топливо — целый год; пожары — только та часть года, которая уже прошла.',
@@ -703,4 +769,52 @@ export function applyStaticStrings(root: ParentNode = document): void {
   root.querySelectorAll<HTMLInputElement>('[data-i18n-placeholder]').forEach((el) => {
     el.placeholder = t(el.dataset.i18nPlaceholder!)
   })
+}
+
+/**
+ * The two lists on the about page, kept out of the string dictionary.
+ *
+ * Everything else in here is one string for one key, which is what makes
+ * `t()` simple and what the `Dict` type enforces. These are pairs of a
+ * heading and a paragraph, repeated, and squeezing them into that shape
+ * would have meant four keys per row and a numbering scheme nobody could
+ * edit. Their own structure costs one exported function.
+ */
+export type AboutRow = readonly [string, string]
+
+const aboutLists: Record<Lang, Record<string, readonly AboutRow[]>> = {
+  en: {
+    aboutBuiltList: [
+    ['The reconciliation', 'The sensitivity ratio between the two instruments, measured separately for every area and season rather than assumed, and applied so the years before 2012 read on the same scale as the years after.'],
+    ['A pyramid of resolutions', 'The whole planet at one degree by month, down to a hundredth of a degree by year \u2014 four levels, drawn from the level the zoom can actually use, so the globe loads as fast as a city.'],
+    ['A day at a time', 'Every day of 24 years at a quarter degree, which is what makes a calendar of 9,000 days possible for any point on Earth.'],
+    ['This week, and next', 'The last seven days as a snapshot, and a gradient-boosted model\u2019s estimate of the seven to come.'],
+    ['What it does', 'Fire radiative power turned into carbon dioxide by the published method, calibrated against GFED, with the caveats printed beside the number rather than in a footnote.'],
+    ],
+    aboutCheckList: [
+    ['The forecast is scored against reality', 'The week on the map was computed before it happened. `verify_forecast.py` asks NASA what has burned since and scores it \u2014 ranking from day one, calibration once the week closes. The answer did not exist when the question was asked.'],
+    ['The reconciliation is a switch', 'Every chart has "as recorded" beside "reconciled". If the correction were doing something dishonest, it would be visible in one click.'],
+    ['The skill figure is the unflattering one', 'Average precision against a seasonal baseline that already knows where fires usually are \u2014 not accuracy against a 5% base rate, which would read as 95% and mean nothing.'],
+    ['The data is NASA\u2019s', 'FIRMS MODIS C6.1 and VIIRS C2, fetched through the public API. Every number here can be recomputed from the same source.'],
+    ],
+  },
+  ru: {
+    aboutBuiltList: [
+    ['Сведение приборов', 'Отношение чувствительности двух сенсоров — измеренное для каждой местности и сезона, а не принятое на веру, — и применённое так, что годы до 2012-го читаются в одной шкале с последующими.'],
+    ['Пирамида разрешений', 'Вся планета от градуса помесячно до сотой градуса погодно — четыре уровня, и берётся тот, который зум реально может показать. Поэтому глобус грузится так же быстро, как город.'],
+    ['Сутки за сутками', 'Каждый день 24 лет на четверти градуса — именно это делает возможным календарь на 9 000 дней для любой точки Земли.'],
+    ['Эта неделя и следующая', 'Последние семь дней снимком и оценка модели на семь вперёд.'],
+    ['Чем это отзывается', 'Мощность излучения, переведённая в CO₂ по опубликованной методике и сверенная с GFED, с оговорками рядом с числом, а не в сноске.'],
+    ],
+    aboutCheckList: [
+    ['Прогноз сверяется с реальностью', 'Неделя на карте посчитана до того, как она случилась. `verify_forecast.py` спрашивает у NASA, что сгорело с тех пор, и считает оценку: ранжирование с первого дня, калибровка когда неделя закроется. Ответа не существовало в момент вопроса.'],
+    ['Сведение — это переключатель', 'У каждого графика рядом с «сведено» есть «как снято». Если бы поправка делала что-то нечестное, это было бы видно в один клик.'],
+    ['Цифра точности — самая невыгодная', 'Средняя точность против сезонной базы, которая уже знает, где обычно горит, — а не «доля верных ответов» при базе 5%, которая дала бы 95% и не значила бы ничего.'],
+    ['Данные — насовские', 'FIRMS MODIS C6.1 и VIIRS C2 через публичный API. Любое число отсюда пересчитывается из того же источника.'],
+    ],
+  },
+}
+
+export function aboutList(name: string): readonly AboutRow[] {
+  return aboutLists[getLang()][name] ?? []
 }
