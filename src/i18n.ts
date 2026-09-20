@@ -792,7 +792,7 @@ const aboutLists: Record<Lang, Record<string, readonly AboutRow[]>> = {
     ['What it does', 'Fire radiative power turned into carbon dioxide by the published method, calibrated against GFED, with the caveats printed beside the number rather than in a footnote.'],
     ],
     aboutCheckList: [
-    ['The forecast is scored against reality', 'The week on the map was computed before it happened. `verify_forecast.py` asks NASA what has burned since and scores it \u2014 ranking from day one, calibration once the week closes. The answer did not exist when the question was asked.'],
+    ['The forecast is scored against reality', 'The week on the map was computed before it happened. verify_forecast.py asks NASA what has burned since and scores it \u2014 ranking from day one, calibration once the week closes. The answer did not exist when the question was asked.'],
     ['The reconciliation is a switch', 'Every chart has "as recorded" beside "reconciled". If the correction were doing something dishonest, it would be visible in one click.'],
     ['The skill figure is the unflattering one', 'Average precision against a seasonal baseline that already knows where fires usually are \u2014 not accuracy against a 5% base rate, which would read as 95% and mean nothing.'],
     ['The data is NASA\u2019s', 'FIRMS MODIS C6.1 and VIIRS C2, fetched through the public API. Every number here can be recomputed from the same source.'],
@@ -807,7 +807,7 @@ const aboutLists: Record<Lang, Record<string, readonly AboutRow[]>> = {
     ['Чем это отзывается', 'Мощность излучения, переведённая в CO₂ по опубликованной методике и сверенная с GFED, с оговорками рядом с числом, а не в сноске.'],
     ],
     aboutCheckList: [
-    ['Прогноз сверяется с реальностью', 'Неделя на карте посчитана до того, как она случилась. `verify_forecast.py` спрашивает у NASA, что сгорело с тех пор, и считает оценку: ранжирование с первого дня, калибровка когда неделя закроется. Ответа не существовало в момент вопроса.'],
+    ['Прогноз сверяется с реальностью', 'Неделя на карте посчитана до того, как она случилась. verify_forecast.py спрашивает у NASA, что сгорело с тех пор, и считает оценку: ранжирование с первого дня, калибровка когда неделя закроется. Ответа не существовало в момент вопроса.'],
     ['Сведение — это переключатель', 'У каждого графика рядом с «сведено» есть «как снято». Если бы поправка делала что-то нечестное, это было бы видно в один клик.'],
     ['Цифра точности — самая невыгодная', 'Средняя точность против сезонной базы, которая уже знает, где обычно горит, — а не «доля верных ответов» при базе 5%, которая дала бы 95% и не значила бы ничего.'],
     ['Данные — насовские', 'FIRMS MODIS C6.1 и VIIRS C2 через публичный API. Любое число отсюда пересчитывается из того же источника.'],

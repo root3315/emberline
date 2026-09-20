@@ -853,7 +853,10 @@ async function renderAbout(): Promise<void> {
       features: String(FEATURE_COUNT),
       train: splits.train,
       validate: splits.validate,
-      test: meta.tested,
+      // The model card writes its span with a hyphen and the two typed
+      // above use an en dash; three date ranges in one sentence should not
+      // be punctuated three different ways.
+      test: meta.tested.replace('-', '–'),
     })
     els.aboutModelStats.innerHTML = ''
     aboutStat(t('skillModel'), meta.skill.model.toFixed(3))
