@@ -261,6 +261,7 @@ const en: Dict = {
   aboutCalibNote:
     'Group the cells the model gave about the same chance, and count how many burned. On the line means the number meant what it said. A model can rank perfectly and still be wrong about how sure it is, and average precision cannot show that.',
   aboutKicker: 'NASA Space Apps 2026 \u00b7 Harmonization of MODIS and VIIRS Hot Spots',
+  ringNote: 'Every day of the record. A ring is a year, 2000 in the middle; around it, January at the top through December. Brighter is more of the planet alight. Switch to “as recorded” and watch a bright ring appear partway out — that is VIIRS arriving in 2012, not the Earth igniting.',
   aboutAnswer: 'Two satellites disagree about how much the world burns. This makes them agree.',
   aboutLede:
     'MODIS has watched since 2000 at a kilometre. VIIRS arrived in 2012 and sees several times as many fires over the same ground. Put the two together without thinking and the record shows a global surge in 2012 that never happened \u2014 an instrument being replaced, read as the planet catching fire.',
@@ -589,6 +590,7 @@ const ru: Dict = {
   aboutCalibNote:
     'Сгруппируйте ячейки, которым модель дала примерно один шанс, и посчитайте, сколько сгорело. На линии — значит число значило то, что говорило. Модель может ранжировать идеально и при этом врать о своей уверенности, а средняя точность этого не показывает.',
   aboutKicker: 'NASA Space Apps 2026 \u00b7 Сведение очагов MODIS и VIIRS',
+  ringNote: 'Каждый день ряда. Кольцо — год, 2000-й в центре; по кругу — январь сверху и далее до декабря. Ярче — больше планеты горит. Переключите на «как снято» и посмотрите, как где-то на полпути появится яркое кольцо — это VIIRS в 2012-м, а не загоревшаяся Земля.',
   aboutAnswer: 'Два спутника не согласны, сколько горит мир. Здесь они приведены к согласию.',
   aboutLede:
     'MODIS смотрит с 2000 года с километрового шага. VIIRS появился в 2012-м и видит на той же земле в несколько раз больше очагов. Сложите их не думая — и в ряду появится всплеск 2012 года, которого не было: смена прибора, прочитанная как загоревшаяся планета.',

@@ -2044,6 +2044,57 @@ canvas {
   padding-bottom: calc(var(--s-10) + var(--s-5));
 }
 
+/*
+ * The ring, its readout and its switch.
+ *
+ * The switch sits under the object rather than beside it, because the two
+ * modes are the same picture twice and the eye should not have to travel
+ * to compare them. The readout is reserved space, not a tooltip: a line
+ * that appears and disappears under a chart makes the whole hero jump.
+ */
+.fireyear {
+  position: relative;
+  margin: 0;
+  display: grid;
+  gap: var(--s-3);
+  justify-items: center;
+  width: 100%;
+  max-width: 460px;
+  justify-self: center;
+}
+
+.fireyear canvas {
+  display: block;
+  width: 100%;
+  aspect-ratio: 1;
+  cursor: crosshair;
+}
+
+.fireyear__read {
+  min-height: 1.2em;
+  font-family: var(--font-mono);
+  font-size: var(--t-caption);
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-tertiary);
+}
+
+.fireyear__modes {
+  width: fit-content;
+}
+
+.fireyear__note {
+  margin: 0;
+  max-width: 44ch;
+  text-align: center;
+}
+
+@media (max-width: 860px) {
+  .fireyear {
+    order: -1;
+    max-width: 340px;
+  }
+}
+
 .about-hero .hero__answer {
   max-width: 22ch;
 }

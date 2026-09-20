@@ -36,6 +36,7 @@ import { drawCalibration } from './ui/calibration'
 import { drawScaleBars } from './ui/scale-bars'
 import { drawImportance } from './ui/importance'
 import { loadModelCard } from './core/model-card'
+import { mountFireYear, type FireYear, type YearHandle } from './ui/fire-year'
 import { aboutList } from './i18n'
 import { loadLand } from './core/land'
 import { mountGlobe, type GlobeFire, type GlobeHandle } from './ui/globe'
@@ -176,7 +177,9 @@ const els = {
   aboutModelBody: $('about-model-body'),
   aboutModelStats: $('about-model-stats'),
   aboutCheckList: $('about-check-list'),
-  aboutGlobe: $<HTMLCanvasElement>('about-globe'),
+  aboutYear: $<HTMLCanvasElement>('about-year'),
+  aboutYearRead: $('about-year-read'),
+  aboutYearModes: $<HTMLFieldSetElement>('about-year-modes'),
   aboutSeam: $<HTMLCanvasElement>('about-seam'),
   aboutSteps: $('about-steps'),
   aboutImportance: $<HTMLCanvasElement>('about-importance'),
@@ -681,8 +684,8 @@ let globe: GlobeHandle | null = null
 /** The small one at the foot of the record, which is the door's window. */
 let doorGlobe: GlobeHandle | null = null
 
-/** And one on the project's own page, for the same reason. */
-let aboutGlobe: GlobeHandle | null = null
+/** The record as one ring, on the project's own page. */
+let fireYear: YearHandle | null = null
 
 /**
  * How many places the list shows before it is asked for the rest.
@@ -862,7 +865,7 @@ async function renderAbout(): Promise<void> {
   fillSteps()
   drawSeam()
   void drawModelCharts()
-  void aboutPlanet()
+  void aboutRing()
 
   if (meta) {
     const splits = ABOUT_SPLITS
@@ -973,14 +976,22 @@ async function drawModelCharts(): Promise<void> {
   }
 }
 
-/** The same planet as the other two pages, because this one is about it. */
-async function aboutPlanet(): Promise<void> {
-  if (!aboutGlobe) {
-    const land = await loadLand()
-    if (!land) return
-    aboutGlobe = mountGlobe(els.aboutGlobe, land)
-  }
-  aboutGlobe.setFires(globeFires())
+/**
+ * The radial year, built once and kept.
+ *
+ * Its data is the global daily series the world view already ships — a
+ * hundred kilobytes for every day of the record, both instruments apart —
+ * so nothing new is downloaded for it.
+ */
+async function aboutRing(): Promise<void> {
+  if (fireYear) return
+  const res = await fetch('/data/world/l0-daily.json').catch(() => null)
+  if (!res?.ok) return
+  const data = (await res.json()) as FireYear
+  fireYear = mountFireYear(els.aboutYear, data, (text) => {
+    els.aboutYearRead.textContent = text ?? ''
+  })
+  fireYear.setMode(state.mode === 'raw' ? 'raw' : 'harmonized')
 }
 
 function aboutStat(label: string, value: string): void {
@@ -3508,7 +3519,7 @@ function setTheme(theme: 'night' | 'day'): void {
     // have to be told; every other canvas is redrawn by `rerender`.
     globe?.retheme()
     doorGlobe?.retheme()
-    aboutGlobe?.retheme()
+    fireYear?.retheme()
   }, theme)
 }
 
@@ -3586,6 +3597,11 @@ function wire(): void {
   els.mapDays.addEventListener('change', (e) => {
     nowDays = Number((e.target as HTMLInputElement).value) || 7
     drawMap()
+  })
+
+  els.aboutYearModes.addEventListener('change', (e) => {
+    const value = (e.target as HTMLInputElement).value
+    fireYear?.setMode(value === 'raw' ? 'raw' : 'harmonized')
   })
 
   els.riskMore.addEventListener('click', () => {

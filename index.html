@@ -481,9 +481,31 @@
           <p class="hero__aside" data-i18n="aboutLede"></p>
           <dl class="hero__stats" id="about-stats"></dl>
         </div>
-        <figure class="globe">
-          <canvas id="about-globe" aria-hidden="true"></canvas>
-          <figcaption class="globe__hint" data-i18n="globeHint">Drag to turn</figcaption>
+        <!--
+          The whole record as one object, rather than a third globe.
+
+          Twenty-seven rings, one per year; around each, a day. The year
+          closes on a ring the way it closes in life, so the southern
+          season that runs through December and January is one arc here
+          and two cut edges on any grid. And the 2012 seam stops being an
+          argument in a caption: in "as recorded" it is a literal bright
+          ring, and reconciling makes it go away.
+        -->
+        <figure class="fireyear">
+          <canvas id="about-year"></canvas>
+          <figcaption class="fireyear__read" id="about-year-read"></figcaption>
+          <fieldset class="segmented fireyear__modes" id="about-year-modes">
+            <legend class="sr-only" data-i18n="modeLegend">Mode</legend>
+            <label>
+              <input type="radio" name="about-year-mode" value="harmonized" checked />
+              <span data-i18n="modeHarmonized">Reconciled</span>
+            </label>
+            <label>
+              <input type="radio" name="about-year-mode" value="raw" />
+              <span data-i18n="modeRaw">As recorded</span>
+            </label>
+          </fieldset>
+          <p class="note note--tight fireyear__note" data-i18n="ringNote"></p>
         </figure>
       </section>
 
