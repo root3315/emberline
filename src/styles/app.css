@@ -2390,6 +2390,110 @@ canvas {
   margin-top: var(--s-3);
 }
 
+/*
+ * The card sits over the planet rather than beside it.
+ *
+ * Beside it would have meant a third column in a hero that already has
+ * two, and on a narrow screen a card that appears somewhere the reader is
+ * not looking. Over the sphere, anchored to its foot, it arrives where
+ * the finger just was.
+ */
+.globe--pick {
+  position: relative;
+}
+
+.globe__call {
+  position: absolute;
+  inset: auto 0 -4px;
+  text-align: center;
+  font-size: var(--t-caption);
+  color: var(--ink-muted);
+  transition: opacity var(--t-base) var(--ease-out);
+  pointer-events: none;
+}
+
+.globe--pick:has(.pick:not([hidden])) .globe__call {
+  opacity: 0;
+}
+
+.pick {
+  position: absolute;
+  inset: auto 0 0;
+  padding: var(--s-4);
+  border: 1px solid var(--edge);
+  border-radius: var(--r-card);
+  background: color-mix(in srgb, var(--ash-raised) 92%, transparent);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  box-shadow: 0 14px 40px -24px rgb(0 0 0 / 0.7);
+  animation: pick-in var(--t-base) var(--ease-out);
+}
+
+@keyframes pick-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pick {
+    animation: none;
+  }
+}
+
+.pick__close {
+  position: absolute;
+  top: var(--s-2);
+  right: var(--s-2);
+  min-width: 28px;
+  height: 28px;
+  padding: 0;
+  font-size: var(--t-h4);
+  line-height: 1;
+}
+
+.pick__where {
+  margin: 0 0 var(--s-3);
+  font-family: var(--font-mono);
+  font-size: var(--t-caption);
+  color: var(--ink-tertiary);
+}
+
+/*
+ * Two figures, and the comparison is the whole card: what is expected
+ * beside what was seen. Side by side rather than stacked, because they
+ * are meant to be read against each other.
+ */
+.pick__facts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--s-4);
+  margin: 0;
+}
+
+.pick__facts dt {
+  font-size: var(--t-caption);
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-muted);
+}
+
+.pick__facts dd {
+  margin: var(--s-1) 0 0;
+  font-family: var(--font-display);
+  font-size: var(--t-h2);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+  color: var(--ink-primary);
+}
+
+.pick__facts dd[data-tone='fore'] {
+  color: var(--ember);
+}
+
 .globe--small {
   max-width: 260px;
 }

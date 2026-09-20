@@ -619,9 +619,25 @@
           <p class="hero__aside" id="future-aside"></p>
           <dl class="hero__stats" id="future-stats"></dl>
         </div>
-        <figure class="globe">
+        <!--
+          The planet is the instrument here, not the illustration.
+
+          Every bright point is a cell the model has put a number on, so
+          pressing one should answer for it. The card that opens sets the
+          forecast against what the satellite actually recorded on the same
+          ground the week before — prediction beside observation, on the
+          same grid, which is the one comparison this project exists to
+          make.
+        -->
+        <figure class="globe globe--pick">
           <canvas id="globe-canvas" aria-label="Rotating globe of next week's fire probability"></canvas>
-          <figcaption class="globe__hint" data-i18n="globeHint">Drag to turn</figcaption>
+          <figcaption class="globe__call" data-i18n="globeCall">Press a fire to see the detail</figcaption>
+          <div class="pick" id="pick" hidden>
+            <button type="button" class="pick__close ghost-btn" id="pick-close" aria-label="Close">&times;</button>
+            <p class="pick__where" id="pick-where"></p>
+            <dl class="pick__facts" id="pick-facts"></dl>
+            <p class="note note--tight" id="pick-note"></p>
+          </div>
         </figure>
       </section>
 

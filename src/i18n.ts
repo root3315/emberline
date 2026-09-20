@@ -248,7 +248,7 @@ const en: Dict = {
   aboutHowTitle: 'How it learns',
   aboutWeighsTitle: 'What it weighs',
   aboutWeighsNote:
-    'Shuffle one column across the test rows and score the model again: how far the average precision falls is how much it needed that column. The scale is square-root, because the top bar is two hundred times the bottom one and a linear axis would leave eighteen of these invisible.',
+    'What the model actually leans on. Take one thing away from it — make that column meaningless and score it again — and the drop is how much it needed it. The shape is the honest summary of this project: the fire archive carries the model almost entirely, the weather sharpens it, and what is standing there to burn barely registers at a hundred and sixty kilometres. Among the weather, rain decides.',
   aboutLegendArchive: 'From the fire archive',
   aboutLegendWeather: 'From the weather forecast',
   aboutLegendGround: 'What is standing there',
@@ -334,6 +334,11 @@ const en: Dict = {
     'Average precision on {tested}. The season alone is a hard baseline; with the weather the model roughly doubles its margin over it, from 2.0% to 3.9%. One qualifier, because it matters: the model learned from the weather that actually happened, and the live map is driven by a forecast of it. So this is what is reachable if the weather forecast is right \u2014 an upper bound, not a promise.',
   futureBack: 'Back to the record',
   globeHint: 'Drag to turn',
+  globeCall: 'Press a fire to see the detail',
+  pickForecast: 'Expected next week',
+  pickSeen: 'Seen last week',
+  pickNote: 'The model\u2019s chance for this 25 km cell between {from} and {to}, beside what MODIS and VIIRS actually recorded on the same ground in the seven days before. One is a forecast; the other is a measurement.',
+  pickNoneSeen: 'Nothing was recorded here last week, which is not the same as nothing burning: a satellite sees a fire only if it passes while the fire is alight and the sky is clear.',
   riskMore: 'Show {n} more',
   riskLess: 'Show fewer',
 
@@ -579,7 +584,7 @@ const ru: Dict = {
   aboutHowTitle: 'Как она учится',
   aboutWeighsTitle: 'На что она опирается',
   aboutWeighsNote:
-    'Перемешайте один столбец по тестовым строкам и посчитайте заново: насколько упадёт точность — настолько он был нужен. Шкала корневая: верхняя полоса в двести раз больше нижней, и на линейной восемнадцать из них стали бы невидимы.',
+    'На что модель опирается на самом деле. Отнимите у неё одну вещь — испортьте этот признак и посчитайте заново, — и насколько просядет точность, настолько он ей был нужен. Форма графика и есть честная сводка всего проекта: архив пожаров тянет модель почти целиком, погода её затачивает, а то, чему там гореть, на ста шестидесяти километрах почти не слышно. Из погоды решает дождь.',
   aboutLegendArchive: 'Из архива пожаров',
   aboutLegendWeather: 'Из прогноза погоды',
   aboutLegendGround: 'Что там растёт',
@@ -665,6 +670,11 @@ const ru: Dict = {
     'Средняя точность на {tested}. Один только сезон — очень сильная база; с погодой модель почти удваивает перевес над ней, с 2.0% до 3.9%. Одна оговорка, и она важная: модель училась на погоде, которая была на самом деле, а живая карта идёт по прогнозу погоды. То есть это то, что достижимо, если прогноз погоды верен, — верхняя граница, а не обещание.',
   futureBack: 'Назад к архиву',
   globeHint: 'Потяните, чтобы повернуть',
+  globeCall: 'Нажмите огонь, чтобы увидеть подробности',
+  pickForecast: 'Ждём на неделе',
+  pickSeen: 'Видел спутник',
+  pickNote: 'Шанс, который модель даёт этой ячейке 25 км с {from} по {to}, рядом с тем, что MODIS и VIIRS реально засекли на той же земле за семь дней до этого. Одно — прогноз, второе — измерение.',
+  pickNoneSeen: 'За прошлую неделю здесь ничего не засекли — это не то же, что ничего не горело: спутник видит огонь, только если пролетает, пока тот горит, и небо чистое.',
   riskMore: 'Показать ещё {n}',
   riskLess: 'Свернуть',
 

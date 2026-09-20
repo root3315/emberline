@@ -39,7 +39,7 @@ import { loadModelCard } from './core/model-card'
 import { mountFireYear, type FireYear, type YearHandle } from './ui/fire-year'
 import { aboutList } from './i18n'
 import { loadLand } from './core/land'
-import { mountGlobe, type GlobeFire, type GlobeHandle } from './ui/globe'
+import { mountGlobe, type GlobeFire, type GlobeHandle, type GlobePick } from './ui/globe'
 import { daysInYear, dayOfYear, yearOf } from './core/grid'
 import {
   MIN_RATIO_SAMPLES,
@@ -164,6 +164,11 @@ const els = {
   futureSkill: $('future-skill'),
   futureSkillNote: $('future-skill-note'),
   globeCanvas: $<HTMLCanvasElement>('globe-canvas'),
+  pick: $('pick'),
+  pickClose: $<HTMLButtonElement>('pick-close'),
+  pickWhere: $('pick-where'),
+  pickFacts: $('pick-facts'),
+  pickNote: $('pick-note'),
   riskMore: $<HTMLButtonElement>('risk-more'),
   ctaWhen: $('cta-when'),
   ctaLine: $('cta-line'),
@@ -1023,6 +1028,7 @@ function fillAboutList(host: HTMLElement, name: string): void {
 }
 
 function showFutureLayout(on: boolean): void {
+  if (!on) els.pick.hidden = true
   if (on && !futureScope && location.hash && location.hash !== '#/future') {
     lastRecord = location.hash
   }
@@ -1126,9 +1132,65 @@ async function showGlobe(): Promise<void> {
   if (!globe) {
     const land = await loadLand()
     if (!land) return
-    globe = mountGlobe(els.globeCanvas, land)
+    globe = mountGlobe(els.globeCanvas, land, { onPick: (p) => void openPick(p) })
   }
   globe.setFires(globeFires())
+}
+
+/**
+ * What the model expects here, beside what the satellite actually saw.
+ *
+ * The forecast grid and the weekly snapshot are both a quarter of a
+ * degree, so the same cell index addresses the same ground in each. That
+ * is not a coincidence to be grateful for; it is why the comparison can
+ * be made at all, and it is the one this whole project is about —
+ * prediction on the left, measurement on the right, same square, seven
+ * days apart.
+ */
+async function openPick(pick: GlobePick | null): Promise<void> {
+  els.pick.hidden = !pick
+  if (!pick || !forecast) return
+  const meta = forecast.meta
+
+  els.pickWhere.textContent = `${pick.lat.toFixed(2)}, ${pick.lon.toFixed(2)}`
+
+  // The snapshot is a separate file and most readers never press a fire,
+  // so it is fetched on the first click rather than with the page.
+  worldNowData ??= await loadWorldNow().catch(() => null)
+  const seen = observedAt(pick.lat, pick.lon)
+
+  els.pickFacts.innerHTML = ''
+  pickFact(t('pickForecast'), `${Math.min(99, Math.round(pick.p * 100))}%`, 'fore')
+  pickFact(t('pickSeen'), seen === null ? '—' : formatNumber(seen))
+
+  els.pickNote.textContent =
+    seen === 0
+      ? t('pickNoneSeen')
+      : t('pickNote', { from: meta.from, to: meta.to })
+}
+
+function pickFact(label: string, value: string, tone?: string): void {
+  const wrap = document.createElement('div')
+  const dt = document.createElement('dt')
+  dt.textContent = label
+  const dd = document.createElement('dd')
+  dd.textContent = value
+  if (tone) dd.dataset.tone = tone
+  wrap.append(dt, dd)
+  els.pickFacts.append(wrap)
+}
+
+/** Detections in the snapshot's cell covering this point, or null if unknown. */
+function observedAt(lat: number, lon: number): number | null {
+  const snap = worldNowData
+  if (!snap) return null
+  const deg = snap.meta.degrees
+  const row = Math.floor((lat + 90) / deg)
+  const col = Math.floor((lon + 180) / deg)
+  const hit = snap.cells.find(
+    (c) => Math.floor((c.lat + 90) / deg) === row && Math.floor((c.lon + 180) / deg) === col,
+  )
+  return hit ? hit.value : 0
 }
 
 /**
@@ -3665,6 +3727,11 @@ function wire(): void {
   els.aboutYearModes.addEventListener('change', (e) => {
     const value = (e.target as HTMLInputElement).value
     fireYear?.setMode(value === 'raw' ? 'raw' : 'harmonized')
+  })
+
+  els.pickClose.addEventListener('click', () => {
+    els.pick.hidden = true
+    globe?.reset()
   })
 
   els.riskMore.addEventListener('click', () => {
