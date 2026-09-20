@@ -1865,22 +1865,78 @@ canvas {
  * have made it an advertisement.
  */
 .cta {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--s-6);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(180px, 280px);
+  gap: var(--s-8);
   align-items: center;
-  justify-content: space-between;
 }
 
 .cta__text {
   min-width: 0;
-  flex: 1 1 32ch;
+  max-width: 54ch;
+}
+
+/*
+ * A band that is not about the selected area says so, quietly, before the
+ * reader has to work it out from the prose.
+ */
+.scope-tag {
+  margin: 0 0 var(--s-2);
+  font-size: var(--t-caption);
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-muted);
+}
+
+.cta__when {
+  margin: 0 0 var(--s-2);
+  font-family: var(--font-mono);
+  font-size: var(--t-caption);
+  letter-spacing: 0.04em;
+  color: var(--ink-muted);
 }
 
 .cta__text h2 {
-  font-size: var(--t-h2);
+  font-size: var(--t-h1);
+  font-weight: 800;
+  letter-spacing: -0.028em;
+}
+
+/*
+ * The one line that does the persuading: the count, in the type the rest of
+ * the page reserves for an answer. A question and a paragraph alone were
+ * asking the reader to take the click on trust.
+ */
+.cta__line {
+  margin: var(--s-3) 0 0;
+  font-size: var(--t-h4);
+  line-height: 1.45;
+  color: var(--ink-secondary);
+}
+
+.cta__line b {
   font-weight: 700;
-  letter-spacing: -0.02em;
+  color: var(--ember);
+  font-variant-numeric: tabular-nums;
+}
+
+.cta .note {
+  margin-top: var(--s-3);
+}
+
+.globe--small {
+  max-width: 260px;
+}
+
+@media (max-width: 760px) {
+  .cta {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .globe--small {
+    order: -1;
+  }
 }
 
 /*
@@ -1891,7 +1947,7 @@ canvas {
  * and the whole thing read as a mistake.
  */
 .cta__btn {
-  flex: 0 0 auto;
+  margin-top: var(--s-6);
   display: inline-flex;
   align-items: center;
   text-decoration: none;

@@ -34,7 +34,7 @@ import { loadClimate, loadEmissions, type EmissionsFile } from './core/emissions
 import { loadForecast, type ForecastCell, type ForecastMeta } from './core/forecast'
 import { drawCalibration } from './ui/calibration'
 import { loadLand } from './core/land'
-import { mountGlobe, type GlobeHandle } from './ui/globe'
+import { mountGlobe, type GlobeFire, type GlobeHandle } from './ui/globe'
 import { daysInYear, dayOfYear, yearOf } from './core/grid'
 import {
   MIN_RATIO_SAMPLES,
@@ -160,6 +160,9 @@ const els = {
   futureSkillNote: $('future-skill-note'),
   globeCanvas: $<HTMLCanvasElement>('globe-canvas'),
   riskMore: $<HTMLButtonElement>('risk-more'),
+  ctaWhen: $('cta-when'),
+  ctaLine: $('cta-line'),
+  ctaGlobe: $<HTMLCanvasElement>('cta-globe'),
   rampLow: $('ramp-low'),
   rampHigh: $('ramp-high'),
   status: $('status'),
@@ -633,6 +636,9 @@ let futureScope = false
 /** Built on the first visit to the forecast page, and kept turning after. */
 let globe: GlobeHandle | null = null
 
+/** The small one at the foot of the record, which is the door's window. */
+let doorGlobe: GlobeHandle | null = null
+
 /**
  * How many places the list shows before it is asked for the rest.
  *
@@ -825,12 +831,53 @@ async function showGlobe(): Promise<void> {
     if (!land) return
     globe = mountGlobe(els.globeCanvas, land)
   }
+  globe.setFires(globeFires())
+}
+
+/**
+ * The brightest cells, and no more than a frame can carry.
+ *
+ * Sorted once and shared by both globes, because the sort is the expensive
+ * part and the answer is the same for each.
+ */
+let globeCache: GlobeFire[] | null = null
+
+function globeFires(): GlobeFire[] {
+  if (globeCache) return globeCache
   const cells = forecast?.cells ?? []
-  const shown =
+  globeCache =
     cells.length > GLOBE_CELLS
       ? [...cells].sort((a, b) => b.p - a.p).slice(0, GLOBE_CELLS)
       : cells
-  globe.setFires(shown)
+  return globeCache
+}
+
+/**
+ * The door at the foot of the record: its line, and its little planet.
+ *
+ * Loaded on its own rather than with the page, because a reader who never
+ * scrolls that far should not pay for the forecast file or the land mask.
+ */
+async function showDoor(): Promise<void> {
+  forecast ??= await loadForecast()
+  const meta = forecast?.meta
+  if (!meta) return
+
+  els.ctaWhen.textContent = t('futureWhere', {
+    from: meta.from,
+    to: meta.to,
+    asOf: meta.asOf,
+  })
+  els.ctaLine.replaceChildren(
+    markup(t('ctaLine', { cells: formatNumber(meta.cells) })),
+  )
+
+  if (!doorGlobe) {
+    const land = await loadLand()
+    if (!land) return
+    doorGlobe = mountGlobe(els.ctaGlobe, land)
+  }
+  doorGlobe.setFires(globeFires())
 }
 
 /**
@@ -3163,9 +3210,10 @@ function applyTheme(theme: 'night' | 'day'): void {
 function setTheme(theme: 'night' | 'day'): void {
   burnTransition(() => {
     applyTheme(theme)
-    // The globe keeps its ocean and its halo in a buffer built once, so it
-    // has to be told; every other canvas is redrawn by `rerender`.
+    // The globes keep their ocean and halo in a buffer built once, so they
+    // have to be told; every other canvas is redrawn by `rerender`.
     globe?.retheme()
+    doorGlobe?.retheme()
   }, theme)
 }
 
@@ -3181,6 +3229,7 @@ function switchLang(lang: Lang): void {
    * in script, so the sweep over `data-i18n` leaves all of them in the old
    * language. `rerender` speaks for the record and has nothing to say here.
    */
+  void showDoor()
   if (futureScope) {
     void renderFuture()
     return
@@ -3587,6 +3636,9 @@ async function boot(): Promise<void> {
     return
   }
   await goTo(startId, wanted.year)
+  // The door is filled after the record, not before: it is the last thing
+  // on the page and the first thing that can wait.
+  void showDoor()
 }
 
 void boot()

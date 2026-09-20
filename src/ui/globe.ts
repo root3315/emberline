@@ -94,6 +94,7 @@ export function mountGlobe(canvas: HTMLCanvasElement, land: LandMask): GlobeHand
   let lastY = 0
   let raf = 0
   let last = performance.now()
+  let onScreen = true
 
   const still = window.matchMedia('(prefers-reduced-motion: reduce)')
 
@@ -131,15 +132,27 @@ export function mountGlobe(canvas: HTMLCanvasElement, land: LandMask): GlobeHand
     const out: Point[] = []
     for (let row = 0; row < land.rows; row += base) {
       const lat = -90 + (row + 0.5) * land.degrees
-      const shrink = Math.max(0.08, Math.cos((lat * Math.PI) / 180))
+      const shrink = Math.max(0.12, Math.cos((lat * Math.PI) / 180))
       const step = Math.max(base, Math.round(base / shrink))
-      for (let col = 0; col < land.cols; col += step) {
-        // The stride can step over a narrow coast, so the whole span it
-        // skips is asked rather than the one cell it lands on.
-        let here = false
-        for (let k = 0; k < step && !here; k++) here = isLand(land, row, (col + k) % land.cols)
-        if (!here) continue
-        out.push(pointOf(lat, -180 + (col + step / 2) * land.degrees))
+
+      /*
+       * Each row starts at a different offset.
+       *
+       * Rows that all begin at zero put their dots on the same meridians,
+       * and near the pole — where the step is six cells wide and the rows
+       * converge — those meridians read as spokes and rings across the
+       * Arctic. An offset that walks with the row scatters them into a
+       * stipple, which is what the rest of the globe already looks like.
+       */
+      const offset = (row * 3) % step
+      for (let col = offset; col < land.cols; col += step) {
+        // Only the cell actually sampled. Asking whether anything in the
+        // skipped span is land sounds generous and is not: at eighty north
+        // the span is six cells, so one Arctic island painted a dot for a
+        // thousand kilometres of open water, and the cap grew a crust of
+        // land that is not there.
+        if (!isLand(land, row, col)) continue
+        out.push(pointOf(lat, -180 + (col + 0.5) * land.degrees))
       }
     }
     landPoints = out
@@ -215,6 +228,10 @@ export function mountGlobe(canvas: HTMLCanvasElement, land: LandMask): GlobeHand
   }
 
   function draw(now: number): void {
+    if (!onScreen) {
+      raf = 0
+      return
+    }
     raf = requestAnimationFrame(draw)
     const dt = Math.min(now - last, 60)
     last = now
@@ -296,13 +313,28 @@ export function mountGlobe(canvas: HTMLCanvasElement, land: LandMask): GlobeHand
     data[i + 3] = 255
   }
 
-  // ---- turning it by hand ------------------------------------------------
+  /*
+   * ---- turning it by hand ------------------------------------------------
+   *
+   * The move and release are listened for on the window rather than on the
+   * canvas, and no pointer capture is taken.
+   *
+   * Capture is the usual answer to "the cursor left the element mid-drag",
+   * and it half worked: `setPointerCapture` throws when the id is not a
+   * pointer the browser has down, and on the ids it does accept Chrome
+   * answers a capture it did not want with `pointercancel` — which landed
+   * on the release handler and ended the drag on its first frame. Window
+   * listeners solve the same problem without asking the browser for
+   * anything, and they are removed the moment the button comes up.
+   */
   function onDown(e: PointerEvent): void {
     dragging = true
     lastX = e.clientX
     lastY = e.clientY
-    canvas.setPointerCapture(e.pointerId)
     canvas.style.cursor = 'grabbing'
+    window.addEventListener('pointermove', onMove)
+    window.addEventListener('pointerup', onUp)
+    window.addEventListener('pointercancel', onUp)
   }
 
   function onMove(e: PointerEvent): void {
@@ -314,21 +346,40 @@ export function mountGlobe(canvas: HTMLCanvasElement, land: LandMask): GlobeHand
     lastY = e.clientY
   }
 
-  function onUp(e: PointerEvent): void {
+  function onUp(): void {
     dragging = false
-    canvas.releasePointerCapture?.(e.pointerId)
     canvas.style.cursor = 'grab'
+    window.removeEventListener('pointermove', onMove)
+    window.removeEventListener('pointerup', onUp)
+    window.removeEventListener('pointercancel', onUp)
   }
 
   const observer = new ResizeObserver(() => resize())
   if (canvas.parentElement) observer.observe(canvas.parentElement)
 
+  /*
+   * A planet nobody is looking at should not be costing anyone a frame.
+   *
+   * There are two of these now — one at the foot of the record and one on
+   * the forecast page — and the record's page is already drawing a ribbon,
+   * three charts and a Leaflet map. Whichever globe is scrolled away stops
+   * entirely rather than turning into a heater.
+   */
+  const watcher = new IntersectionObserver(
+    (entries) => {
+      onScreen = entries.some((entry) => entry.isIntersecting)
+      if (onScreen && !raf) {
+        last = performance.now()
+        raf = requestAnimationFrame(draw)
+      }
+    },
+    { rootMargin: '120px' },
+  )
+  watcher.observe(canvas)
+
   canvas.style.cursor = 'grab'
   canvas.style.touchAction = 'pan-y'
   canvas.addEventListener('pointerdown', onDown)
-  canvas.addEventListener('pointermove', onMove)
-  canvas.addEventListener('pointerup', onUp)
-  canvas.addEventListener('pointercancel', onUp)
 
   resize()
   raf = requestAnimationFrame(draw)
@@ -350,10 +401,9 @@ export function mountGlobe(canvas: HTMLCanvasElement, land: LandMask): GlobeHand
     destroy(): void {
       cancelAnimationFrame(raf)
       observer.disconnect()
+      watcher.disconnect()
       canvas.removeEventListener('pointerdown', onDown)
-      canvas.removeEventListener('pointermove', onMove)
-      canvas.removeEventListener('pointerup', onUp)
-      canvas.removeEventListener('pointercancel', onUp)
+      onUp()
     },
   }
 }

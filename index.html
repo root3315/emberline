@@ -376,6 +376,13 @@
       <section class="band" id="impact">
         <header class="band__head">
           <div>
+            <!--
+              This band is the same whichever area is chosen, because carbon
+              mixes and the answer to "so what" does not have a postcode.
+              The sentence below already says "the planet", but that is read
+              on the second line and the scope should be clear on the first.
+            -->
+            <p class="scope-tag" data-i18n="scopeGlobal">Worldwide</p>
             <h2 data-i18n="impactTitle">What the burning does</h2>
             <p class="note" data-i18n="impactNote"></p>
           </div>
@@ -400,10 +407,22 @@
       -->
       <section class="band cta" id="future-cta">
         <div class="cta__text">
+          <p class="cta__when" id="cta-when"></p>
           <h2 data-i18n="ctaTitle">Next week</h2>
+          <p class="cta__line" id="cta-line"></p>
           <p class="note" data-i18n="ctaNote"></p>
+          <a class="btn cta__btn" href="#/future" data-i18n="ctaButton">What happens next week</a>
         </div>
-        <a class="btn cta__btn" href="#/future" data-i18n="ctaButton">What happens next week</a>
+        <!--
+          The same planet as the forecast page, small and turning.
+
+          A door should show a little of the room behind it. The alternative
+          was a heading, a paragraph and a button alone in a wide dark band,
+          which read as a footer rather than as an invitation.
+        -->
+        <figure class="globe globe--small">
+          <canvas id="cta-globe" aria-hidden="true"></canvas>
+        </figure>
       </section>
 
       <!--

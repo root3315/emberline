@@ -238,9 +238,11 @@ const en: Dict = {
     'Fire detections from NASA FIRMS (MODIS and VIIRS). These mark burning at the moment a satellite passed overhead, not the area burned. Built for the NASA Space Apps Challenge 2026.',
   provenanceFirms: 'NASA FIRMS — MODIS C6.1 and VIIRS C2 active fire products, retrieved via the FIRMS area API',
   ctaTitle: 'And then?',
+  scopeGlobal: 'Worldwide',
   ctaNote:
     'Everything above already happened. One thing has not: a model trained on the whole record puts a number on the week ahead, and says plainly how often that number has been right.',
   ctaButton: 'What happens next week',
+  ctaLine: 'Somewhere in <b>{cells}</b> squares, the next seven days carry a real chance of fire.',
 
   futureWhere: '{from} to {to} \u00b7 built {asOf}',
   futureAnswer: 'Somewhere in <em>{cells}</em> squares, the next seven days carry a real chance of fire.',
@@ -508,9 +510,11 @@ const ru: Dict = {
     'Засечки огня из NASA FIRMS (MODIS и VIIRS). Они отмечают горение в момент пролёта спутника, а не выгоревшую площадь. Сделано для NASA Space Apps Challenge 2026.',
   provenanceFirms: 'NASA FIRMS — продукты активных пожаров MODIS C6.1 и VIIRS C2, получены через area API FIRMS',
   ctaTitle: 'А дальше?',
+  scopeGlobal: 'По всей планете',
   ctaNote:
     'Всё выше уже случилось. Одно — нет: модель, обученная на всём архиве, ставит число на ближайшую неделю и честно говорит, как часто это число сбывалось.',
   ctaButton: 'Что будет на следующей неделе',
+  ctaLine: 'В <b>{cells}</b> квадратах ближайшие семь дней несут реальный шанс пожара.',
 
   futureWhere: 'с {from} по {to} · считано {asOf}',
   futureAnswer: 'В <em>{cells}</em> квадратах ближайшие семь дней несут реальный шанс пожара.',
