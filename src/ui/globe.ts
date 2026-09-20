@@ -51,7 +51,10 @@ export interface GlobePick {
 
 export interface GlobeHandle {
   setFires(fires: GlobeFire[]): void
-  /** Turn the planet until a point faces the reader, and close in on it. */
+  /**
+   * Turn the planet until a point faces the reader, close in on it, and
+   * ring the fire there if the globe is holding one.
+   */
   flyTo(lat: number, lon: number, zoom?: number): void
   /** Back to the whole sphere, turning by itself again. */
   reset(): void
@@ -156,6 +159,18 @@ export function mountGlobe(
   let dragging = false
   let lastX = 0
   let lastY = 0
+
+  /*
+   * How far the pointer went between pressing and letting go.
+   *
+   * A browser sends `click` after any press-and-release, including the
+   * one that just spun the planet half a turn — so without this, letting
+   * go of a drag picked whatever fire happened to be under the cursor at
+   * the end of it. Anything past a few pixels was a drag and is not an
+   * attempt to press a point.
+   */
+  let downAt: { x: number; y: number } | null = null
+  let travelled = 0
   let raf = 0
   let last = performance.now()
   let onScreen = true
@@ -164,6 +179,9 @@ export function mountGlobe(
 
   let landPoints: Point[] = []
   let fires: Fire[] = []
+
+  /** The one that was pressed, ringed so the reader can see the choice. */
+  let marked: Fire | null = null
   let inkLand: Rgb = [255, 255, 255, 1]
   let ocean: Rgb = [0, 0, 0, 1]
   let rim: Rgb = [255, 255, 255, 1]
@@ -418,10 +436,43 @@ export function mountGlobe(
      * `putImageData` would replace what is underneath rather than sit on
      * it, so the pixel layer goes to its own canvas and is composited.
      */
+    /*
+     * The chosen point, ringed.
+     *
+     * Without it a reader who felt they had pressed the wrong fire had no
+     * way to check, because the card only shows numbers and one patch of
+     * savanna looks much like the next. A ring turns "it picked something
+     * odd" into "it picked that one", which is answerable.
+     */
+    if (marked) {
+      const { cosC, x, y } = project(marked, sinLat0, cosLat0, sinLon0, cosLon0)
+      if (cosC > 0.02) {
+        const mx = cx + x * r
+        const my = cy - y * r
+        ctx.save()
+        ctx.strokeStyle = rgba(varColor('--ink-primary'), 0.85)
+        ctx.lineWidth = Math.max(1.2, width / 420)
+        ctx.beginPath()
+        ctx.arc(mx, my, Math.max(7, width / 52), 0, Math.PI * 2)
+        ctx.stroke()
+        ctx.restore()
+      }
+    }
+
+    /*
+     * Clipped to the disc, not to the sphere.
+     *
+     * `r` is the sphere's radius after the zoom, and once a flight closes
+     * in it is larger than the canvas — so clipping the land and fires to
+     * it clipped them to nothing, and Borneo came apart across the corners
+     * of the square while the ocean stayed politely inside its circle. The
+     * disc is what the reader sees a planet as; the zoom magnifies what is
+     * inside it and must not change its edge.
+     */
     layerCtx.putImageData(pixels, 0, 0)
     ctx.save()
     ctx.beginPath()
-    ctx.arc(cx, cy, r, 0, Math.PI * 2)
+    ctx.arc(cx, cy, Math.min(radius, r), 0, Math.PI * 2)
     ctx.clip()
     ctx.drawImage(layer, 0, 0)
     ctx.restore()
@@ -455,6 +506,8 @@ export function mountGlobe(
     flight = null
     lastX = e.clientX
     lastY = e.clientY
+    downAt = { x: e.clientX, y: e.clientY }
+    travelled = 0
     canvas.style.cursor = 'grabbing'
     window.addEventListener('pointermove', onMove)
     window.addEventListener('pointerup', onUp)
@@ -468,6 +521,7 @@ export function mountGlobe(
     // the surface goes right, as though it were being pushed. Adding the
     // delta to the central meridian moves the surface the other way, which
     // is the same gesture running in reverse.
+    travelled += Math.abs(e.clientX - lastX) + Math.abs(e.clientY - lastY)
     lon0 -= (e.clientX - lastX) * scale
     lat0 = Math.max(-1.2, Math.min(1.2, lat0 + (e.clientY - lastY) * scale))
     lastX = e.clientX
@@ -504,21 +558,36 @@ export function mountGlobe(
     const sinLon0 = Math.sin(lon0)
     const cosLon0 = Math.cos(lon0)
 
+    /*
+     * Nearest wins, and brightness only settles a tie.
+     *
+     * The first version let a brighter fire beat a nearer one within
+     * twenty per cent, which sounds generous and is why the wrong point
+     * kept being chosen: in a dense cluster almost everything is within
+     * twenty per cent of everything else, so the brightest in the
+     * neighbourhood won regardless of where the reader had aimed.
+     *
+     * Now distance decides outright, and probability is consulted only
+     * when two points are within a pixel of each other — which does
+     * happen, because at this scale several quarter-degree cells land on
+     * the same pixel and the reader cannot have meant one over another.
+     */
+    const reach = (14 * width) / 460
     let best: Fire | null = null
-    let bestD = (18 * width) / 460 // a finger's worth, scaled to the canvas
+    let bestD = Infinity
 
     for (const f of fires) {
       const { cosC, x, y } = project(f, sinLat0, cosLat0, sinLon0, cosLon0)
       if (cosC <= 0.02) continue
       const d = Math.hypot(cx + x * r - px, cy - y * r - py)
-      // Ties go to the likelier fire: clusters are dense and the reader
-      // is aiming at the bright one.
-      if (d < bestD || (d < bestD * 1.2 && best && f.p > best.p)) {
+      if (d > reach) continue
+      if (d < bestD - 1 || (Math.abs(d - bestD) <= 1 && best !== null && f.p > best.p)) {
         bestD = Math.min(bestD, d)
         best = f
       }
     }
     if (!best) return null
+    marked = best
     return {
       lat: (Math.asin(best.sinLat) * 180) / Math.PI,
       lon: (Math.atan2(best.sinLon, best.cosLon) * 180) / Math.PI,
@@ -528,14 +597,62 @@ export function mountGlobe(
 
   function onClick(e: PointerEvent): void {
     if (!options.onPick) return
+    // Anything that travelled was a drag; the click that ends it is the
+    // browser's, not the reader's.
+    if (travelled > 6) return
+    if (downAt && Math.hypot(e.clientX - downAt.x, e.clientY - downAt.y) > 6) return
+
     const pick = pickAt(e.clientX, e.clientY)
+    if (!pick) {
+      marked = null
+      return
+    }
     options.onPick(pick)
-    if (pick) fly(pick.lat, pick.lon, 2.4)
+    fly(pick.lat, pick.lon, 2.2)
+  }
+
+  /**
+   * The stored fire nearest a place, or none if nothing is near.
+   *
+   * Needed because the page sometimes chooses the place itself — the
+   * project's page opens on the week's likeliest cell rather than on an
+   * empty frame — and the ring has to land on a fire the globe actually
+   * holds. Ringing a bare coordinate would put the circle beside the glow
+   * instead of on it.
+   *
+   * Compared as a dot product of the two unit vectors, which is the same
+   * arithmetic the projection already does and needs no trigonometry: the
+   * larger the cosine, the closer the point.
+   */
+  function nearestTo(lat: number, lon: number): Fire | null {
+    const t = pointOf(lat, lon)
+    let best: Fire | null = null
+    let bestCos = Math.cos((1.5 * Math.PI) / 180) // no further than a degree and a half
+    for (const f of fires) {
+      const cosD = f.cosLon * t.cosLon + f.sinLon * t.sinLon
+      const c = f.sinLat * t.sinLat + f.cosLat * t.cosLat * cosD
+      if (c > bestCos) {
+        bestCos = c
+        best = f
+      }
+    }
+    return best
   }
 
   function fly(lat: number, lon: number, to: number): void {
     flight = {
-      lon: -((lon * Math.PI) / 180),
+      /*
+       * East is positive here, and it was negated.
+       *
+       * `lon0` is the longitude of the meridian down the middle of the
+       * disc — that is what `cos(lon - lon0)` in the projection makes it —
+       * so flying to a place means easing `lon0` toward that place's own
+       * longitude. The sign flip sent every flight to the mirror image of
+       * its target: pressing a fire on Borneo turned the planet to the
+       * empty Pacific at the same latitude, which looked like the globe
+       * had simply failed to find anything rather than like a wrong turn.
+       */
+      lon: (lon * Math.PI) / 180,
       lat: (lat * Math.PI) / 180,
       zoom: to,
       lon0,
@@ -591,9 +708,13 @@ export function mountGlobe(
       }))
     },
     flyTo(lat: number, lon: number, to = 2.4): void {
+      // Flying somewhere is the page saying "this place", so it gets the
+      // same ring a reader's own press would get.
+      marked = nearestTo(lat, lon) ?? marked
       fly(lat, lon, to)
     },
     reset(): void {
+      marked = null
       flight = {
         lon: lon0,
         lat: TILT,

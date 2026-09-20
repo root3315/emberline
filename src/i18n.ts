@@ -341,6 +341,15 @@ const en: Dict = {
   pickSeen: 'Seen last week',
   pickNote: 'The model\u2019s chance for this 25 km cell between {from} and {to}, beside what MODIS and VIIRS actually recorded on the same ground in the seven days before. One is a forecast; the other is a measurement.',
   pickNoneSeen: 'Nothing was recorded here last week, which is not the same as nothing burning: a satellite sees a fire only if it passes while the fire is alight and the sky is clear.',
+  aboutLookTitle: 'See for yourself',
+  aboutLookNote:
+    'Everything above is an argument. This is the thing itself: turn the planet, press any fire, and the model\u2019s number for that square arrives beside a photograph of the ground it is about.',
+  aboutLookCall: 'Drag to turn \u00b7 press a fire',
+  lookScale: '{km} km across',
+  lookBy: 'Imagery: Esri, Maxar, Earthstar. Points: this model, one per quarter-degree cell.',
+  lookFail: 'The imagery for this square did not come down. The figures beside it are unaffected.',
+  lookNote:
+    'Every point of light is a place the model expects to burn in the coming week, the brighter the likelier. The white outline is the square that was pressed \u2014 about 25 km on a side, which is one cell of the grid the whole forecast is made on.',
   riskMore: 'Show {n} more',
   riskLess: 'Show fewer',
 
@@ -679,6 +688,15 @@ const ru: Dict = {
   pickSeen: 'Видел спутник',
   pickNote: 'Шанс, который модель даёт этой ячейке 25 км с {from} по {to}, рядом с тем, что MODIS и VIIRS реально засекли на той же земле за семь дней до этого. Одно — прогноз, второе — измерение.',
   pickNoneSeen: 'За прошлую неделю здесь ничего не засекли — это не то же, что ничего не горело: спутник видит огонь, только если пролетает, пока тот горит, и небо чистое.',
+  aboutLookTitle: 'Посмотрите сами',
+  aboutLookNote:
+    'Всё выше — это доводы. А это сама вещь: поверните планету, нажмите на любой огонь — и число модели по этому квадрату появится рядом с фотографией той земли, о которой оно.',
+  aboutLookCall: 'Тяните, чтобы повернуть · нажмите на огонь',
+  lookScale: '{km} км поперёк',
+  lookBy: 'Снимок: Esri, Maxar, Earthstar. Точки: эта модель, по одной на ячейку в четверть градуса.',
+  lookFail: 'Снимок этого квадрата не загрузился. На числа рядом это не влияет.',
+  lookNote:
+    'Каждая светящаяся точка — место, где модель ждёт огонь на ближайшей неделе: чем ярче, тем вероятнее. Белым обведён тот самый квадрат — около 25 км в поперечнике, одна ячейка сетки, на которой считается весь прогноз.',
   riskMore: 'Показать ещё {n}',
   riskLess: 'Свернуть',
 

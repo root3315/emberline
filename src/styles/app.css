@@ -2391,34 +2391,48 @@ canvas {
 }
 
 /*
- * The card sits over the planet rather than beside it.
+ * The card sits under the planet, not over it.
  *
- * Beside it would have meant a third column in a hero that already has
- * two, and on a narrow screen a card that appears somewhere the reader is
- * not looking. Over the sphere, anchored to its foot, it arrives where
- * the finger just was.
+ * Over it was the first attempt, anchored to the sphere's foot so it
+ * arrived where the finger just was. It also covered the bottom third of
+ * the globe — including, after a flight, the very point that had been
+ * pressed, which is the one thing the reader wanted to look at. Under it
+ * costs a little height and hides nothing.
  */
 .globe--pick {
   position: relative;
+  aspect-ratio: auto;
+  display: grid;
+  gap: var(--s-3);
+  align-content: start;
+}
+
+.globe__disc {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1;
+}
+
+.globe__disc canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
 }
 
 .globe__call {
-  position: absolute;
-  inset: auto 0 -4px;
+  margin: 0;
   text-align: center;
   font-size: var(--t-caption);
   color: var(--ink-muted);
-  transition: opacity var(--t-base) var(--ease-out);
-  pointer-events: none;
+  transition: opacity var(--t-fast) var(--ease-out);
 }
 
 .globe--pick:has(.pick:not([hidden])) .globe__call {
-  opacity: 0;
+  display: none;
 }
 
 .pick {
-  position: absolute;
-  inset: auto 0 0;
+  position: relative;
   padding: var(--s-4);
   border: 1px solid var(--edge);
   border-radius: var(--r-card);
@@ -2494,6 +2508,188 @@ canvas {
   color: var(--ember);
 }
 
+/*
+ * A planet and a photograph, side by side.
+ *
+ * Two panels of deliberately unequal weight. The globe is the control: the
+ * reader presses it once and then stops looking at it, so it takes the
+ * narrower column. The photograph is the answer and gets the room, along
+ * with the numbers that belong to the square inside it — all in one
+ * panel, because they are one statement about one place and splitting them
+ * would make the reader carry the connection themselves.
+ */
+.look {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--s-10);
+  align-items: start;
+  /* Narrower than the band it sits in: at the full 1240 the photograph
+     grew past six hundred pixels and stopped being a detail of the page,
+     scrolling on its own while the planet beside it sat small. */
+  max-width: 1060px;
+  margin-inline: auto;
+}
+
+.look__globe {
+  display: grid;
+  gap: var(--s-4);
+  width: 100%;
+  max-width: 470px;
+  margin: 0;
+  justify-self: center;
+}
+
+.look__call {
+  margin: 0;
+  text-align: center;
+  font-size: var(--t-caption);
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--ink-muted);
+}
+
+.look__panel {
+  display: grid;
+  gap: var(--s-4);
+  padding: var(--s-6);
+  border: 1px solid var(--edge);
+  border-radius: var(--r-panel);
+  background: var(--ash-raised);
+}
+
+.look__place {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: var(--t-h1);
+  font-weight: 700;
+  line-height: 1.12;
+  letter-spacing: -0.02em;
+  color: var(--ink-primary);
+  text-wrap: balance;
+}
+
+/* A coordinate pair is not a name, and should not be set like one. */
+.look__place[data-kind='coords'] {
+  font-family: var(--font-mono);
+  font-size: var(--t-h2);
+  font-weight: 500;
+  letter-spacing: 0;
+}
+
+.look__coords {
+  margin: calc(-1 * var(--s-3)) 0 0;
+  font-family: var(--font-mono);
+  font-size: var(--t-caption);
+  letter-spacing: 0.04em;
+  color: var(--ink-tertiary);
+}
+
+.shot {
+  margin: 0;
+  display: grid;
+  gap: var(--s-2);
+}
+
+.shot__frame {
+  position: relative;
+  aspect-ratio: 1;
+  overflow: hidden;
+  border-radius: var(--r-card);
+  background: var(--ash-input);
+  box-shadow: inset 0 0 0 1px var(--edge-strong);
+}
+
+.shot__frame canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  transition: opacity var(--t-slow) var(--ease-out);
+}
+
+.shot__frame[data-state='loading'] canvas {
+  opacity: 0.2;
+}
+
+/*
+ * One pass of light while the tiles come down.
+ *
+ * The frame is a square of empty grey for a second or two on a slow line,
+ * and an empty square reads as a broken image rather than a pending one.
+ * A sweep says the picture is on its way without pretending to know how
+ * far along it is.
+ */
+.shot__frame[data-state='loading']::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    100deg,
+    transparent 32%,
+    color-mix(in srgb, var(--ember) 20%, transparent) 50%,
+    transparent 68%
+  );
+  animation: shot-sweep 1.5s var(--ease-move) infinite;
+}
+
+@keyframes shot-sweep {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(100%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .shot__frame[data-state='loading']::after {
+    animation: none;
+  }
+}
+
+/*
+ * The scale sits on the photograph, so it keeps light type on a dark scrim
+ * in both themes rather than following the page: what is behind it is a
+ * satellite image, not the page's surface.
+ */
+.shot__scale {
+  position: absolute;
+  left: var(--s-3);
+  bottom: var(--s-3);
+  padding: 3px var(--s-2);
+  border-radius: var(--r-pill);
+  font-family: var(--font-mono);
+  font-size: var(--t-caption);
+  letter-spacing: 0.04em;
+  color: hsl(36 24% 94%);
+  background: hsl(28 12% 6% / 0.6);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  opacity: 1;
+  transition: opacity var(--t-base) var(--ease-out);
+}
+
+.shot__frame[data-state='loading'] .shot__scale {
+  opacity: 0;
+}
+
+.shot__by {
+  margin: 0;
+  font-size: var(--t-caption);
+  color: var(--ink-muted);
+}
+
+.look__facts {
+  padding-top: var(--s-4);
+  border-top: 1px solid var(--edge-soft);
+}
+
+@media (max-width: 900px) {
+  .look {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--s-6);
+  }
+}
+
 .globe--small {
   max-width: 260px;
 }
@@ -2544,6 +2740,8 @@ canvas {
   margin: 0;
   aspect-ratio: 1;
   width: 100%;
+  /* A globe that carries a card below it is taller than it is wide. */
+  container-type: inline-size;
   /* A cap on the height alone left the box wider than it was tall, and the
      planet sat in a rectangle of dead space. */
   max-width: 460px;

@@ -618,6 +618,54 @@
         <ul class="about__list" id="about-check-list"></ul>
       </section>
 
+      <!--
+        The page ends on the instrument rather than on one more claim.
+
+        Everything above it argues that the forecast is worth believing.
+        Closing with another paragraph would ask the reader to take that on
+        trust; closing with the planet hands it over instead — turn it,
+        press a fire, and the model's number for that square arrives beside
+        a photograph of the ground it is about. A reader who doubts the
+        argument can hold it against the landscape itself, which is the
+        only check that needs no statistics.
+      -->
+      <section class="band" id="about-look" hidden>
+        <header class="band__head band__head--wide">
+          <div><h2 data-i18n="aboutLookTitle">See for yourself</h2></div>
+          <p class="note band__head-note" data-i18n="aboutLookNote"></p>
+        </header>
+
+        <div class="look">
+          <figure class="look__globe">
+            <div class="globe__disc">
+              <canvas
+                id="look-globe"
+                aria-label="Rotating globe of next week's fire probability"
+              ></canvas>
+            </div>
+            <figcaption class="look__call" data-i18n="aboutLookCall">
+              Drag to turn, press a fire
+            </figcaption>
+          </figure>
+
+          <div class="look__panel">
+            <p class="look__place" id="look-place"></p>
+            <p class="look__coords" id="look-coords"></p>
+
+            <figure class="shot">
+              <div class="shot__frame" id="look-frame" data-state="loading">
+                <canvas id="look-shot"></canvas>
+                <span class="shot__scale" id="look-scale"></span>
+              </div>
+              <figcaption class="shot__by" id="look-by"></figcaption>
+            </figure>
+
+            <dl class="pick__facts look__facts" id="look-facts"></dl>
+            <p class="note note--tight" id="look-note"></p>
+          </div>
+        </div>
+      </section>
+
       <section class="hero future-hero" id="future-hero" hidden>
         <div class="future-hero__words">
           <p class="hero__where" id="future-where"></p>
@@ -636,7 +684,15 @@
           make.
         -->
         <figure class="globe globe--pick">
-          <canvas id="globe-canvas" aria-label="Rotating globe of next week's fire probability"></canvas>
+          <!--
+            The canvas gets a wrapper of its own because the globe sizes
+            itself from its parent's box. Once a card was added under it,
+            the figure stopped being square and the sphere grew to the
+            height of figure-plus-card and burst out of the column.
+          -->
+          <div class="globe__disc">
+            <canvas id="globe-canvas" aria-label="Rotating globe of next week's fire probability"></canvas>
+          </div>
           <figcaption class="globe__call" data-i18n="globeCall">Press a fire to see the detail</figcaption>
           <div class="pick" id="pick" hidden>
             <button type="button" class="pick__close ghost-btn" id="pick-close" aria-label="Close">&times;</button>

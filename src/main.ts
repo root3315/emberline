@@ -40,6 +40,7 @@ import { mountFireYear, type FireYear, type YearHandle } from './ui/fire-year'
 import { aboutList } from './i18n'
 import { loadLand } from './core/land'
 import { mountGlobe, type GlobeFire, type GlobeHandle, type GlobePick } from './ui/globe'
+import { drawShot } from './ui/satellite'
 import { daysInYear, dayOfYear, yearOf } from './core/grid'
 import {
   MIN_RATIO_SAMPLES,
@@ -192,6 +193,15 @@ const els = {
   aboutWeather: $<HTMLCanvasElement>('about-weather'),
   aboutWeatherRaw: $('about-weather-raw'),
   aboutCalib: $<HTMLCanvasElement>('about-calib'),
+  lookGlobe: $<HTMLCanvasElement>('look-globe'),
+  lookPlace: $('look-place'),
+  lookCoords: $('look-coords'),
+  lookFrame: $('look-frame'),
+  lookShot: $<HTMLCanvasElement>('look-shot'),
+  lookScale: $('look-scale'),
+  lookBy: $('look-by'),
+  lookFacts: $('look-facts'),
+  lookNote: $('look-note'),
   impactBars: $<HTMLCanvasElement>('impact-bars'),
   impactBarsNote: $('impact-bars-note'),
   rampLow: $('ramp-low'),
@@ -659,7 +669,13 @@ const ALWAYS_ON = new Set(['calendar', 'impact'])
 const FUTURE_SECTIONS = ['future-cta', 'future-map', 'future-risk', 'future-trust']
 
 /** The about page's bands, which belong to the route and not to the area. */
-const ABOUT_SECTIONS = ['about-problem', 'about-built', 'about-model', 'about-check']
+const ABOUT_SECTIONS = [
+  'about-problem',
+  'about-built',
+  'about-model',
+  'about-check',
+  'about-look',
+]
 
 const dataSections = [...document.querySelectorAll<HTMLElement>('.band')].filter(
   (el) =>
@@ -874,6 +890,7 @@ async function renderAbout(): Promise<void> {
   drawSeam()
   void drawModelCharts()
   void aboutRing()
+  void showLook()
 
   if (meta) {
     const splits = ABOUT_SPLITS
@@ -1160,8 +1177,8 @@ async function openPick(pick: GlobePick | null): Promise<void> {
   const seen = observedAt(pick.lat, pick.lon)
 
   els.pickFacts.innerHTML = ''
-  pickFact(t('pickForecast'), `${Math.min(99, Math.round(pick.p * 100))}%`, 'fore')
-  pickFact(t('pickSeen'), seen === null ? '—' : formatNumber(seen))
+  pickFact(els.pickFacts, t('pickForecast'), `${Math.min(99, Math.round(pick.p * 100))}%`, 'fore')
+  pickFact(els.pickFacts, t('pickSeen'), seen === null ? '—' : formatNumber(seen))
 
   els.pickNote.textContent =
     seen === 0
@@ -1169,7 +1186,8 @@ async function openPick(pick: GlobePick | null): Promise<void> {
       : t('pickNote', { from: meta.from, to: meta.to })
 }
 
-function pickFact(label: string, value: string, tone?: string): void {
+/** One labelled figure, in whichever of the two pick panels asked for it. */
+function pickFact(host: HTMLElement, label: string, value: string, tone?: string): void {
   const wrap = document.createElement('div')
   const dt = document.createElement('dt')
   dt.textContent = label
@@ -1177,7 +1195,7 @@ function pickFact(label: string, value: string, tone?: string): void {
   dd.textContent = value
   if (tone) dd.dataset.tone = tone
   wrap.append(dt, dd)
-  els.pickFacts.append(wrap)
+  host.append(wrap)
 }
 
 /** Detections in the snapshot's cell covering this point, or null if unknown. */
@@ -1191,6 +1209,133 @@ function observedAt(lat: number, lon: number): number | null {
     (c) => Math.floor((c.lat + 90) / deg) === row && Math.floor((c.lon + 180) / deg) === col,
   )
   return hit ? hit.value : 0
+}
+
+/**
+ * The planet at the foot of the project's page, and what it is showing.
+ *
+ * A second instance rather than the forecast page's one moved about: the
+ * two pages can both be in the router's history, and a canvas cannot be in
+ * two documents at once. Everything inside `mountGlobe` is closed over, so
+ * two of them cost two animation frames and nothing else — and neither
+ * draws while it is scrolled off, which the globe already handles.
+ */
+let lookGlobe: GlobeHandle | null = null
+
+/** Where the band is looking, so a theme change can repaint the overlay. */
+let lookAt: GlobePick | null = null
+
+/**
+ * Only the newest request may write into the frame.
+ *
+ * Sixteen tiles take a moment, and a reader pressing three places in a row
+ * would otherwise get whichever set of tiles happened to land last — a
+ * photograph of one place under the numbers of another, with nothing on
+ * screen to say so.
+ */
+let lookRun = 0
+
+async function showLook(): Promise<void> {
+  if (!lookGlobe) {
+    const land = await loadLand()
+    if (!land) return
+    lookGlobe = mountGlobe(els.lookGlobe, land, { onPick: (p) => void openLook(p) })
+  }
+  lookGlobe.setFires(globeFires())
+  if (lookAt) return
+
+  /*
+   * It opens on the week's likeliest place rather than on an empty frame.
+   *
+   * A panel that says "press something" before it says anything is a panel
+   * most readers scroll past, and this one is the last thing on the page.
+   * Starting on the hottest cell of the week means the band is already
+   * making its point when the reader arrives; pressing is how they
+   * disagree with the choice, not how they earn the first answer.
+   */
+  const named = [...(forecast?.meta.hotspots ?? [])].sort((a, b) => b.p - a.p)[0]
+  const start = named ?? [...globeFires()].sort((a, b) => b.p - a.p)[0]
+  if (!start) return
+  lookGlobe.flyTo(start.lat, start.lon, 2.2)
+  await openLook({ lat: start.lat, lon: start.lon, p: start.p })
+}
+
+/**
+ * Fill the panel: where this is, what it looks like, what is expected.
+ *
+ * The photograph is fetched last and awaited on its own, so the numbers —
+ * which are already in memory — are on screen while the tiles are still
+ * coming down. A reader should never be waiting on imagery to find out
+ * what the model said.
+ */
+async function openLook(pick: GlobePick | null): Promise<void> {
+  if (!pick) return
+  lookAt = pick
+  const run = ++lookRun
+
+  /*
+   * The coordinates become the heading when there is no name for the place.
+   *
+   * Only twenty places on the planet carry one here, so most presses land
+   * somewhere unnamed, and a stand-in like "open country" is a sentence
+   * that asserts something nobody checked — some of those cells are
+   * plantation, some are swamp. The coordinates are the one label that is
+   * always true, so they move up and the line under them goes away rather
+   * than repeating them.
+   */
+  const where = `${degree(pick.lat, 'NS')}, ${degree(pick.lon, 'EW')}`
+  const named = nameNear(pick.lat, pick.lon)
+  els.lookPlace.textContent = named ?? where
+  els.lookPlace.dataset.kind = named ? 'name' : 'coords'
+  els.lookCoords.textContent = where
+  els.lookCoords.hidden = !named
+
+  worldNowData ??= await loadWorldNow().catch(() => null)
+  if (run !== lookRun) return
+  const seen = observedAt(pick.lat, pick.lon)
+
+  els.lookFacts.innerHTML = ''
+  pickFact(els.lookFacts, t('pickForecast'), `${Math.min(99, Math.round(pick.p * 100))}%`, 'fore')
+  pickFact(els.lookFacts, t('pickSeen'), seen === null ? '—' : formatNumber(seen))
+  els.lookNote.textContent = seen === 0 ? t('pickNoneSeen') : t('lookNote')
+
+  els.lookFrame.dataset.state = 'loading'
+  const shot = await drawShot(els.lookShot, pick, forecast?.cells ?? [])
+  if (run !== lookRun) return
+  els.lookFrame.dataset.state = shot.tiles ? 'ready' : 'fail'
+  els.lookScale.textContent = t('lookScale', { km: formatNumber(shot.km) })
+  els.lookBy.textContent = shot.tiles ? t('lookBy') : t('lookFail')
+}
+
+/** 12.25, 'NS' → 12.25° N. Degrees with a hemisphere read better than a sign. */
+function degree(value: number, axis: 'NS' | 'EW'): string {
+  const side = value >= 0 ? axis[0] : axis[1]
+  return `${Math.abs(value).toFixed(2)}\u00b0 ${side}`
+}
+
+/**
+ * The nearest named place, if one is near enough to be this one.
+ *
+ * Only the twenty hotspots the risk list prints carry names — they were
+ * resolved once at build time rather than twenty times per reader — so
+ * most presses fall outside them and get none. Two degrees is roughly two
+ * hundred kilometres: close enough that the name still describes the
+ * ground in the frame, far enough away that it is not naming a different
+ * country.
+ */
+function nameNear(lat: number, lon: number): string | null {
+  const lang = getLang()
+  let best: string | null = null
+  let bestD = 2
+  for (const spot of forecast?.meta.hotspots ?? []) {
+    const east = Math.abs(((spot.lon - lon + 540) % 360) - 180) * Math.cos((lat * Math.PI) / 180)
+    const d = Math.hypot(spot.lat - lat, east)
+    if (d < bestD && spot.name[lang]) {
+      bestD = d
+      best = spot.name[lang]
+    }
+  }
+  return best
 }
 
 /**
@@ -3643,8 +3788,15 @@ function setTheme(theme: 'night' | 'day'): void {
      */
     globe?.retheme()
     doorGlobe?.retheme()
+    lookGlobe?.retheme()
     fireYear?.retheme()
-    if (aboutScope) void drawModelCharts()
+    if (aboutScope) {
+      void drawModelCharts()
+      // The squares over the photograph are painted from the fire ramp,
+      // which is a different ramp in each theme; the photograph itself is
+      // not, but the two are one canvas and it is redrawn together.
+      if (lookAt) void openLook(lookAt)
+    }
   }, theme)
 }
 
@@ -3948,9 +4100,19 @@ function applyUrl(): void {
    * the about page, in the middle of a sentence whose beginning they had
    * never seen.
    */
+  /*
+   * Instantly, against the stylesheet's smooth scrolling.
+   *
+   * `scroll-behavior: smooth` turns a jump to the top into an animation,
+   * and the animation was being cancelled halfway: the sections of the
+   * page being left are hidden in the same tick, the document loses three
+   * thousand pixels of height mid-flight, and Chrome abandons the scroll
+   * wherever it had got to. Leaving the forecast page from its foot
+   * dropped the reader into the middle of the record.
+   */
   const here = aboutScope ? 'about' : futureScope ? 'future' : 'record'
   const there = wanted.about ? 'about' : wanted.future ? 'future' : 'record'
-  if (here !== there) window.scrollTo(0, 0)
+  if (here !== there) window.scrollTo({ top: 0, behavior: 'instant' })
 
   if (wanted.about) {
     if (!aboutScope) void renderAbout().finally(() => (applyingUrl = false))
