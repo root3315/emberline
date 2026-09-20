@@ -78,6 +78,23 @@ export function mountFireYear(
   let height = 0
   let raf = 0
   let started = 0
+
+  /*
+   * The rings are painted once into their own canvas.
+   *
+   * Twenty-seven years of days is ten thousand annular segments, and each
+   * is an arc, an arc back and a fill. Redrawing all of them on every
+   * frame of the opening sweep meant six hundred thousand paths in a
+   * second and a half, which on any laptop is a visible stutter before
+   * the page settles.
+   *
+   * Nothing about the rings changes during the sweep — only how much of
+   * them is showing. So they go into an offscreen canvas once, and each
+   * frame is one clipped copy: the same picture, drawn in a millisecond.
+   */
+  const cache = document.createElement('canvas')
+  const cacheCtx = cache.getContext('2d')!
+  let cacheMode: string | null = null
   const still = window.matchMedia('(prefers-reduced-motion: reduce)')
 
   /**
@@ -147,16 +164,20 @@ export function mountFireYear(
     return { cx, cy, outer, inner, ring }
   }
 
-  /** `progress` runs 0 to 1 for the opening sweep. */
-  function draw(progress: number): void {
+  /** Paint every ring into the cache. Slow, and done once per mode. */
+  function paint(): void {
     const { cx, cy, inner, outer, ring } = geometry()
     const dpr = Math.min(window.devicePixelRatio || 1, 2)
     const side = width / dpr
+    cache.width = width
+    cache.height = height
+    const ctx = cacheCtx
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
     ctx.clearRect(0, 0, side, side)
 
     const dim = varColor('--ash-raised')
     const edge = varColor('--edge-soft')
-    const limit = TWO_PI * progress
+    const limit = TWO_PI
 
     years.forEach((year, yi) => {
       const days = series(year)
@@ -226,8 +247,64 @@ export function mountFireYear(
       ctx.fillText(short[month], cx + Math.cos(a) * (outer + 13), cy + Math.sin(a) * (outer + 13))
     })
 
-    ctx.fillStyle = rgba(varColor('--ink-muted'))
-    ctx.fillText(`${years[0]}–${years[years.length - 1]}`, cx, cy)
+    cacheMode = mode
+  }
+
+  /**
+   * One frame: the cached rings, wiped in clockwise from January.
+   *
+   * The centre is left to the caller's readout rather than stamped into
+   * the cache, so hovering can change it without repainting ten thousand
+   * segments.
+   */
+  function draw(progress: number): void {
+    const dpr = Math.min(window.devicePixelRatio || 1, 2)
+    const side = width / dpr
+    if (cacheMode !== mode || cache.width !== width) paint()
+
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
+    ctx.clearRect(0, 0, side, side)
+    ctx.save()
+    if (progress < 1) {
+      const { cx, cy, outer } = geometry()
+      ctx.beginPath()
+      ctx.moveTo(cx, cy)
+      ctx.arc(cx, cy, outer + 30, -Math.PI / 2, -Math.PI / 2 + TWO_PI * progress)
+      ctx.closePath()
+      ctx.clip()
+    }
+    ctx.drawImage(cache, 0, 0, side, side)
+    ctx.restore()
+
+    centre(null)
+  }
+
+  /** The hole, which is where the readout lives. */
+  function centre(text: string | null): void {
+    const { cx, cy, inner } = geometry()
+    const dpr = Math.min(window.devicePixelRatio || 1, 2)
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
+
+    ctx.save()
+    ctx.beginPath()
+    ctx.arc(cx, cy, inner - 1, 0, TWO_PI)
+    ctx.clip()
+    ctx.clearRect(cx - inner, cy - inner, inner * 2, inner * 2)
+    ctx.restore()
+
+    ctx.font = MONO
+    ctx.textAlign = 'center'
+    ctx.textBaseline = 'middle'
+    if (text) {
+      const [when, count] = text.split(' \u00b7 ')
+      ctx.fillStyle = rgba(varColor('--ink-tertiary'))
+      ctx.fillText(when, cx, cy - 8)
+      ctx.fillStyle = rgba(varColor('--ember'))
+      ctx.fillText(count, cx, cy + 8)
+    } else {
+      ctx.fillStyle = rgba(varColor('--ink-muted'))
+      ctx.fillText(`${years[0]}\u2013${years[years.length - 1]}`, cx, cy)
+    }
   }
 
   function step(now: number): void {
@@ -256,6 +333,7 @@ export function mountFireYear(
     const r = Math.hypot(x, y)
     const yi = Math.floor((r - inner) / ring)
     if (yi < 0 || yi >= years.length) {
+      centre(null)
       onProbe(null)
       return
     }
@@ -264,13 +342,18 @@ export function mountFireYear(
     const angle = (Math.atan2(y, x) + Math.PI / 2 + TWO_PI) % TWO_PI
     const d = Math.min(days.length - 1, Math.floor((angle / TWO_PI) * days.length))
     const when = new Date(Date.UTC(year, 0, 1 + d))
-    onProbe(`${when.toISOString().slice(0, 10)} · ${Math.round(days[d] ?? 0).toLocaleString()}`)
+    const text = `${when.toISOString().slice(0, 10)} · ${Math.round(days[d] ?? 0).toLocaleString()}`
+    centre(text)
+    onProbe(text)
   }
 
   const observer = new ResizeObserver(() => resize())
   if (canvas.parentElement) observer.observe(canvas.parentElement)
   canvas.addEventListener('pointermove', onMove)
-  canvas.addEventListener('pointerleave', () => onProbe?.(null))
+  canvas.addEventListener('pointerleave', () => {
+    centre(null)
+    onProbe?.(null)
+  })
 
   resize()
   replay()
@@ -279,9 +362,11 @@ export function mountFireYear(
     setMode(next) {
       if (next === mode) return
       mode = next
+      cacheMode = null
       replay()
     },
     retheme() {
+      cacheMode = null
       draw(1)
     },
     destroy() {

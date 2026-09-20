@@ -531,11 +531,9 @@
       </section>
 
       <section class="band" id="about-built" hidden>
-        <header class="band__head">
-          <div>
-            <h2 data-i18n="aboutBuiltTitle">What was built</h2>
-            <p class="note" data-i18n="aboutBuiltNote"></p>
-          </div>
+        <header class="band__head band__head--wide">
+          <div><h2 data-i18n="aboutBuiltTitle">What was built</h2></div>
+          <p class="note band__head-note" data-i18n="aboutBuiltNote"></p>
         </header>
         <ul class="about__list" id="about-built-list"></ul>
       </section>
@@ -590,11 +588,14 @@
       </section>
 
       <section class="band" id="about-check" hidden>
-        <header class="band__head">
-          <div>
-            <h2 data-i18n="aboutCheckTitle">Check us</h2>
-            <p class="note" data-i18n="aboutCheckNote"></p>
-          </div>
+        <!--
+          The note moves to the right of the heading rather than under it.
+          Stacked, it left the whole right half of the band empty above
+          four columns of cards, which read as a layout that ran out.
+        -->
+        <header class="band__head band__head--wide">
+          <div><h2 data-i18n="aboutCheckTitle">Check us</h2></div>
+          <p class="note band__head-note" data-i18n="aboutCheckNote"></p>
         </header>
         <ul class="about__list" id="about-check-list"></ul>
       </section>
@@ -664,10 +665,15 @@
     <footer class="colophon">
       <div class="colophon__inner">
         <p id="colophon-text"></p>
-        <p class="colophon__links">
-          <a href="#/about" data-i18n="aboutLink">About the project</a>
-          <a href="#/future" data-i18n="ctaButton">What happens next week</a>
-        </p>
+        <!--
+          Underlined text links were the one place on the site that did not
+          look like the site. These are the same ghost control the header
+          uses, which is what every other clickable thing here already is.
+        -->
+        <nav class="colophon__links">
+          <a class="ghost-btn" href="#/about" data-i18n="aboutLink">About the project</a>
+          <a class="ghost-btn" href="#/future" data-i18n="ctaButton">What happens next week</a>
+        </nav>
       </div>
     </footer>
 

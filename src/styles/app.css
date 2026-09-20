@@ -2248,10 +2248,29 @@ canvas {
 .colophon__links {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--s-6);
+  gap: var(--s-3);
   margin: var(--s-5) 0 0;
-  font-size: var(--t-small);
-  font-weight: 500;
+}
+
+/*
+ * A heading on the left and its note on the right, so a band whose body is
+ * a row of cards does not open with half a metre of nothing.
+ */
+.band__head--wide {
+  align-items: baseline;
+  gap: var(--s-8);
+}
+
+.band__head-note {
+  margin: 0;
+  flex: 1 1 34ch;
+  max-width: 62ch;
+}
+
+@media (max-width: 860px) {
+  .band__head-note {
+    flex-basis: 100%;
+  }
 }
 
 .bar__about {

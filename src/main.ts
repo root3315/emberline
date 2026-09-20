@@ -3515,11 +3515,20 @@ function applyTheme(theme: 'night' | 'day'): void {
 function setTheme(theme: 'night' | 'day'): void {
   burnTransition(() => {
     applyTheme(theme)
-    // The globes keep their ocean and halo in a buffer built once, so they
-    // have to be told; every other canvas is redrawn by `rerender`.
+    /*
+     * Every canvas that is not on the record has to be told.
+     *
+     * `rerender` redraws the record's charts, and the comment that used to
+     * sit here said the globes were the only exception. They were not: the
+     * about page's three charts read their colours once, at draw time, and
+     * a theme switch left them painted in the other theme's palette —
+     * white tracks on a near-black page, which read as a styling mistake
+     * rather than as a stale canvas.
+     */
     globe?.retheme()
     doorGlobe?.retheme()
     fireYear?.retheme()
+    if (aboutScope) void drawModelCharts()
   }, theme)
 }
 
