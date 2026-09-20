@@ -258,7 +258,7 @@ const en: Dict = {
   aboutWeatherWith: 'With the weather',
   aboutWeatherWithout: 'Archive only',
   aboutWeatherBase: 'The season alone',
-  aboutWeatherRaw: 'In full: {withAp} against {withoutAp} average precision, {withRoc} against {withoutRoc} ROC AUC.',
+  aboutWeatherRaw: 'In full: {withAp} against {withoutAp} on the scale above. The second figure in the table, ROC AUC, is the same question asked another way and moves the same direction: {withRoc} against {withoutRoc}.',
   aboutCalibTitle: 'Does 85% mean 85%',
   aboutCalibNote:
     'Group the cells the model gave about the same chance, and count how many burned. On the line means the number meant what it said. A model can rank perfectly and still be wrong about how sure it is, and average precision cannot show that.',
@@ -287,10 +287,12 @@ const en: Dict = {
   aboutModelNote:
     'A gradient-boosted classifier, trained on the archive and on the weather of the week it is asked about.',
   aboutModelBody:
-    'It reads {features} things about every quarter-degree cell: how often it burns at this time of year, how recently it burned, what its neighbours are doing, how far the year is from its own normal, where ENSO stands \u2014 and the forecast weather of the week ahead, which is the half the fire archive cannot supply. Trained on {train}, tuned on {validate}, scored on {test}: years it had never seen. The weather roughly doubles its margin over the seasonal baseline.',
+    'It reads {features} things about every 25 km square of the planet: how often it burns at this time of year, how recently it burned, what its neighbours are doing, how far the year is from its own normal, where El Ni\u00f1o stands \u2014 and the forecast weather of the week ahead, which is the half the fire archive cannot supply. It learns on {train}, is tuned on {validate}, and is marked on {test} \u2014 years it had never seen. The weather roughly doubles how far it gets past a simple seasonal guess.',
   aboutModelNumbers: 'Measured',
+  aboutScoreGloss:
+    'One number, from 0 to 1, for how well a method sorts squares by risk: put every square in its order, walk down the list, and see how much of it is fire before the guesses run out. Picking at random scores 0.05, because one square in twenty burns. Nothing reaches 1, because the same weather over the same ground sometimes burns and sometimes does not.',
   aboutModelCaveat:
-    'One qualifier: the model learned from the weather that actually happened, and the live map runs on a forecast of it. The figures above are what is reachable if the weather forecast is right.',
+    'One thing to hold on to: the model learned from weather that had already happened, and the live map runs on a forecast of it. These figures are what is reachable if the weather forecast turns out right.',
 
   aboutCheckTitle: 'Check us',
   aboutCheckNote:
@@ -594,7 +596,7 @@ const ru: Dict = {
   aboutWeatherWith: 'С погодой',
   aboutWeatherWithout: 'Только архив',
   aboutWeatherBase: 'Один сезон',
-  aboutWeatherRaw: 'В цифрах: {withAp} против {withoutAp} средней точности, {withRoc} против {withoutRoc} ROC AUC.',
+  aboutWeatherRaw: 'В цифрах: {withAp} против {withoutAp} по шкале выше. Вторая цифра в таблице, ROC AUC, — тот же вопрос с другой стороны, и двигается туда же: {withRoc} против {withoutRoc}.',
   aboutCalibTitle: 'Значит ли 85% именно 85%',
   aboutCalibNote:
     'Сгруппируйте ячейки, которым модель дала примерно один шанс, и посчитайте, сколько сгорело. На линии — значит число значило то, что говорило. Модель может ранжировать идеально и при этом врать о своей уверенности, а средняя точность этого не показывает.',
@@ -623,10 +625,12 @@ const ru: Dict = {
   aboutModelNote:
     'Градиентный бустинг, обученный на архиве и на погоде той недели, о которой его спрашивают.',
   aboutModelBody:
-    'Он читает {features} вещей про каждую ячейку в четверть градуса: как часто здесь горит в это время года, как давно горело, что делают соседи, насколько год отошёл от своей нормы, где сейчас Эль-Ниньо — и прогноз погоды на ближайшую неделю, то есть ту половину, которую архив пожаров дать не может. Обучение {train}, настройка {validate}, проверка {test} — годы, которых он не видел. Погода почти удваивает его перевес над сезонной базой.',
+    'Она смотрит на {features} вещей про каждый квадрат 25 на 25 километров: как часто здесь горит в это время года, как давно горело, что делается у соседей, насколько год отошёл от своей нормы, где сейчас Эль-Ниньо — и прогноз погоды на ближайшую неделю, то есть ту половину, которую архив пожаров дать не может. Учится на {train}, настраивается на {validate}, а оценивается на {test} — годах, которых ни разу не видела. Погода почти вдвое увеличивает её отрыв от простой сезонной догадки.',
   aboutModelNumbers: 'Измерено',
+  aboutScoreGloss:
+    'Одно число от 0 до 1 — насколько хорошо способ расставляет квадраты по риску: выстройте все квадраты в порядке, идите по списку сверху и считайте, сколько из него действительно загорелось. Случайный выбор даёт 0.05, потому что горит один квадрат из двадцати. Единицы не достигает никто: одна и та же погода на одной и той же земле иногда даёт пожар, а иногда нет.',
   aboutModelCaveat:
-    'Одна оговорка: модель училась на погоде, которая была на самом деле, а живая карта идёт по прогнозу погоды. Цифры выше — это то, что достижимо, если прогноз погоды верен.',
+    'Одно важное: модель училась на погоде, которая уже случилась, а живая карта идёт по прогнозу погоды. Эти цифры — то, что достижимо, если прогноз погоды окажется верным.',
 
   aboutCheckTitle: 'Проверьте нас',
   aboutCheckNote:
@@ -848,10 +852,10 @@ const aboutLists: Record<Lang, Record<string, readonly AboutRow[]>> = {
     ['What it does', 'Fire radiative power turned into carbon dioxide by the published method, calibrated against GFED, with the caveats printed beside the number rather than in a footnote.'],
     ],
     aboutSteps: [
-      ['Every cell that has ever burned, on every fourth day of 24 years, becomes one row: what was known that morning, and whether it burned in the week that followed.', ''],
-      ['Fires are rare — five per cent of rows — so the negatives are thinned to three per positive, and the probabilities are shifted back to the real base rate afterwards.', ''],
-      ['The years are split in time, never at random: learn on 2003–2013, tune on 2014–2017, and touch 2018–2021 exactly once, at the end.', ''],
-      ['1,500 gradient-boosted trees, each correcting the last. Nothing deep and nothing fashionable: on thirty columns of tabular data this beats a neural network and can be asked why it said what it said.', ''],
+      ['Every square that has ever burned, on every fourth day of 24 years, becomes one question: given what was known that morning, did it burn in the week that followed? Three million questions with the answers attached.', ''],
+      ['Fires are rare \u2014 five squares in a hundred \u2014 so most of the quiet ones are set aside. Otherwise the shortest way to be right would be to answer \u201cno fire\u201d every time and score ninety-five per cent, and the model would learn exactly that. What it gives back is corrected afterwards so the numbers still mean what they say.', ''],
+      ['The years are split by time, never shuffled: it learns on 2003\u20132013, is adjusted on 2014\u20132017, and sees 2018\u20132021 once, at the very end. Shuffling would let it learn from a Tuesday to answer about the Monday beside it, and the score would be a lie.', ''],
+      ['1,500 small decision trees, each correcting what the ones before it got wrong. Nothing deep and nothing fashionable: on a table of thirty columns this beats a neural network and, unlike one, can be asked why it said what it said \u2014 which is the chart above.', ''],
     ],
     aboutCheckList: [
     ['The forecast is scored against reality', 'The week on the map was computed before it happened. verify_forecast.py asks NASA what has burned since and scores it \u2014 ranking from day one, calibration once the week closes. The answer did not exist when the question was asked.'],
@@ -869,10 +873,10 @@ const aboutLists: Record<Lang, Record<string, readonly AboutRow[]>> = {
     ['Чем это отзывается', 'Мощность излучения, переведённая в CO₂ по опубликованной методике и сверенная с GFED, с оговорками рядом с числом, а не в сноске.'],
     ],
     aboutSteps: [
-      ['Каждая ячейка, где когда-либо горело, на каждый четвёртый день 24 лет становится строкой: что было известно тем утром — и загорелось ли в ближайшую неделю.', ''],
-      ['Пожары редки — пять процентов строк, — поэтому отрицательные примеры прореживаются до трёх на один положительный, а вероятности потом возвращаются к настоящей базе.', ''],
-      ['Годы делятся по времени, никогда случайно: учёба на 2003–2013, настройка на 2014–2017, а 2018–2021 трогаются ровно один раз, в самом конце.', ''],
-      ['1 500 деревьев градиентного бустинга, каждое правит ошибки предыдущих. Ничего глубокого и ничего модного: на тридцати колонках табличных данных это обходит нейросеть и умеет объяснить, почему сказало именно так.', ''],
+      ['Каждый квадрат, где когда-либо горело, на каждый четвёртый день 24 лет становится вопросом: если знать только то, что было известно тем утром, — загорелось ли там в ближайшую неделю? Три миллиона вопросов с уже известными ответами.', ''],
+      ['Пожары редки — пять квадратов из ста, — поэтому большую часть спокойных мы откладываем в сторону. Иначе самый лёгкий способ быть правой — всегда отвечать «не загорится» и попадать в 95% случаев, и модель именно этому бы и научилась. То, что она потом выдаёт, поправляется обратно, чтобы числа значили то, что говорят.', ''],
+      ['Годы делятся по времени, а не вперемешку: учёба на 2003–2013, настройка на 2014–2017, а 2018–2021 она видит один раз, в самом конце. Если перемешать, модель сможет подглядеть во вторник, чтобы ответить про соседний понедельник, и оценка будет врать.', ''],
+      ['1 500 маленьких решающих деревьев, каждое правит ошибки предыдущих. Ничего глубокого и ничего модного: на таблице из тридцати колонок это обходит нейросеть и, в отличие от неё, умеет объяснить, почему сказала именно так — это и есть график выше.', ''],
     ],
     aboutCheckList: [
     ['Прогноз сверяется с реальностью', 'Неделя на карте посчитана до того, как она случилась. verify_forecast.py спрашивает у NASA, что сгорело с тех пор, и считает оценку: ранжирование с первого дня, калибровка когда неделя закроется. Ответа не существовало в момент вопроса.'],
