@@ -1890,6 +1890,40 @@ canvas {
  * A band that is not about the selected area says so, quietly, before the
  * reader has to work it out from the prose.
  */
+/*
+ * The claim on the left, the proportion on the right.
+ *
+ * The prose column keeps its measure rather than stretching to the band's
+ * full width, which it was doing while the right half of the section sat
+ * empty — a wall of text with a hole beside it.
+ */
+.impact__top {
+  display: grid;
+  grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr);
+  gap: var(--s-8);
+  align-items: start;
+}
+
+.impact__say {
+  min-width: 0;
+}
+
+.impact__scale {
+  margin: 0;
+  min-width: 0;
+}
+
+.impact__scale canvas {
+  width: 100%;
+  display: block;
+}
+
+@media (max-width: 860px) {
+  .impact__top {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
 .bar__back {
   display: inline-flex;
   gap: var(--s-2);

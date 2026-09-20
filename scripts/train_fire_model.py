@@ -66,11 +66,24 @@ import numpy as np
 # week, the month and the season without a copy of itself per horizon.
 HORIZON = int(sys.argv[1]) if len(sys.argv) > 1 else 7
 
+# Weather is optional so the two models can be compared on identical rows.
+# `python scripts/train_fire_model.py 7 dry` builds the same samples, the
+# same splits and the same seed without the weather columns, which is the
+# only way to say what the weather is actually worth.
+WITH_WEATHER = "dry" not in sys.argv[2:]
+
 DAYS_DIR = "public/data/world/days"
 INDEX = "public/data/world/days-index.json"
-OUT = f"models/features-{HORIZON}d.npz"
+OUT = f"models/features-{HORIZON}d{'' if WITH_WEATHER else '-dry'}.npz"
 
-ERAS = {0: (2003, 2018), 1: (2019, 2021), 2: (2022, 2026)}
+# The splits end in 2021 because that is where the weather record ends.
+#
+# The public ERA5 mirror that can be read in bulk carries 1959 to 2021; the
+# fire archive runs to 2026. Training on years the weather does not cover
+# would mean two models scored on two different questions, so the fire-only
+# model is re-run on exactly these years too. Four years of test is fewer
+# than before and still four fire seasons the model has never seen.
+ERAS = {0: (2003, 2013), 1: (2014, 2017), 2: (2018, 2021)}
 ONI_FILE = "models/oni.json"
 EPOCH = date(2003, 1, 1)
 LAST = date(2026, 9, 19)
@@ -108,6 +121,11 @@ FEATURES = [
     # years that stand out in the record are the El Nino ones.
     "oni",
 ]
+
+if WITH_WEATHER:
+    from weather_features import COLUMNS as WEATHER_COLUMNS
+
+    FEATURES = FEATURES + list(WEATHER_COLUMNS)
 
 
 def day_index(y: int, doy1: int) -> int:
@@ -230,7 +248,7 @@ def load_oni():
         return {}
 
 
-def tile_rows(grid, tx, ty, idx, n_days, doy_of, year_of, oni_by_day):
+def tile_rows(grid, tx, ty, idx, n_days, doy_of, year_of, oni_by_day, weather=None):
     side, deg, step = idx["tileCells"], idx["degrees"], idx["tileDegrees"]
 
     ever = grid.max(axis=1) > 0
@@ -341,6 +359,21 @@ def tile_rows(grid, tx, ty, idx, n_days, doy_of, year_of, oni_by_day):
         feats[:, 21] = np.log1p(tile30) - np.log1p(tile_clim30[doy0])
         feats[:, 22] = np.log1p(ytd[cells, dd]) - np.log1p(ytd_clim[cells, doy0])
         feats[:, 23] = oni_by_day[dd]
+
+        if weather is not None:
+            #
+            # The weather of the week each row is asked about.
+            #
+            # `dd` is the day the forecast is made; the window the target
+            # counts over is the `HORIZON` days after it, and that is the
+            # window read here. Anything else would be telling the model
+            # about a different week than the one it is being graded on.
+            #
+            lat = lat0 + (cells // side + 0.5) * deg
+            lon = (tx * step - 180) + (cells % side + 0.5) * deg
+            wx, wy = weather.index_of(lat, lon)
+            feats[:, 24:] = weather.window(wx, wy, dd)
+
         chunks.append((feats, y, np.full(y.size, split, dtype=np.int8)))
 
     del cum, cum_ring, cum_active, since, clim, clim_ring, clim30, ring_clim30, ytd, ytd_clim
@@ -366,8 +399,16 @@ def main() -> None:
         day = EPOCH + timedelta(days=d)
         oni_by_day[d] = oni.get((day.year, day.month), 0.0)
 
+    weather = None
+    if WITH_WEATHER:
+        from weather_features import Weather
+
+        weather = Weather(HORIZON)
+        print(f"weather: {weather.days:,} days from {weather.first} at {weather.degrees} deg")
+
     tiles = sorted(idx["tiles"].items())
     print(f"{len(tiles)} tiles, {n_days} days, horizon {HORIZON}d, MODIS only")
+    print(f"features: {len(FEATURES)}{' with weather' if WITH_WEATHER else ' , fire only'}")
     print(f"El Nino index: {'loaded' if oni else 'MISSING - run fetch_oni.py'}")
 
     X, Y, S = [], [], []
@@ -376,7 +417,7 @@ def main() -> None:
         grid = load_tile(tx, ty, groups, n_days, side)
         if grid is None:
             continue
-        got = tile_rows(grid, tx, ty, idx, n_days, doy_of, year_of, oni_by_day)
+        got = tile_rows(grid, tx, ty, idx, n_days, doy_of, year_of, oni_by_day, weather)
         del grid
         gc.collect()
         if got is None:

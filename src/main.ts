@@ -33,6 +33,7 @@ import { drawWorldSeason, drawWorldYears, worldHeadline, type WorldTotal } from 
 import { loadClimate, loadEmissions, type EmissionsFile } from './core/emissions'
 import { loadForecast, type ForecastCell, type ForecastMeta } from './core/forecast'
 import { drawCalibration } from './ui/calibration'
+import { drawScaleBars } from './ui/scale-bars'
 import { loadLand } from './core/land'
 import { mountGlobe, type GlobeFire, type GlobeHandle } from './ui/globe'
 import { daysInYear, dayOfYear, yearOf } from './core/grid'
@@ -164,6 +165,8 @@ const els = {
   ctaLine: $('cta-line'),
   ctaGlobe: $<HTMLCanvasElement>('cta-globe'),
   barBack: $<HTMLAnchorElement>('bar-back'),
+  impactBars: $<HTMLCanvasElement>('impact-bars'),
+  impactBarsNote: $('impact-bars-note'),
   rampLow: $('ramp-low'),
   rampHigh: $('ramp-high'),
   status: $('status'),
@@ -2896,6 +2899,17 @@ function renderImpact(): void {
         lead.append(part)
       }
       els.impactLead.replaceChildren(lead)
+
+      drawScaleBars(
+        els.impactBars,
+        [
+          { label: t('barFossil'), value: est.comparison.annualGtCo2 },
+          { label: t('barFires', { year: String(state.year) }), value: gt, ours: true },
+        ],
+        t('unitGt'),
+      )
+      els.impactBarsNote.textContent = t('barNote')
+      els.impactBars.hidden = false
     } else {
       els.impactLead.textContent = t('impactLeadNone', { year: String(state.year) })
     }
@@ -3493,6 +3507,16 @@ function applyUrl(): void {
   if (applyingUrl) return
   applyingUrl = true
 
+  /*
+   * The door is filled on every route, not once at start-up.
+   *
+   * Someone who lands straight on #/future never runs the record's boot
+   * path, so its closing band stayed empty — no dates, no count, no small
+   * planet — for the rest of the session. After the first call this costs
+   * nothing: the forecast is cached and the globe is already mounted.
+   */
+  void showDoor()
+
   if (wanted.future) {
     if (!futureScope) void renderFuture().finally(() => (applyingUrl = false))
     else applyingUrl = false
@@ -3674,6 +3698,7 @@ async function boot(): Promise<void> {
   picker.setValue(startId, wanted.place?.name)
   if (wanted.future) {
     await renderFuture()
+    void showDoor()
     return
   }
   await goTo(startId, wanted.year)

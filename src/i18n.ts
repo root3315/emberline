@@ -239,6 +239,9 @@ const en: Dict = {
   provenanceFirms: 'NASA FIRMS — MODIS C6.1 and VIIRS C2 active fire products, retrieved via the FIRMS area API',
   ctaTitle: 'And then?',
   scopeGlobal: 'Worldwide',
+  barFossil: 'Fossil fuels, a year',
+  barFires: 'The planet burning, {year}',
+  barNote: 'On one scale, so the share is a picture rather than a division. The fuel figure is a whole year; the fires are only the part of the year that has happened.',
   ctaNote:
     'Everything above already happened. One thing has not: a model trained on the whole record puts a number on the week ahead, and says plainly how often that number has been right.',
   ctaButton: 'What happens next week',
@@ -511,6 +514,9 @@ const ru: Dict = {
   provenanceFirms: 'NASA FIRMS — продукты активных пожаров MODIS C6.1 и VIIRS C2, получены через area API FIRMS',
   ctaTitle: 'А дальше?',
   scopeGlobal: 'По всей планете',
+  barFossil: 'Ископаемое топливо за год',
+  barFires: 'Пожары планеты, {year}',
+  barNote: 'На одной шкале — чтобы доля была картинкой, а не делением в уме. Топливо — целый год; пожары — только та часть года, которая уже прошла.',
   ctaNote:
     'Всё выше уже случилось. Одно — нет: модель, обученная на всём архиве, ставит число на ближайшую неделю и честно говорит, как часто это число сбывалось.',
   ctaButton: 'Что будет на следующей неделе',

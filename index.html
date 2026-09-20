@@ -402,8 +402,23 @@
           </div>
         </header>
 
-        <p class="impact__lead" id="impact-lead"></p>
-        <p class="note note--tight" id="impact-caveat"></p>
+        <div class="impact__top">
+          <div class="impact__say">
+            <p class="impact__lead" id="impact-lead"></p>
+            <p class="note note--tight" id="impact-caveat"></p>
+          </div>
+          <!--
+            The sentence beside this says the year's fires released a few
+            gigatonnes, "about nine per cent of what fossil fuels put out".
+            Both halves are true and neither is legible: a reader is handed
+            two enormous numbers and asked to divide them in their head.
+            Drawn against each other, the same sentence needs no arithmetic.
+          -->
+          <figure class="impact__scale">
+            <canvas id="impact-bars"></canvas>
+            <figcaption class="note note--tight" id="impact-bars-note"></figcaption>
+          </figure>
+        </div>
 
         <ul class="impact__list" id="impact-list"></ul>
 
