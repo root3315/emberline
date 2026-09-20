@@ -474,11 +474,17 @@
         what, and how much of it can be checked by someone who does not
         trust us. It is the page a judge with four minutes reads.
       -->
-      <section class="hero about-hero" id="about-hero" hidden>
-        <p class="hero__where" data-i18n="aboutKicker">NASA Space Apps 2026</p>
-        <h1 class="hero__answer" id="about-answer"></h1>
-        <p class="hero__aside" data-i18n="aboutLede"></p>
-        <dl class="hero__stats" id="about-stats"></dl>
+      <section class="hero future-hero about-hero" id="about-hero" hidden>
+        <div class="future-hero__words">
+          <p class="hero__where" data-i18n="aboutKicker">NASA Space Apps 2026</p>
+          <h1 class="hero__answer" id="about-answer"></h1>
+          <p class="hero__aside" data-i18n="aboutLede"></p>
+          <dl class="hero__stats" id="about-stats"></dl>
+        </div>
+        <figure class="globe">
+          <canvas id="about-globe" aria-hidden="true"></canvas>
+          <figcaption class="globe__hint" data-i18n="globeHint">Drag to turn</figcaption>
+        </figure>
       </section>
 
       <section class="band band--split" id="about-problem" hidden>
@@ -487,10 +493,18 @@
             <div><h2 data-i18n="aboutProblemTitle">The problem</h2></div>
           </header>
           <p class="about__body" data-i18n="aboutProblemBody"></p>
+          <p class="note" data-i18n="aboutProblemNote"></p>
         </div>
         <div class="band__col">
-          <h3 class="subhead" data-i18n="aboutProblemAside">Why it matters</h3>
-          <p class="note" data-i18n="aboutProblemNote"></p>
+          <!--
+            The seam, drawn. Two instruments side by side rather than
+            stacked: the blue series stops being the whole story in 2012 and
+            the orange one takes over, and that step is the entire challenge
+            in one picture. Saying it in a paragraph never lands as hard.
+          -->
+          <h3 class="subhead" data-i18n="aboutSeamTitle">The seam, in the record</h3>
+          <div class="contrib"><canvas id="about-seam"></canvas></div>
+          <p class="note note--tight" data-i18n="aboutSeamNote"></p>
         </div>
       </section>
 
@@ -504,22 +518,52 @@
         <ul class="about__list" id="about-built-list"></ul>
       </section>
 
-      <section class="band band--split" id="about-model" hidden>
-        <div class="band__col">
-          <header class="band__head band__head--tight">
-            <div>
-              <h2 data-i18n="aboutModelTitle">The model</h2>
-              <p class="note" data-i18n="aboutModelNote"></p>
-            </div>
-          </header>
-          <p class="about__body" id="about-model-body"></p>
-          <a class="btn cta__btn" href="#/future" data-i18n="ctaButton">What happens next week</a>
+      <section class="band" id="about-model" hidden>
+        <header class="band__head">
+          <div>
+            <h2 data-i18n="aboutModelTitle">The model</h2>
+            <p class="note" data-i18n="aboutModelNote"></p>
+          </div>
+        </header>
+
+        <div class="about__model">
+          <div class="about__model-say">
+            <p class="about__body" id="about-model-body"></p>
+            <h3 class="subhead" data-i18n="aboutHowTitle">How it learns</h3>
+            <ol class="about__steps" id="about-steps"></ol>
+          </div>
+          <div class="about__model-num">
+            <h3 class="subhead" data-i18n="aboutModelNumbers">Measured</h3>
+            <dl class="metrics metrics--about" id="about-model-stats"></dl>
+            <p class="note note--tight" data-i18n="aboutModelCaveat"></p>
+          </div>
         </div>
-        <div class="band__col">
-          <h3 class="subhead" data-i18n="aboutModelNumbers">Measured</h3>
-          <dl class="metrics metrics--about" id="about-model-stats"></dl>
-          <p class="note note--tight" data-i18n="aboutModelCaveat"></p>
+
+        <!--
+          The three questions anyone should ask of a model, each answered
+          with the measurement rather than with a sentence: what does it
+          lean on, what did the weather buy, and does a number it gives
+          mean what it says.
+        -->
+        <h3 class="subhead" data-i18n="aboutWeighsTitle">What it weighs</h3>
+        <p class="note" data-i18n="aboutWeighsNote"></p>
+        <div class="about__chart about__chart--tall"><canvas id="about-importance"></canvas></div>
+        <p class="legend about__legend" id="about-importance-legend"></p>
+
+        <div class="band--split about__pair">
+          <div class="band__col">
+            <h3 class="subhead" data-i18n="aboutWeatherTitle">What the weather bought</h3>
+            <p class="note" data-i18n="aboutWeatherNote"></p>
+            <div class="about__chart"><canvas id="about-weather"></canvas></div>
+          </div>
+          <div class="band__col">
+            <h3 class="subhead" data-i18n="aboutCalibTitle">Does 85% mean 85%</h3>
+            <p class="note" data-i18n="aboutCalibNote"></p>
+            <div class="calib"><canvas id="about-calib"></canvas></div>
+          </div>
         </div>
+
+        <a class="btn cta__btn" href="#/future" data-i18n="ctaButton">What happens next week</a>
       </section>
 
       <section class="band" id="about-check" hidden>

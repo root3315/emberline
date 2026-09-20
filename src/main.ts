@@ -34,6 +34,8 @@ import { loadClimate, loadEmissions, type EmissionsFile } from './core/emissions
 import { loadForecast, type ForecastCell, type ForecastMeta } from './core/forecast'
 import { drawCalibration } from './ui/calibration'
 import { drawScaleBars } from './ui/scale-bars'
+import { drawImportance } from './ui/importance'
+import { loadModelCard } from './core/model-card'
 import { aboutList } from './i18n'
 import { loadLand } from './core/land'
 import { mountGlobe, type GlobeFire, type GlobeHandle } from './ui/globe'
@@ -174,6 +176,13 @@ const els = {
   aboutModelBody: $('about-model-body'),
   aboutModelStats: $('about-model-stats'),
   aboutCheckList: $('about-check-list'),
+  aboutGlobe: $<HTMLCanvasElement>('about-globe'),
+  aboutSeam: $<HTMLCanvasElement>('about-seam'),
+  aboutSteps: $('about-steps'),
+  aboutImportance: $<HTMLCanvasElement>('about-importance'),
+  aboutImportanceLegend: $('about-importance-legend'),
+  aboutWeather: $<HTMLCanvasElement>('about-weather'),
+  aboutCalib: $<HTMLCanvasElement>('about-calib'),
   impactBars: $<HTMLCanvasElement>('impact-bars'),
   impactBarsNote: $('impact-bars-note'),
   rampLow: $('ramp-low'),
@@ -671,6 +680,9 @@ let globe: GlobeHandle | null = null
 /** The small one at the foot of the record, which is the door's window. */
 let doorGlobe: GlobeHandle | null = null
 
+/** And one on the project's own page, for the same reason. */
+let aboutGlobe: GlobeHandle | null = null
+
 /**
  * How many places the list shows before it is asked for the rest.
  *
@@ -846,6 +858,10 @@ async function renderAbout(): Promise<void> {
 
   fillAboutList(els.aboutBuiltList, 'aboutBuiltList')
   fillAboutList(els.aboutCheckList, 'aboutCheckList')
+  fillSteps()
+  drawSeam()
+  void drawModelCharts()
+  void aboutPlanet()
 
   if (meta) {
     const splits = ABOUT_SPLITS
@@ -866,6 +882,93 @@ async function renderAbout(): Promise<void> {
   }
   writeUrl()
   status('')
+}
+
+/**
+ * The four steps, numbered, because "how it learns" is a sequence and a
+ * bulleted list of it reads as four unrelated facts.
+ */
+function fillSteps(): void {
+  els.aboutSteps.innerHTML = ''
+  for (const [text] of aboutList('aboutSteps')) {
+    const item = document.createElement('li')
+    item.textContent = text
+    els.aboutSteps.append(item)
+  }
+}
+
+/**
+ * The seam itself: the two instruments side by side, year by year.
+ *
+ * The same chart the world view already draws, reused rather than
+ * reinvented. On this page it is not a reading — it is the evidence for
+ * the paragraph beside it, which is why it sits under the problem rather
+ * than under a heading of its own.
+ */
+function drawSeam(): void {
+  const totals = worldIndex?.totals
+  if (!totals?.length) return
+  drawWorldYears(els.aboutSeam, totals, totals[totals.length - 1].year)
+}
+
+/** The three questions about the model, each answered with its measurement. */
+async function drawModelCharts(): Promise<void> {
+  const model = await loadModelCard()
+  if (!model) return
+
+  drawImportance(els.aboutImportance, model.importance)
+  els.aboutImportanceLegend.innerHTML = ''
+  for (const [key, colour] of [
+    ['aboutLegendArchive', '--ink-muted'],
+    ['aboutLegendWeather', '--ember'],
+    ['aboutLegendGround', '--sensor-modis'],
+  ] as const) {
+    const item = document.createElement('span')
+    item.className = 'legend__item'
+    const dot = document.createElement('i')
+    dot.className = 'legend__swatch'
+    dot.style.background = `var(${colour})`
+    item.append(dot, document.createTextNode(t(key)))
+    els.aboutImportanceLegend.append(item)
+  }
+
+  if (model.edge) {
+    /*
+     * The margin over the baseline, not the raw scores.
+     *
+     * Drawn as average precision the three bars were 0.55, 0.54 and 0.53:
+     * rounded to one figure they printed as identical, and drawn from zero
+     * they were three full-length bars. The chart showed nothing, which is
+     * worse than having no chart, because it implied there was nothing to
+     * see. What is actually being compared is how far each model gets past
+     * a baseline that already knows where fires usually are, and that
+     * difference is a clean factor of two.
+     */
+    drawScaleBars(
+      els.aboutWeather,
+      [
+        { label: t('aboutWeatherWith'), value: model.edge.with * 100, ours: true },
+        { label: t('aboutWeatherWithout'), value: model.edge.without * 100 },
+      ],
+      '%',
+    )
+  }
+  if (model.reliability.length) {
+    drawCalibration(
+      els.aboutCalib,
+      model.reliability.map((b) => ({ from: 0, to: 1, n: b.n, said: b.said, burned: b.burned })),
+    )
+  }
+}
+
+/** The same planet as the other two pages, because this one is about it. */
+async function aboutPlanet(): Promise<void> {
+  if (!aboutGlobe) {
+    const land = await loadLand()
+    if (!land) return
+    aboutGlobe = mountGlobe(els.aboutGlobe, land)
+  }
+  aboutGlobe.setFires(globeFires())
 }
 
 function aboutStat(label: string, value: string): void {
@@ -3393,6 +3496,7 @@ function setTheme(theme: 'night' | 'day'): void {
     // have to be told; every other canvas is redrawn by `rerender`.
     globe?.retheme()
     doorGlobe?.retheme()
+    aboutGlobe?.retheme()
   }, theme)
 }
 

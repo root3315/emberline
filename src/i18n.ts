@@ -240,6 +240,25 @@ const en: Dict = {
   ctaTitle: 'And then?',
   scopeGlobal: 'Worldwide',
   aboutLink: 'About the project',
+  aboutSeamTitle: 'The seam, in the record',
+  aboutSeamNote:
+    'Detections per year, the two instruments kept apart. VIIRS begins in 2012 and immediately dwarfs MODIS over the same ground. Add the two series and the total jumps; that jump is an instrument, not a planet.',
+  aboutHowTitle: 'How it learns',
+  aboutWeighsTitle: 'What it weighs',
+  aboutWeighsNote:
+    'Shuffle one column across the test rows and score the model again: how far the average precision falls is how much it needed that column. The scale is square-root, because the top bar is two hundred times the bottom one and a linear axis would leave eighteen of these invisible.',
+  aboutLegendArchive: 'From the fire archive',
+  aboutLegendWeather: 'From the weather forecast',
+  aboutLegendGround: 'What is standing there',
+  aboutWeatherTitle: 'What the weather bought',
+  aboutWeatherNote:
+    'How far past the seasonal baseline each model gets — the baseline being "how often does this cell burn at this time of year", which already knows where fires usually are. Same rows, same splits, same seed; the weather columns are the only difference. The raw scores are in the table above: they sit close together, and the margin is what moves.',
+  aboutWeatherWith: 'With the weather',
+  aboutWeatherWithout: 'Archive only',
+  aboutWeatherBase: 'The season alone',
+  aboutCalibTitle: 'Does 85% mean 85%',
+  aboutCalibNote:
+    'Group the cells the model gave about the same chance, and count how many burned. On the line means the number meant what it said. A model can rank perfectly and still be wrong about how sure it is, and average precision cannot show that.',
   aboutKicker: 'NASA Space Apps 2026 \u00b7 Harmonization of MODIS and VIIRS Hot Spots',
   aboutAnswer: 'Two satellites disagree about how much the world burns. This makes them agree.',
   aboutLede:
@@ -548,6 +567,25 @@ const ru: Dict = {
   ctaTitle: 'А дальше?',
   scopeGlobal: 'По всей планете',
   aboutLink: 'О проекте',
+  aboutSeamTitle: 'Шов в самом ряду',
+  aboutSeamNote:
+    'Засечек за год, приборы порознь. VIIRS начинается в 2012-м и сразу затмевает MODIS на той же земле. Сложите два ряда — и общая кривая прыгнет. Этот скачок — прибор, а не планета.',
+  aboutHowTitle: 'Как она учится',
+  aboutWeighsTitle: 'На что она опирается',
+  aboutWeighsNote:
+    'Перемешайте один столбец по тестовым строкам и посчитайте заново: насколько упадёт точность — настолько он был нужен. Шкала корневая: верхняя полоса в двести раз больше нижней, и на линейной восемнадцать из них стали бы невидимы.',
+  aboutLegendArchive: 'Из архива пожаров',
+  aboutLegendWeather: 'Из прогноза погоды',
+  aboutLegendGround: 'Что там растёт',
+  aboutWeatherTitle: 'Что дала погода',
+  aboutWeatherNote:
+    'Насколько каждая модель уходит вперёд от сезонной базы — то есть от «как часто здесь горит в это время года», которая уже знает, где обычно горит. Те же строки, то же разбиение, тот же сид; отличие только в погодных колонках. Сама точность — в таблице выше: цифры близки, а двигается именно перевес.',
+  aboutWeatherWith: 'С погодой',
+  aboutWeatherWithout: 'Только архив',
+  aboutWeatherBase: 'Один сезон',
+  aboutCalibTitle: 'Значит ли 85% именно 85%',
+  aboutCalibNote:
+    'Сгруппируйте ячейки, которым модель дала примерно один шанс, и посчитайте, сколько сгорело. На линии — значит число значило то, что говорило. Модель может ранжировать идеально и при этом врать о своей уверенности, а средняя точность этого не показывает.',
   aboutKicker: 'NASA Space Apps 2026 \u00b7 Сведение очагов MODIS и VIIRS',
   aboutAnswer: 'Два спутника не согласны, сколько горит мир. Здесь они приведены к согласию.',
   aboutLede:
@@ -791,6 +829,12 @@ const aboutLists: Record<Lang, Record<string, readonly AboutRow[]>> = {
     ['This week, and next', 'The last seven days as a snapshot, and a gradient-boosted model\u2019s estimate of the seven to come.'],
     ['What it does', 'Fire radiative power turned into carbon dioxide by the published method, calibrated against GFED, with the caveats printed beside the number rather than in a footnote.'],
     ],
+    aboutSteps: [
+      ['Every cell that has ever burned, on every fourth day of 24 years, becomes one row: what was known that morning, and whether it burned in the week that followed.', ''],
+      ['Fires are rare — five per cent of rows — so the negatives are thinned to three per positive, and the probabilities are shifted back to the real base rate afterwards.', ''],
+      ['The years are split in time, never at random: learn on 2003–2013, tune on 2014–2017, and touch 2018–2021 exactly once, at the end.', ''],
+      ['1,500 gradient-boosted trees, each correcting the last. Nothing deep and nothing fashionable: on thirty columns of tabular data this beats a neural network and can be asked why it said what it said.', ''],
+    ],
     aboutCheckList: [
     ['The forecast is scored against reality', 'The week on the map was computed before it happened. verify_forecast.py asks NASA what has burned since and scores it \u2014 ranking from day one, calibration once the week closes. The answer did not exist when the question was asked.'],
     ['The reconciliation is a switch', 'Every chart has "as recorded" beside "reconciled". If the correction were doing something dishonest, it would be visible in one click.'],
@@ -805,6 +849,12 @@ const aboutLists: Record<Lang, Record<string, readonly AboutRow[]>> = {
     ['Сутки за сутками', 'Каждый день 24 лет на четверти градуса — именно это делает возможным календарь на 9 000 дней для любой точки Земли.'],
     ['Эта неделя и следующая', 'Последние семь дней снимком и оценка модели на семь вперёд.'],
     ['Чем это отзывается', 'Мощность излучения, переведённая в CO₂ по опубликованной методике и сверенная с GFED, с оговорками рядом с числом, а не в сноске.'],
+    ],
+    aboutSteps: [
+      ['Каждая ячейка, где когда-либо горело, на каждый четвёртый день 24 лет становится строкой: что было известно тем утром — и загорелось ли в ближайшую неделю.', ''],
+      ['Пожары редки — пять процентов строк, — поэтому отрицательные примеры прореживаются до трёх на один положительный, а вероятности потом возвращаются к настоящей базе.', ''],
+      ['Годы делятся по времени, никогда случайно: учёба на 2003–2013, настройка на 2014–2017, а 2018–2021 трогаются ровно один раз, в самом конце.', ''],
+      ['1 500 деревьев градиентного бустинга, каждое правит ошибки предыдущих. Ничего глубокого и ничего модного: на тридцати колонках табличных данных это обходит нейросеть и умеет объяснить, почему сказало именно так.', ''],
     ],
     aboutCheckList: [
     ['Прогноз сверяется с реальностью', 'Неделя на карте посчитана до того, как она случилась. verify_forecast.py спрашивает у NASA, что сгорело с тех пор, и считает оценку: ранжирование с первого дня, калибровка когда неделя закроется. Ответа не существовало в момент вопроса.'],

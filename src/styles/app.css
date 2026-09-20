@@ -1995,6 +1995,70 @@ canvas {
   color: var(--ink-secondary);
 }
 
+/*
+ * The model section is the longest on the page, so it is given rhythm
+ * rather than one column of prose: a wide top with the numbers beside the
+ * explanation, then a tall chart, then two short ones side by side.
+ */
+.about__model {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+  gap: var(--s-8);
+  align-items: start;
+  margin-bottom: var(--s-10);
+}
+
+.about__model-say,
+.about__model-num {
+  min-width: 0;
+}
+
+.about__steps {
+  margin: 0;
+  padding-left: 1.4em;
+  max-width: 62ch;
+}
+
+.about__steps li {
+  margin-bottom: var(--s-3);
+  font-size: var(--t-small);
+  line-height: 1.6;
+  color: var(--ink-secondary);
+}
+
+.about__steps li::marker {
+  font-family: var(--font-mono);
+  color: var(--ink-muted);
+}
+
+.about__chart {
+  margin-top: var(--s-4);
+}
+
+.about__chart canvas {
+  display: block;
+  width: 100%;
+}
+
+.about__legend {
+  margin-top: var(--s-3);
+}
+
+/* The two short charts share a row and their own breathing space. */
+.about__pair {
+  margin-top: var(--s-10);
+}
+
+.about__pair .subhead:first-child {
+  margin-top: 0;
+}
+
+@media (max-width: 860px) {
+  .about__model {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
 .about__list {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
