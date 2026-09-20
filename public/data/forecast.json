@@ -1,0 +1,22 @@
+{
+  "horizonDays": 7,
+  "degrees": 0.25,
+  "cols": 1440,
+  "rows": 720,
+  "cells": 74013,
+  "from": "2026-09-20",
+  "to": "2026-09-26",
+  "asOf": "2026-09-19",
+  "file": "world/forecast-7d.bin.gz",
+  "threshold": 0.01,
+  "skill": {
+    "model": 0.5335431805844842,
+    "climatology": 0.5210579497761018,
+    "persistence": 0.37927102823298203,
+    "baseRate": 0.04933002178415668,
+    "rocAuc": 0.9200946961607461
+  },
+  "tested": "2022-2026",
+  "target": "at least one MODIS detection in the cell over the next 7 days",
+  "builtAt": "2026-09-20T14:12:15.180391+00:00"
+}

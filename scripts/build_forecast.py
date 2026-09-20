@@ -1,0 +1,259 @@
+"""
+Apply the model to the end of the record and ship the result as a map.
+
+The site is static, so the forecast is built here rather than in the browser:
+one file of probabilities, as of the last day the archive holds, exactly like
+the weekly snapshot beside it. It is honest about being a build-time artefact
+and the caption says which week it covers.
+
+── The one thing that has to be exact ─────────────────────────────────────
+
+The neighbourhood features. Training could afford to skip the cells on a
+tile's border, because a missing ten per cent of samples costs nothing. A map
+cannot: an under-read border every ten degrees would draw a grid of faint
+seams across the planet and look like a bug, which it would be.
+
+So the recent activity is assembled globally first — the last thirty-one days
+of the whole Earth, sixty-four megabytes — and the ring is summed across tile
+boundaries, wrapping at the date line. Everything that depends only on the
+cell's own history still comes from the per-tile pass, where the full
+twenty-four years are at hand.
+
+    python scripts/build_forecast.py [horizon]
+"""
+
+from __future__ import annotations
+
+import gzip
+import json
+import os
+import pickle
+import struct
+import sys
+from datetime import date, timedelta
+
+import numpy as np
+
+HORIZON = int(sys.argv[1]) if len(sys.argv) > 1 else 7
+DAYS_DIR = "public/data/world/days"
+INDEX = "public/data/world/days-index.json"
+MODEL = f"models/fire-{HORIZON}d.pkl"
+META = f"models/fire-{HORIZON}d.json"
+ONI_FILE = "models/oni.json"
+OUT_BIN = f"public/data/world/forecast-{HORIZON}d.bin"
+OUT_JSON = "public/data/forecast.json"
+
+EPOCH = date(2003, 1, 1)
+LAST = date(2026, 9, 19)
+TRAIN_ERA = (2003, 2018)
+RECENT = 31
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from train_fire_model import (  # noqa: E402
+    climatology,
+    count_climatology,
+    load_tile,
+    ring_of,
+    window,
+)
+
+
+def main() -> None:
+    idx = json.load(open(INDEX, encoding="utf-8"))
+    side, deg, step = idx["tileCells"], idx["degrees"], idx["tileDegrees"]
+    cols, rows = idx["cols"], idx["rows"]
+    n_days = (LAST - EPOCH).days + 1
+    today = n_days - 1
+
+    doy_of = np.array([(EPOCH + timedelta(days=int(d))).timetuple().tm_yday for d in range(n_days)])
+    year_of = np.array([(EPOCH + timedelta(days=int(d))).year for d in range(n_days)])
+
+    bundle = pickle.load(open(MODEL, "rb"))
+    model, names = bundle["model"], bundle["features"]
+    trained_rate, true_rate = bundle["trained_rate"], bundle["true_rate"]
+
+    oni = {tuple(int(x) for x in k.split("-")): v for k, v in json.load(open(ONI_FILE)).items()}
+    oni_now = oni.get(((EPOCH + timedelta(days=today)).year, (EPOCH + timedelta(days=today)).month), 0.0)
+
+    tiles = sorted(idx["tiles"].items())
+    print(f"{len(tiles)} tiles, forecast from day {LAST} over {HORIZON}d")
+
+    # Pass one: the planet's last month, so the ring is exact across seams.
+    recent = np.zeros((rows * cols, RECENT), dtype=np.uint16)
+    for key, groups in tiles:
+        tx, ty = (int(v) for v in key.split("-"))
+        grid = load_tile(tx, ty, groups, n_days, side)
+        if grid is None:
+            continue
+        local = grid[:, today - RECENT + 1 : today + 1]
+        r = (np.arange(side * side) // side) + ty * side
+        c = (np.arange(side * side) % side) + tx * side
+        recent[r * cols + c] = local
+        del grid
+
+    print("  global ring...")
+    g = recent.reshape(rows, cols, RECENT).astype(np.int32)
+    ring_recent = np.zeros_like(g)
+    for dy in (-1, 0, 1):
+        for dx in (-1, 0, 1):
+            if dx == 0 and dy == 0:
+                continue
+            src = np.roll(g, shift=dx, axis=1)  # longitude wraps at the date line
+            if dy < 0:
+                ring_recent[:dy] += src[-dy:]
+            elif dy > 0:
+                ring_recent[dy:] += src[:-dy]
+            else:
+                ring_recent += src
+    ring_recent = ring_recent.reshape(rows * cols, RECENT)
+    del g, recent
+
+    cum_ring_g = np.cumsum(ring_recent, axis=1, dtype=np.int32)
+    del ring_recent
+
+    # Pass two: everything that needs a cell's own long history.
+    out_cells: list[np.ndarray] = []
+    out_prob: list[np.ndarray] = []
+    for n, (key, groups) in enumerate(tiles, 1):
+        tx, ty = (int(v) for v in key.split("-"))
+        grid = load_tile(tx, ty, groups, n_days, side)
+        if grid is None:
+            continue
+        ever = np.where(grid.max(axis=1) > 0)[0]
+        if ever.size == 0:
+            del grid
+            continue
+
+        cum = np.cumsum(grid, axis=1, dtype=np.int32)
+        cum_active = np.cumsum(grid > 0, axis=1, dtype=np.int32)
+        clim = climatology(grid, doy_of, year_of)
+        clim_ring = ring_of(clim, side) / 8.0
+        clim30 = count_climatology(grid, cum, doy_of, year_of, n_days, 30)
+        ring_clim30 = ring_of(clim30, side) / 8.0
+
+        tile_cum = cum.sum(axis=0)
+        tile_clim30 = np.zeros(366, dtype=np.float64)
+        seen30 = np.zeros(366, dtype=np.float64)
+        lo0, hi0 = TRAIN_ERA
+        for d in np.where((year_of >= lo0) & (year_of <= hi0))[0]:
+            tile_clim30[doy_of[d] - 1] += tile_cum[d] - tile_cum[max(0, d - 30)]
+            seen30[doy_of[d] - 1] += 1
+        seen30[seen30 == 0] = 1
+        tile_clim30 /= seen30
+
+        jan1 = today - (doy_of[today] - 1)
+        ytd_now = cum[:, today] - cum[:, max(jan1, 0)]
+        ytd_clim = np.zeros(grid.shape[0], dtype=np.float32)
+        seen_y = 0
+        for d in np.where((year_of >= lo0) & (year_of <= hi0) & (doy_of == doy_of[today]))[0]:
+            j = d - (doy_of[d] - 1)
+            ytd_clim += cum[:, d] - cum[:, max(j, 0)]
+            seen_y += 1
+        ytd_clim /= max(seen_y, 1)
+
+        since = np.full(grid.shape[0], 365, dtype=np.int32)
+        for back in range(0, 366):
+            d = today - back
+            if d < 0:
+                break
+            hit = (grid[:, d] > 0) & (since == 365)
+            since[hit] = back
+
+        cells = ever
+        dd = np.full(cells.size, today)
+        doy0 = doy_of[today] - 1
+        gr = (cells // side) + ty * side
+        gc = (cells % side) + tx * side
+        gix = gr * cols + gc
+        last_ix = RECENT - 1
+
+        def ring_win(w: int) -> np.ndarray:
+            return cum_ring_g[gix, last_ix] - cum_ring_g[gix, max(last_ix - w, 0)]
+
+        f = np.empty((cells.size, len(names)), dtype=np.float32)
+        for i, w in enumerate((1, 3, 7, 14, 30, 90)):
+            f[:, i] = np.log1p(window(cum, cells, dd, w))
+        for i, w in enumerate((1, 3, 7, 30), start=6):
+            f[:, i] = np.log1p(ring_win(w))
+        f[:, 10] = np.sin(2 * np.pi * doy_of[today] / 365.25)
+        f[:, 11] = np.cos(2 * np.pi * doy_of[today] / 365.25)
+        f[:, 12] = clim[cells, doy0]
+        f[:, 13] = clim_ring[cells, doy0]
+        f[:, 14] = np.log1p(grid[cells].sum(axis=1) / (TRAIN_ERA[1] - TRAIN_ERA[0] + 1))
+        f[:, 15] = since[cells] / 365.0
+        f[:, 16] = ((ty * step - 90) + (cells // side + 0.5) * deg) / 90.0
+        f[:, 17] = (cum_active[cells, today] - cum_active[cells, max(today - 30, 0)]) / 30.0
+        ago = max(today - 365, 0)
+        f[:, 18] = np.log1p(window(cum, cells, np.full(cells.size, ago), 14)) if today >= 372 else 0.0
+        own30 = window(cum, cells, dd, 30).astype(np.float32)
+        f[:, 19] = np.log1p(own30) - np.log1p(clim30[cells, doy0])
+        f[:, 20] = np.log1p(ring_win(30).astype(np.float32)) - np.log1p(ring_clim30[cells, doy0])
+        t30 = float(tile_cum[today] - tile_cum[max(today - 30, 0)])
+        f[:, 21] = np.log1p(t30) - np.log1p(tile_clim30[doy0])
+        f[:, 22] = np.log1p(ytd_now[cells]) - np.log1p(ytd_clim[cells])
+        f[:, 23] = oni_now
+
+        raw = model.predict_proba(f)[:, 1]
+        eps = 1e-9
+        pc = np.clip(raw, eps, 1 - eps)
+        shift = np.log((trained_rate / (1 - trained_rate)) / (true_rate / (1 - true_rate)))
+        p = 1 / (1 + np.exp(-(np.log(pc / (1 - pc)) - shift)))
+
+        keep = p >= 0.01
+        if keep.any():
+            out_cells.append(gix[keep].astype(np.uint32))
+            out_prob.append(np.round(p[keep] * 255).astype(np.uint8))
+
+        del grid, cum, cum_active, clim, clim_ring, clim30, ring_clim30
+        if n % 80 == 0:
+            print(f"  {n}/{len(tiles)}  {sum(a.size for a in out_cells):,} cells")
+
+    cells = np.concatenate(out_cells)
+    probs = np.concatenate(out_prob)
+    order = np.argsort(cells)
+    cells, probs = cells[order], probs[order]
+
+    buf = bytearray(struct.pack("<I", cells.size))
+    buf += cells.astype("<u4").tobytes()
+    buf += probs.tobytes()
+    blob = gzip.compress(bytes(buf), 9)
+    os.makedirs(os.path.dirname(OUT_BIN), exist_ok=True)
+    with open(OUT_BIN + ".gz", "wb") as fh:
+        fh.write(blob)
+
+    meta = json.load(open(META, encoding="utf-8"))
+    from_day = LAST + timedelta(days=1)
+    json.dump(
+        {
+            "horizonDays": HORIZON,
+            "degrees": 0.25,
+            "cols": cols,
+            "rows": rows,
+            "cells": int(cells.size),
+            "from": from_day.isoformat(),
+            "to": (LAST + timedelta(days=HORIZON)).isoformat(),
+            "asOf": LAST.isoformat(),
+            "file": f"world/forecast-{HORIZON}d.bin.gz",
+            "threshold": 0.01,
+            "skill": {
+                "model": meta["scores"]["model"]["average_precision"],
+                "climatology": meta["scores"]["climatology"]["average_precision"],
+                "persistence": meta["scores"]["persistence"]["average_precision"],
+                "baseRate": meta["test_base_rate"],
+                "rocAuc": meta["scores"]["model"]["roc_auc"],
+            },
+            "tested": meta["splits"]["test"],
+            "target": meta["target"],
+            "builtAt": meta["builtAt"],
+        },
+        open(OUT_JSON, "w", encoding="utf-8"),
+        indent=2,
+    )
+
+    print(f"\n{cells.size:,} cells above 1%   {len(blob) / 1048576:.2f} MB")
+    print(f"  mean {probs.mean() / 255:.3f}   above 50%: {(probs > 127).sum():,}")
+    print(f"{OUT_BIN}.gz\n{OUT_JSON}")
+
+
+if __name__ == "__main__":
+    main()

@@ -168,6 +168,11 @@ const en: Dict = {
   rangeLegend: 'Period',
   rangeYear: '{year}',
   rangeNow: 'Right now',
+  rangeForecast: 'Next week',
+  forecastNote: 'Chance of a fire large enough for the 1 km sensor to see, {from} to {to}, per {cell} cell. Computed from the archive as it stood on {asOf} — a build-time estimate, not a live forecast.',
+  forecastSkill: 'Scored on {tested}, years the model never saw: {model} average precision against {clim} for "how often it burns here at this time of year" and {persist} for "it burned last week". Picking at random scores {base}. The margin over the seasonal baseline is small, and it is printed here rather than hidden: without daily weather — rain, wind, humidity — most of what is predictable about the next week is the season.',
+  forecastProbe: '{p} chance in the next {n} days',
+  forecastMissing: 'No forecast has been built for this deployment.',
   nowDaysLegend: 'How far back',
   nowDay1: 'Last day',
   nowDay3: '3 days',
@@ -199,6 +204,8 @@ const en: Dict = {
   probeQuiet: 'never burned here',
   rampLow: 'burned once',
   rampHigh: 'burns often',
+  rampUnlikely: 'unlikely',
+  rampLikely: 'near certain',
 
   dataSource: 'Data source',
   srcArchive: 'Bundled',
@@ -229,6 +236,7 @@ const en: Dict = {
   concentrationLine: 'Half of {year} burned in {n} days, and {pct}% of the year fell in {month}.',
   colophon:
     'Fire detections from NASA FIRMS (MODIS and VIIRS). These mark burning at the moment a satellite passed overhead, not the area burned. Built for the NASA Space Apps Challenge 2026.',
+  provenanceFirms: 'NASA FIRMS — MODIS C6.1 and VIIRS C2 active fire products, retrieved via the FIRMS area API',
   provenanceLine:
     '{provenance}. {days} days of record, {detections} detections, {dropped} rows dropped as volcanoes, gas flares or offshore sources.',
 }
@@ -391,6 +399,11 @@ const ru: Dict = {
   rangeLegend: 'Период',
   rangeYear: '{year}',
   rangeNow: 'Прямо сейчас',
+  rangeForecast: 'На неделю вперёд',
+  forecastNote: 'Вероятность пожара, достаточно крупного для километрового сенсора, с {from} по {to}, на ячейку {cell}. Считано по архиву на {asOf} — оценка на момент сборки, не живой прогноз.',
+  forecastSkill: 'Проверено на {tested} — годах, которых модель не видела: средняя точность {model} против {clim} у «как часто здесь горит в это время года» и {persist} у «горело на прошлой неделе». Случайный выбор даёт {base}. Перевес над сезонной базой небольшой, и он здесь написан, а не спрятан: без суточной погоды — дождя, ветра, влажности — предсказуемо в ближайшей неделе почти только сезон.',
+  forecastProbe: '{p} вероятность в ближайшие {n} дней',
+  forecastMissing: 'Для этой сборки прогноз не посчитан.',
   nowDaysLegend: 'За какой срок',
   nowDay1: 'Последний день',
   nowDay3: '3 дня',
@@ -422,6 +435,8 @@ const ru: Dict = {
   probeQuiet: 'здесь не горело',
   rampLow: 'горел однажды',
   rampHigh: 'горит часто',
+  rampUnlikely: 'маловероятно',
+  rampLikely: 'почти наверняка',
 
   dataSource: 'Источник данных',
   srcArchive: 'В комплекте',
@@ -452,6 +467,7 @@ const ru: Dict = {
   concentrationLine: 'Половина {year} года сгорела за {n} дней, а {pct}% всего объёма пришлось на {month}.',
   colophon:
     'Засечки огня из NASA FIRMS (MODIS и VIIRS). Они отмечают горение в момент пролёта спутника, а не выгоревшую площадь. Сделано для NASA Space Apps Challenge 2026.',
+  provenanceFirms: 'NASA FIRMS — продукты активных пожаров MODIS C6.1 и VIIRS C2, получены через area API FIRMS',
   provenanceLine:
     '{provenance}. {days} дней ряда, {detections} засечек, {dropped} строк отброшено как вулканы, газовые факелы и офшорные источники.',
 }

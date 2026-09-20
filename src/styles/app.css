@@ -1601,8 +1601,12 @@ canvas {
  * One control at a time on the right: the year when the map is showing a year,
  * how far back when it is showing the snapshot. They answer the same question
  * for their own period and would only compete for attention side by side.
+ *
+ * Next week has no year at all, and leaving the stepper standing there offered
+ * a choice that changed nothing on the map.
  */
-.map-period[data-range='now'] .yearpick {
+.map-period[data-range='now'] .yearpick,
+.map-period[data-range='forecast'] .yearpick {
   display: none;
 }
 

@@ -31,6 +31,7 @@ import {
 } from './core/world'
 import { drawWorldSeason, drawWorldYears, worldHeadline, type WorldTotal } from './ui/world-panel'
 import { loadClimate, loadEmissions, type EmissionsFile } from './core/emissions'
+import { loadForecast, type ForecastCell, type ForecastMeta } from './core/forecast'
 import { daysInYear, dayOfYear, yearOf } from './core/grid'
 import {
   MIN_RATIO_SAMPLES,
@@ -141,6 +142,9 @@ const els = {
   sensors: $<HTMLUListElement>('sensors'),
   sensitivityNote: $('sensitivity-note'),
   provenance: $('provenance'),
+  mapCaveat: $('map-caveat'),
+  rampLow: $('ramp-low'),
+  rampHigh: $('ramp-high'),
   status: $('status'),
   ribbonHost: $('ribbon-svg'),
   worldBand: $('world-band'),
@@ -255,13 +259,54 @@ picker.setPhrases((state) =>
  * The years come from whichever scope is showing: the planet has a reading for
  * every year since 2000, a small region may not.
  */
+/**
+ * The archive files carry their origin as one English sentence, fixed when
+ * they were built. Rebuilding them to translate a caption is not a trade
+ * worth making, so the one we ship is recognised here and said in the
+ * reader's language; anything else — a file someone dropped in themselves —
+ * goes through exactly as it came.
+ */
+const FIRMS_PROVENANCE =
+  'NASA FIRMS — MODIS C6.1 and VIIRS C2 active fire products, retrieved via the FIRMS area API'
+
+function sourceName(raw: string): string {
+  return raw === FIRMS_PROVENANCE ? t('provenanceFirms') : raw
+}
+
+/**
+ * A second line under the map, for what qualifies the picture rather than
+ * describes it.
+ *
+ * The forecast has to say how well it scores, and that is three sentences —
+ * above the map, next to the heading, it pushed the map itself off the screen
+ * and read as the main statement. It is a footnote, so it sits where one does.
+ */
+function setMapCaveat(text: string): void {
+  els.mapCaveat.textContent = text
+  els.mapCaveat.hidden = !text
+}
+
 function paintRangeLabel(): void {
   els.rangeYearLabel.textContent = t('rangeYear', { year: String(state.year) })
   els.mapYearValue.textContent = String(state.year)
-  els.mapPeriod.dataset.range = worldNow ? 'now' : 'year'
+  els.mapPeriod.dataset.range = worldForecast ? 'forecast' : worldNow ? 'now' : 'year'
   // The day chips only make sense over a framed area: the planet's snapshot is
   // one coarse file for the whole week and has no day in it.
   els.mapDays.hidden = !worldNow || (worldScope && !worldPlace)
+
+  /*
+   * The colour scale means a different thing next week than it does for a
+   * year. "Burned once … burns often" counts fires that happened; the
+   * forecast's cells hold the chance that one will. The key is rewritten
+   * rather than the text set directly, so switching language afterwards
+   * still finds the right words.
+   */
+  const low = worldForecast ? 'rampUnlikely' : 'rampLow'
+  const high = worldForecast ? 'rampLikely' : 'rampHigh'
+  els.rampLow.dataset.i18n = low
+  els.rampLow.textContent = t(low)
+  els.rampHigh.dataset.i18n = high
+  els.rampHigh.textContent = t(high)
 
   const years = mapYears()
   const i = years.indexOf(state.year)
@@ -273,13 +318,24 @@ function mapYears(): number[] {
   return worldScope ? (worldIndex?.totals.map((d) => d.year) ?? []) : state.years
 }
 
-function setRange(now: boolean): void {
-  if (worldNow === now) return
+function setRange(mode: string): void {
+  const now = mode === 'now'
+  const fc = mode === 'forecast'
+  if (worldNow === now && worldForecast === fc) return
   worldNow = now
-  const input = els.mapRange.querySelector<HTMLInputElement>(`input[value="${now ? 'now' : 'year'}"]`)
+  worldForecast = fc
+  const input = els.mapRange.querySelector<HTMLInputElement>(`input[value="${mode}"]`)
   if (input) input.checked = true
   paintRangeLabel()
-  if (now && !worldNowData) {
+
+  if (fc && !forecast) {
+    els.mapNote.textContent = t('worldLoading')
+    void loadForecast().then((got) => {
+      forecast = got
+      if (!got) els.mapNote.textContent = t('forecastMissing')
+      else drawMap()
+    })
+  } else if (now && !worldNowData) {
     els.mapNote.textContent = t('worldLoading')
     void loadWorldNow()
       .then((snap) => {
@@ -296,6 +352,66 @@ function setRange(now: boolean): void {
 }
 
 /**
+ * The forecast, clipped to whatever is framed.
+ *
+ * One global grid of probabilities, so a region or a place simply shows its
+ * own part of it. The colour runs on probability against a ceiling of one,
+ * which is the only scale a probability can honestly have.
+ */
+function renderMapForecast(box: Bounds | null, name: string | null, fitKey: string): void {
+  const got = forecast
+  if (!got) {
+    els.mapNote.textContent = t('forecastMissing')
+    return
+  }
+  const { meta, cells } = got
+  const half = meta.degrees / 2
+  const inside = box
+    ? cells.filter(
+        (c) =>
+          c.lat + half > box.south &&
+          c.lat - half < box.north &&
+          c.lon + half > box.west &&
+          c.lon - half < box.east,
+      )
+    : cells
+
+  updateMap(
+    {
+      bounds: box ?? WORLD_VIEW,
+      cells: inside.map((c) => ({ lat: c.lat, lon: c.lon, days: c.p })),
+      cellKm: 111.32 * meta.degrees,
+      cellDeg: meta.degrees,
+      frame: box !== null,
+      ceiling: 1,
+    },
+    claimFit(fitKey),
+  )
+
+  const pct = (v: number) => `${(v * 100).toFixed(0)}%`
+  // Name the area when there is one, so a framed forecast does not read as
+  // a statement about the planet.
+  els.mapNote.textContent =
+    (name ? `${name}. ` : '') +
+    t('forecastNote', {
+      from: meta.from,
+      to: meta.to,
+      asOf: meta.asOf,
+      cell: t('cellQuarter'),
+    })
+  // How well it scores belongs under the map, not in front of it.
+  setMapCaveat(
+    t('forecastSkill', {
+      tested: meta.tested,
+      model: meta.skill.model.toFixed(2),
+      clim: meta.skill.climatology.toFixed(2),
+      persist: meta.skill.persistence.toFixed(2),
+      base: pct(meta.skill.baseRate),
+    }),
+  )
+}
+
+/**
  * Walk to the next or previous year of whatever is showing.
  *
  * Also leaves the snapshot: asking for a year is a statement about what to
@@ -306,9 +422,7 @@ function stepYear(delta: number): void {
   const i = years.indexOf(state.year)
   const next = years[i + delta]
   if (i < 0 || next === undefined) return
-  if (worldNow) {
-    setRange(false)
-  }
+  if (worldNow || worldForecast) setRange('year')
   state.year = next
   if (worldScope) {
     drawScopeRibbon()
@@ -339,13 +453,51 @@ function drawScopeRibbon(): void {
 }
 
 /** Whichever map the current scope and period call for. */
+/**
+ * Draw the map, and refuse to do it from inside itself.
+ *
+ * Framing the map moves it, moving it settles, and a settled move asks for a
+ * redraw — which frames it again. That closed the circle and overflowed the
+ * stack: every view after it froze on the caption of whatever had been open
+ * before. The guard is crude on purpose; the alternative is reasoning about
+ * which of five draw paths may fit the camera, and being wrong once is a
+ * hung page.
+ */
+let drawing = false
+
 function drawMap(): void {
-  if (worldScope) renderMapWorld()
-  else if (state.dataset) renderMap(state.dataset)
+  if (drawing) return
+  drawing = true
+  try {
+    if (worldScope) renderMapWorld()
+    else if (state.dataset) renderMap(state.dataset)
+  } finally {
+    // After the current task, so a `moveend` raised by this draw's own
+    // `fitBounds` still finds the guard closed.
+    setTimeout(() => {
+      drawing = false
+    }, 0)
+  }
 }
 
 /** Only re-frame the map when the area changes, never on a year click. */
 let mapFittedFor = ''
+
+/**
+ * Claim the camera for a view, and say whether it still needs framing.
+ *
+ * The claim is staked before the draw, never after. Leaflet raises `moveend`
+ * from inside `fitBounds` synchronously, and the handler for that asks for a
+ * redraw; with the key recorded afterwards the redraw read the old one, framed
+ * the same view again, and went round until the stack gave out. The throw
+ * landed in the caller's catch and the page reported that the globe would not
+ * load, which is why this looked like a fetch problem for so long.
+ */
+function claimFit(key: string): boolean {
+  const need = mapFittedFor !== key
+  mapFittedFor = key
+  return need
+}
 
 /** Coordinates and burn history of whatever the pointer is over. */
 function showMapProbe(hit: MapProbe | null): void {
@@ -364,6 +516,17 @@ function showMapProbe(hit: MapProbe | null): void {
     `${Math.abs(hit.lon).toFixed(2)}°${hit.lon < 0 ? 'W' : 'E'}`
 
   const value = document.createElement('div')
+  if (worldForecast && forecast) {
+    // A probability, not a count: the readout has to say so or the number
+    // reads as "this many fires".
+    value.textContent = t('forecastProbe', {
+      p: `${Math.round(hit.days * 100)}%`,
+      n: String(forecast.meta.horizonDays),
+    })
+    els.mapProbe.append(coords, value)
+    els.mapProbe.hidden = false
+    return
+  }
   if (hit.point) {
     /**
      * A detection is one observation, so it is described rather than counted:
@@ -544,8 +707,8 @@ function render(): void {
   // replaced by a count of five-kilometre squares over a period nobody asked
   // for. The figures under the map describe the archive too, so they go with
   // it when the period is the last week.
-  els.mapFacts.hidden = worldScope || worldNow
-  if (!worldScope && !worldNow) {
+  els.mapFacts.hidden = worldScope || worldNow || worldForecast
+  if (!worldScope && !worldNow && !worldForecast) {
     const cells = ds.mapCells(state.year).length
     els.mapNote.textContent = t('mapNoteArchive', { cells: formatNumber(cells), km: ds.mapCellKm, years: state.year })
   }
@@ -1088,7 +1251,7 @@ function renderSensors(ds: Dataset): void {
 
 function renderProvenance(ds: Dataset): void {
   els.provenance.textContent = t('provenanceLine', {
-    provenance: ds.provenance,
+    provenance: sourceName(ds.provenance),
     days: formatNumber(ds.days.length),
     detections: formatNumber(ds.totals.rawDetections),
     dropped: formatNumber(ds.totals.nonVegetation),
@@ -1364,8 +1527,9 @@ function pickYear(year: number): void {
   state.year = year
   paintRangeLabel()
   // Choosing a year is a statement about what to show: leave the snapshot.
-  if (worldNow) {
+  if (worldNow || worldForecast) {
     worldNow = false
+    worldForecast = false
     const input = els.mapRange.querySelector<HTMLInputElement>('input[value="year"]')
     if (input) input.checked = true
   }
@@ -1476,6 +1640,14 @@ let worldDaily: WorldDaily | null = null
  * answer appears.
  */
 let worldNow = false
+/**
+ * The model's week, rather than the archive's.
+ *
+ * A third period, not a third place: the same area can be asked what burned
+ * in a year, what burned this week, and what the model expects next week.
+ */
+let worldForecast = false
+let forecast: { meta: ForecastMeta; cells: ForecastCell[] } | null = null
 /** A searched place: the world view, framed on somewhere in particular. */
 let worldPlace: { bounds: Bounds; name: string } | null = null
 /**
@@ -1756,6 +1928,9 @@ function renderMapNow(box: Bounds | null, name: string | null, fitKey: string): 
       return
     }
     if (nowPoints.points.length) {
+      // With no box the view is whatever the reader has panned to, and its
+      // key is derived from that view. Re-framing would change the view,
+      // change the key, and ask for the next fetch of the same ground.
       drawNowPoints(nowPoints.points, box, name, fitKey, snap.meta)
       return
     }
@@ -1813,9 +1988,8 @@ function renderMapNow(box: Bounds | null, name: string | null, fitKey: string): 
       frame: box !== null,
       ceiling: nowCeiling(),
     },
-    mapFittedFor !== fitKey,
+    claimFit(fitKey),
   )
-  mapFittedFor = fitKey
 
   const fires = box ? inside.reduce((sum, c) => sum + c.value, 0) : snap.meta.detections
   const cell = t('cellQuarter')
@@ -1869,9 +2043,8 @@ function drawNowFine(
       // less, so this level has a ceiling of its own, per day.
       ceiling: nowFineCeiling(nowDays),
     },
-    mapFittedFor !== fitKey,
+    claimFit(fitKey),
   )
-  mapFittedFor = fitKey
 
   const from = addDays(fine.dayZero, firstDay)
   const to = addDays(fine.dayZero, last)
@@ -1921,9 +2094,11 @@ function drawNowPoints(
       frame: box !== null,
       ceiling: 90,
     },
-    mapFittedFor !== fitKey,
+    // With no box the bounds are whatever the reader has panned to, and the
+    // ground fetched follows from them. Framing that would move the view,
+    // which would move the ground, which would ask for it again.
+    box !== null && claimFit(fitKey),
   )
-  mapFittedFor = fitKey
 
   const from = addDays(fine?.dayZero ?? meta.from, firstDay)
   const to = addDays(fine?.dayZero ?? meta.from, last)
@@ -1938,6 +2113,16 @@ function addDays(day: string, n: number): string {
 }
 
 function renderMapWorld(): void {
+  setMapCaveat('')
+  if (worldForecast) {
+    const place = worldPlace
+    renderMapForecast(
+      place?.bounds ?? null,
+      place?.name ?? null,
+      place ? `fc:${place.name}` : 'world-forecast',
+    )
+    return
+  }
   if (worldNow) {
     const place = worldPlace
     renderMapNow(place?.bounds ?? null, place?.name ?? null, place ? `now:${place.name}` : 'world-now')
@@ -2051,9 +2236,8 @@ function renderMapWorld(): void {
         frame: true,
         ceiling: worldCeiling(drawnLevel, state.year),
       },
-      mapFittedFor !== `place:${place.name}`,
+      claimFit(`place:${place.name}`),
     )
-    mapFittedFor = `place:${place.name}`
     els.mapNote.textContent = sum
       ? t(isTiled(drawnLevel) ? 'placeNoteFine' : 'placeNote', {
           place: place.name,
@@ -2074,9 +2258,8 @@ function renderMapWorld(): void {
       frame: false,
       ceiling: worldCeiling(drawnLevel, state.year),
     },
-    mapFittedFor !== 'world',
+    claimFit('world'),
   )
-  mapFittedFor = 'world'
   const tot = worldIndex?.totals.find((d) => d.year === state.year)
   els.mapNote.textContent = t(isTiled(drawnLevel) ? 'worldNoteFine' : 'worldNote', {
     fires: formatNumber(tot ? tot.modis + tot.viirs : 0),
@@ -2086,6 +2269,12 @@ function renderMapWorld(): void {
 }
 
 function renderMap(ds: Dataset): void {
+  setMapCaveat('')
+  if (worldForecast) {
+    const aoi = aoiById(ds.id)
+    renderMapForecast(ds.bounds, aoi ? aoi.name[getLang()] : ds.id, `fc:${ds.id}`)
+    return
+  }
   // A bundled region can be asked "what is burning here this week" too. Its
   // own archive cannot answer it — the cube keeps a year per cell, not a day
   // — so the answer is the same global snapshot, clipped to the region.
@@ -2094,8 +2283,7 @@ function renderMap(ds: Dataset): void {
     renderMapNow(ds.bounds, aoi ? aoi.name[getLang()] : ds.id, `now:${ds.id}`)
     return
   }
-  updateMap({ bounds: ds.bounds, cells: ds.mapCells(state.year), cellKm: ds.mapCellKm }, ds.id !== mapFittedFor)
-  mapFittedFor = ds.id
+  updateMap({ bounds: ds.bounds, cells: ds.mapCells(state.year), cellKm: ds.mapCellKm }, claimFit(ds.id))
 }
 
 /**
@@ -2421,6 +2609,7 @@ async function selectPlace(bounds: Bounds, name: string, wantYear?: number): Pro
       worldNowData ??= await loadWorldNow()
       if (token !== loadToken) return
     }
+    if (worldForecast) forecast ??= await loadForecast()
     worldScope = true
     worldPlace = { bounds, name }
     // The map first, then the calendar: the cube is a few hundred kilobytes
@@ -2454,7 +2643,11 @@ async function selectPlace(bounds: Bounds, name: string, wantYear?: number): Pro
       showCalendar()
     }
     renderWorldPanels()
-  } catch {
+  } catch (err) {
+    // The reader is told the globe would not load either way, but a bug in
+    // the drawing reaches this catch as readily as a dropped request does,
+    // and silence here once cost an afternoon of looking at the network tab.
+    console.error('[emberline] world view failed', err)
     status(t('worldFailed'), 'error')
   }
 }
@@ -2476,6 +2669,7 @@ async function selectWorld(wantYear?: number): Promise<void> {
       worldNowData ??= await loadWorldNow()
       if (token !== loadToken) return
     }
+    if (worldForecast) forecast ??= await loadForecast()
     worldDaily ??= await loadWorldDaily()
     if (token !== loadToken) return
 
@@ -2486,7 +2680,11 @@ async function selectWorld(wantYear?: number): Promise<void> {
     renderMapWorld()
     writeUrl()
     status('')
-  } catch {
+  } catch (err) {
+    // The reader is told the globe would not load either way, but a bug in
+    // the drawing reaches this catch as readily as a dropped request does,
+    // and silence here once cost an afternoon of looking at the network tab.
+    console.error('[emberline] world view failed', err)
     status(t('worldFailed'), 'error')
   }
 }
@@ -2505,6 +2703,7 @@ async function selectAoi(id: string, wantYear?: number): Promise<void> {
     // was pointed. Leaving `worldPlace` set was enough to make the link this
     // view writes claim to be the place the reader had just left.
     if (worldNow) worldNowData ??= await loadWorldNow().catch(() => null)
+    if (worldForecast) forecast ??= await loadForecast()
     worldScope = false
     worldPlace = null
     placeDays = null
@@ -2687,7 +2886,7 @@ function wire(): void {
   })
 
   els.mapRange.addEventListener('change', (e) => {
-    setRange((e.target as HTMLInputElement).value === 'now')
+    setRange((e.target as HTMLInputElement).value)
   })
 
   els.mapDays.addEventListener('change', (e) => {
@@ -2786,6 +2985,8 @@ interface UrlState {
   year?: number
   /** `#/punjab/now/raw` — the period sits where the year would be. */
   now?: boolean
+  /** `#/punjab/forecast/raw` — the model's week, in the same slot. */
+  forecast?: boolean
   mode?: Mode
 }
 
@@ -2812,6 +3013,7 @@ function readUrl(): UrlState {
         },
         year: parts[3] && /^\d{4}$/.test(parts[3]) ? Number(parts[3]) : undefined,
         now: parts[3] === 'now',
+        forecast: parts[3] === 'forecast',
         mode: parts[4] === 'raw' || parts[4] === 'harmonized' ? parts[4] : undefined,
       }
     }
@@ -2825,6 +3027,7 @@ function readUrl(): UrlState {
     aoi: aoi === 'world-now' ? 'world' : aoi === 'world' || (aoi && aoiById(aoi)) ? aoi : undefined,
     year: year && /^\d{4}$/.test(year) ? Number(year) : undefined,
     now: year === 'now' || aoi === 'world-now',
+    forecast: year === 'forecast',
     mode: mode === 'raw' || mode === 'harmonized' ? mode : undefined,
   }
 }
@@ -2846,7 +3049,8 @@ function writeUrl(): void {
       ? 'world'
       : state.dataset?.id
   if (!id) return
-  const next = `#/${id}/${worldNow ? 'now' : state.year}/${state.mode}`
+  const period = worldForecast ? 'forecast' : worldNow ? 'now' : String(state.year)
+  const next = `#/${id}/${period}/${state.mode}`
   if (location.hash !== next) history.replaceState(null, '', next)
 }
 
@@ -2863,12 +3067,18 @@ function applyUrl(): void {
     if (input) input.checked = true
   }
 
-  if ((wanted.now ?? false) !== worldNow) {
-    worldNow = wanted.now ?? false
-    const input = els.mapRange.querySelector<HTMLInputElement>(
-      `input[value="${worldNow ? 'now' : 'year'}"]`,
-    )
+  const wantMode = wanted.forecast ? 'forecast' : wanted.now ? 'now' : 'year'
+  if ((wantMode === 'now') !== worldNow || (wantMode === 'forecast') !== worldForecast) {
+    worldNow = wantMode === 'now'
+    worldForecast = wantMode === 'forecast'
+    const input = els.mapRange.querySelector<HTMLInputElement>(`input[value="${wantMode}"]`)
     if (input) input.checked = true
+    if (worldForecast && !forecast) {
+      void loadForecast().then((got) => {
+        forecast = got
+        drawMap()
+      })
+    }
   }
 
   const target = wanted.place ? placeValueOf(wanted.place) : wanted.aoi
@@ -2890,7 +3100,7 @@ function applyUrl(): void {
    */
   const years = mapYears()
   if (wanted.year && years.includes(wanted.year)) state.year = wanted.year
-  if (wanted.year || wanted.mode || wanted.now !== undefined) {
+  if (wanted.year || wanted.mode || wanted.now !== undefined || wanted.forecast !== undefined) {
     if (!worldScope) rebuild()
     rerender()
   }
@@ -2956,10 +3166,15 @@ async function boot(): Promise<void> {
       drawMap()
       return
     }
+    // Only a year view reads from the pyramid. This week and next week draw
+    // from the snapshot and the forecast grid, which the branch above already
+    // refetches; falling through to the tile check here asked for a yearly
+    // patch that the present view has no use for, and redrew on every drag.
+    if (worldNow || worldForecast) return
     if (!worldScope || !isTiled(worldLevel) || worldPlace) return
     const step = worldLevel === 'l3' ? 10 : 20
     if (worldPatch?.key === `${worldLevel}:${patchKey(state.year, mapBox(), step)}`) return
-    renderMapWorld()
+    drawMap()
   })
 
   const wanted = readUrl()
@@ -2968,10 +3183,18 @@ async function boot(): Promise<void> {
     const input = els.mode.querySelector<HTMLInputElement>('input[value="' + wanted.mode + '"]')
     if (input) input.checked = true
   }
-  if (wanted.now) {
-    worldNow = true
-    const input = els.mapRange.querySelector<HTMLInputElement>('input[value="now"]')
+  if (wanted.now || wanted.forecast) {
+    worldNow = Boolean(wanted.now)
+    worldForecast = Boolean(wanted.forecast)
+    const mode = worldForecast ? 'forecast' : 'now'
+    const input = els.mapRange.querySelector<HTMLInputElement>(`input[value="${mode}"]`)
     if (input) input.checked = true
+    if (worldForecast) {
+      void loadForecast().then((got) => {
+        forecast = got
+        drawMap()
+      })
+    }
   }
   const startId = wanted.place ? placeValueOf(wanted.place) : (wanted.aoi ?? AOIS[0].id)
   picker.setValue(startId, wanted.place?.name)

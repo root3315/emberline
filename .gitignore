@@ -20,3 +20,6 @@ dist
 # megabytes and the site is not much without them.
 /public/data/world/
 models/
+
+# Python leaves these beside the training scripts
+__pycache__/

@@ -246,6 +246,10 @@
                 <input type="radio" name="map-range" value="now" />
                 <span data-i18n="rangeNow">Right now</span>
               </label>
+              <label>
+                <input type="radio" name="map-range" value="forecast" />
+                <span data-i18n="rangeForecast">Next week</span>
+              </label>
             </fieldset>
             <div class="yearpick" id="map-yearpick">
               <button type="button" class="ghost-btn" id="map-year-prev" aria-label="Previous year">&#8249;</button>
@@ -291,9 +295,10 @@
           </fieldset>
           <div class="ramp" aria-hidden="true"></div>
           <p class="ramp__labels">
-            <span data-i18n="rampLow">burned once</span>
-            <span data-i18n="rampHigh">burns often</span>
+            <span id="ramp-low" data-i18n="rampLow">burned once</span>
+            <span id="ramp-high" data-i18n="rampHigh">burns often</span>
           </p>
+          <p class="note note--tight" id="map-caveat" hidden></p>
           <dl class="mini-facts" id="map-facts"></dl>
         </div>
 
