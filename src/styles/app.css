@@ -1864,16 +1864,26 @@ canvas {
  * and the way through on the right. Making it a card with a border would
  * have made it an advertisement.
  */
+/*
+ * The closing band is the only one that is centred.
+ *
+ * Every other band is a reading surface and belongs at the page's left
+ * margin with the rest of the text. This one is a threshold: two things,
+ * a question and a planet, and on a wide screen holding them at opposite
+ * edges opened a gulf between them that read as a layout accident. Kept
+ * together they read as one gesture.
+ */
 .cta {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(180px, 280px);
-  gap: var(--s-8);
+  grid-template-columns: minmax(0, 48ch) minmax(180px, 280px);
+  gap: var(--s-10);
   align-items: center;
+  justify-content: center;
 }
 
 .cta__text {
   min-width: 0;
-  max-width: 54ch;
+  max-width: 48ch;
 }
 
 /*
@@ -2037,16 +2047,19 @@ canvas {
 }
 
 /*
- * A guess should not be drawn as sharply as a measurement.
+ * There was a blur here, and it had to go.
  *
- * The record's cells have hard edges because a satellite really did see
- * those fires. These are probabilities, so the canvas is blurred by a
- * fraction of a cell: close enough to read the pattern, soft enough that
- * nobody mistakes it for an observation.
+ * The thought was sound — a guess should not be drawn as sharply as a
+ * measurement — but at the width this map runs to, a blurred canvas does
+ * not read as "uncertain". It reads as a low-resolution image, and a
+ * reader's first reaction is that something is broken rather than that
+ * something is unknown.
+ *
+ * The page says three times over that this is an estimate: in the caption,
+ * in the scale that runs from "unlikely" to "near certain", and in a whole
+ * section about how often the model is right. Degrading the picture to
+ * make the same point a fourth time only cost it credibility.
  */
-.future__slot .map canvas {
-  filter: blur(1.5px);
-}
 
 .future__back {
   margin-top: var(--s-6);

@@ -49,7 +49,15 @@ export interface GlobeHandle {
   destroy(): void
 }
 
-/** A turn every ninety seconds: present, and never the thing you watch. */
+/**
+ * A turn every ninety seconds: present, and never the thing you watch.
+ *
+ * Subtracted from the central meridian rather than added, which is the
+ * direction the Earth actually turns. A point at a fixed longitude drifts
+ * right — eastward, with north up — only while the meridian under the
+ * middle of the disc moves west. Added, the planet span backwards, which
+ * almost nobody names and everybody feels.
+ */
 const SPIN = (Math.PI * 2) / 90_000
 const TILT = 0.38 // radians, so the north is a little toward us
 const MAX_DPR = 1.75
@@ -235,7 +243,7 @@ export function mountGlobe(canvas: HTMLCanvasElement, land: LandMask): GlobeHand
     raf = requestAnimationFrame(draw)
     const dt = Math.min(now - last, 60)
     last = now
-    if (spinning && !dragging && !still.matches) lon0 += SPIN * dt
+    if (spinning && !dragging && !still.matches) lon0 -= SPIN * dt
     if (!base || !frame || radius <= 0) return
 
     frame.data.set(base.data)
@@ -340,7 +348,11 @@ export function mountGlobe(canvas: HTMLCanvasElement, land: LandMask): GlobeHand
   function onMove(e: PointerEvent): void {
     if (!dragging) return
     const scale = 0.005
-    lon0 += (e.clientX - lastX) * scale
+    // Both signs are set so the ground follows the cursor: drag right and
+    // the surface goes right, as though it were being pushed. Adding the
+    // delta to the central meridian moves the surface the other way, which
+    // is the same gesture running in reverse.
+    lon0 -= (e.clientX - lastX) * scale
     lat0 = Math.max(-1.2, Math.min(1.2, lat0 + (e.clientY - lastY) * scale))
     lastX = e.clientX
     lastY = e.clientY

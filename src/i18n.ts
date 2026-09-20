@@ -255,7 +255,7 @@ const en: Dict = {
 
   futureMapTitle: 'Where it may burn',
   futureMapNote:
-    'Brighter is likelier. This is a chance, not a count: a pale cell may still burn and a bright one may not. It is drawn softer than the record above, because it is a guess and should not look like a measurement.',
+    'Brighter is likelier. This is a chance, not a count: a pale cell may still burn and a bright one may not. A pale cell is not a safe one; it is a cell the model is less sure about.',
 
   futureRiskTitle: 'Twenty places to watch',
   futureRiskNote:
@@ -527,7 +527,7 @@ const ru: Dict = {
 
   futureMapTitle: 'Где может загореться',
   futureMapNote:
-    'Ярче — вероятнее. Это шанс, а не количество: бледная ячейка всё равно может загореться, а яркая — нет. Рисуется мягче, чем архив выше, потому что это догадка и она не должна выглядеть как измерение.',
+    'Ярче — вероятнее. Это шанс, а не количество: бледная ячейка всё равно может загореться, а яркая — нет. Бледная ячейка — не безопасная, а та, в которой модель меньше уверена.',
 
   futureRiskTitle: 'Двадцать мест, за которыми стоит следить',
   futureRiskNote:

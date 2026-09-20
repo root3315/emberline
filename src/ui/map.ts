@@ -278,20 +278,23 @@ const FireLayer = L.Layer.extend({
     const dLat = deg ?? this._cellKm / 111.32
 
     /**
-     * Which copies of the world are on screen.
+     * One copy of the world carries the fires, and it is the one in the
+     * middle of the view.
      *
-     * Zoomed out, the basemap tiles the Earth sideways for ever, and the view
-     * can hold two or three of them at once. The cells have one longitude
-     * each, so without this the fires appeared on exactly one copy and the
-     * others were blank oceans — the planet rendered as one continent strip
-     * between two empty ones. Each copy is a flat 360° shift, so the same
-     * cells are simply drawn again at each offset the viewport reaches.
+     * Zoomed out, the basemap tiles the Earth sideways for ever and the
+     * viewport can hold two or three of them. Drawing the cells on every
+     * copy was the first fix, for the opposite fault — fires on one strip
+     * between two blank oceans — and it overshot: three burning Earths side
+     * by side read as three planets rather than one seen three times.
+     *
+     * Drawing on none but the nearest is not an option either, because the
+     * copies are how Leaflet lets anyone look at Chukotka or Fiji in one
+     * piece; the date line falls in the middle of the only copy that has
+     * them together. So the shift is chosen from where the reader is
+     * actually looking, and it follows them across the seam.
      */
-    const shifts: number[] = []
-    for (let k = Math.floor((bounds.getWest() + 180) / 360); k <= Math.floor((bounds.getEast() + 180) / 360); k++) {
-      shifts.push(k * 360)
-    }
-    if (!shifts.length) shifts.push(0)
+    const middle = (bounds.getWest() + bounds.getEast()) / 2
+    const shift = Math.round(middle / 360) * 360
 
     for (const cell of this._cells) {
       if (cell.lat > bounds.getNorth() || cell.lat < bounds.getSouth()) continue
@@ -310,17 +313,15 @@ const FireLayer = L.Layer.extend({
        */
       ctx.fillStyle = rgba(heat(t), 0.25 + t * 0.65)
 
-      for (const shift of shifts) {
-        const lon = cell.lon + shift
-        if (lon + dLon < bounds.getWest() || lon - dLon > bounds.getEast()) continue
-        const nw = map.latLngToContainerPoint([cell.lat + dLat / 2, lon - dLon / 2])
-        const se = map.latLngToContainerPoint([cell.lat - dLat / 2, lon + dLon / 2])
+      const lon = cell.lon + shift
+      if (lon + dLon < bounds.getWest() || lon - dLon > bounds.getEast()) continue
+      const nw = map.latLngToContainerPoint([cell.lat + dLat / 2, lon - dLon / 2])
+      const se = map.latLngToContainerPoint([cell.lat - dLat / 2, lon + dLon / 2])
 
-        // Half a pixel of bleed, or the seams read as a honeycomb texture.
-        const w = Math.max(1.5, se.x - nw.x + 0.5)
-        const h = Math.max(1.5, se.y - nw.y + 0.5)
-        ctx.fillRect(nw.x, nw.y, w, h)
-      }
+      // Half a pixel of bleed, or the seams read as a honeycomb texture.
+      const w = Math.max(1.5, se.x - nw.x + 0.5)
+      const h = Math.max(1.5, se.y - nw.y + 0.5)
+      ctx.fillRect(nw.x, nw.y, w, h)
     }
   },
 })
