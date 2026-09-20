@@ -250,7 +250,7 @@ const en: Dict = {
   futureWhere: '{from} to {to} \u00b7 built {asOf}',
   futureAnswer: 'Somewhere in <em>{cells}</em> squares, the next seven days carry a real chance of fire.',
   futureAside:
-    'A gradient-boosted model reads this archive <b>back to {since}</b> \u2014 where it has burned, how recently, what the season usually does, how far this year sits from its own normal \u2014 and gives every 25 km cell the chance that the 1 km sensor sees a fire there before {to}.',
+    'A gradient-boosted model reads this archive <b>back to {since}</b> \u2014 where it has burned, how recently, what the season usually does \u2014 together with <b>the weather of the week ahead</b>: how hot, how windy, how much rain, and what is standing there to burn. Every 25 km cell gets the chance that the 1 km sensor sees a fire there before {to}.',
   futureStatCells: 'Cells at risk',
   futureStatTop: 'Widest front',
   futureStatTested: 'Scored on',
@@ -275,7 +275,7 @@ const en: Dict = {
   skillPersistence: 'It burned last week',
   skillRandom: 'Picking at random',
   futureSkillNote:
-    'Average precision on {tested}. The season alone is a hard baseline and we beat it only narrowly, which is the honest result: without daily weather, most of what is knowable about the coming week is simply what time of year it is.',
+    'Average precision on {tested}. The season alone is a hard baseline; with the weather the model roughly doubles its margin over it, from 2.0% to 3.9%. One qualifier, because it matters: the model learned from the weather that actually happened, and the live map is driven by a forecast of it. So this is what is reachable if the weather forecast is right \u2014 an upper bound, not a promise.',
   futureBack: 'Back to the record',
   globeHint: 'Drag to turn',
   riskMore: 'Show {n} more',
@@ -525,7 +525,7 @@ const ru: Dict = {
   futureWhere: 'с {from} по {to} · считано {asOf}',
   futureAnswer: 'В <em>{cells}</em> квадратах ближайшие семь дней несут реальный шанс пожара.',
   futureAside:
-    'Модель градиентного бустинга читает архив <b>с {since} года</b> — где горело, как давно, что обычно делает сезон, насколько этот год отошёл от своей нормы — и даёт каждой ячейке 25 км вероятность того, что километровый сенсор увидит там огонь до {to}.',
+    'Модель градиентного бустинга читает архив <b>с {since} года</b> — где горело, как давно, что обычно делает сезон — и вместе с этим <b>погоду ближайшей недели</b>: жару, ветер, дождь и то, чему там гореть. Каждая ячейка 25 км получает вероятность того, что километровый сенсор увидит там огонь до {to}.',
   futureStatCells: 'Ячеек в зоне риска',
   futureStatTop: 'Самый широкий фронт',
   futureStatTested: 'Проверено на',
@@ -550,7 +550,7 @@ const ru: Dict = {
   skillPersistence: 'Горело на прошлой неделе',
   skillRandom: 'Случайный выбор',
   futureSkillNote:
-    'Средняя точность на {tested}. Один только сезон — очень сильная база, и мы обходим её совсем немного. Это честный результат: без суточной погоды предсказуемо в ближайшей неделе почти только то, какое сейчас время года.',
+    'Средняя точность на {tested}. Один только сезон — очень сильная база; с погодой модель почти удваивает перевес над ней, с 2.0% до 3.9%. Одна оговорка, и она важная: модель училась на погоде, которая была на самом деле, а живая карта идёт по прогнозу погоды. То есть это то, что достижимо, если прогноз погоды верен, — верхняя граница, а не обещание.',
   futureBack: 'Назад к архиву',
   globeHint: 'Потяните, чтобы повернуть',
   riskMore: 'Показать ещё {n}',
