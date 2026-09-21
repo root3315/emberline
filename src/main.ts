@@ -43,6 +43,7 @@ import { mountGlobe, type GlobeFire, type GlobeHandle, type GlobePick } from './
 import { drawShot } from './ui/satellite'
 import { loadHorizon } from './core/forecast'
 import { loadVerify } from './core/verify'
+import { loadReasons, reasonsAt } from './core/reasons'
 import { daysInYear, dayOfYear, yearOf } from './core/grid'
 import {
   MIN_RATIO_SAMPLES,
@@ -173,6 +174,7 @@ const els = {
   pickWhere: $('pick-where'),
   pickFacts: $('pick-facts'),
   pickNote: $('pick-note'),
+  pickWhy: $('pick-why'),
   riskMore: $<HTMLButtonElement>('risk-more'),
   ctaWhen: $('cta-when'),
   ctaLine: $('cta-line'),
@@ -206,6 +208,7 @@ const els = {
   lookBy: $('look-by'),
   lookFacts: $('look-facts'),
   lookNote: $('look-note'),
+  lookWhy: $('look-why'),
   week: $('week'),
   weekDays: $('week-days'),
   weekRead: $('week-read'),
@@ -1266,6 +1269,9 @@ async function openPick(pick: GlobePick | null): Promise<void> {
     seen === 0
       ? t('pickNoneSeen')
       : t('pickNote', { from: meta.from, to: meta.to })
+
+  reasonTable ??= await loadReasons().catch(() => null)
+  sayWhy(els.pickWhy, pick.lat, pick.lon)
 }
 
 /** One labelled figure, in whichever of the two pick panels asked for it. */
@@ -1279,6 +1285,70 @@ function pickFact(host: HTMLElement, label: string, value: string, tone?: string
   wrap.append(dt, dd)
   host.append(wrap)
 }
+
+/**
+ * A feature name, as something a person would say.
+ *
+ * Several columns say one thing between them — six windows of "it burned
+ * here recently", four of "it is burning next door" — and printing them
+ * separately would fill the card with the model's bookkeeping instead of
+ * an explanation. They collapse onto one phrase each, and a card that
+ * would say the same thing twice says it once.
+ */
+const WHY_SAYS: Record<string, string> = {
+  clim: 'whyClim',
+  cell_rate: 'whyCellRate',
+  own_1d: 'whyRecent',
+  own_3d: 'whyRecent',
+  own_7d: 'whyRecent',
+  own_14d: 'whyLately',
+  own_30d: 'whyLately',
+  own_90d: 'whyLately',
+  ring_1d: 'whyRing',
+  ring_3d: 'whyRing',
+  ring_7d: 'whyRing',
+  ring_30d: 'whyRing',
+  clim_ring: 'whyRing',
+  ring_anom_30d: 'whyRingAnom',
+  anom_30d: 'whyAnom',
+  tile_anom_30d: 'whyRegion',
+  ytd_anom: 'whyYear',
+  oni: 'whyNino',
+  active_30d: 'whyActive',
+  lastyear_14d: 'whyLastYear',
+  since_last: 'whySince',
+  w_dry: 'whyDry',
+  w_rain: 'whyRain',
+  w_tmax: 'whyHeat',
+  w_wind: 'whyWind',
+  veg_low: 'whyGrass',
+  veg_high: 'whyTrees',
+}
+
+/** Fill one of the two cards' reason lines, or hide it. */
+function sayWhy(host: HTMLElement, lat: number, lon: number): void {
+  const meta = forecast?.meta
+  const found = meta ? reasonsAt(reasonTable, lat, lon, meta.degrees, meta.cols) : []
+
+  const said = new Set<string>()
+  const words: string[] = []
+  for (const name of found) {
+    const key = WHY_SAYS[name]
+    if (!key || said.has(key)) continue
+    said.add(key)
+    words.push(t(key))
+  }
+
+  host.hidden = words.length === 0
+  if (!words.length) return
+  host.innerHTML = ''
+  const lead = document.createElement('b')
+  lead.textContent = t('whyLead')
+  host.append(lead, document.createTextNode(words.join(' \u00b7 ')))
+}
+
+/** Fetched on the first press, because most readers never make one. */
+let reasonTable: Map<number, string[]> | null = null
 
 /** Detections in the snapshot's cell covering this point, or null if unknown. */
 function observedAt(lat: number, lon: number): number | null {
@@ -1380,6 +1450,10 @@ async function openLook(pick: GlobePick | null): Promise<void> {
   pickFact(els.lookFacts, t('pickForecast'), `${Math.min(99, Math.round(pick.p * 100))}%`, 'fore')
   pickFact(els.lookFacts, t('pickSeen'), seen === null ? '—' : formatNumber(seen))
   els.lookNote.textContent = seen === 0 ? t('pickNoneSeen') : t('lookNote')
+
+  reasonTable ??= await loadReasons().catch(() => null)
+  if (run !== lookRun) return
+  sayWhy(els.lookWhy, pick.lat, pick.lon)
 
   els.lookFrame.dataset.state = 'loading'
   const shot = await drawShot(els.lookShot, pick, forecast?.cells ?? [])

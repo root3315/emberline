@@ -50,6 +50,7 @@ META = f"models/fire-{HORIZON}d.json"
 ONI_FILE = "models/oni.json"
 OUT_BIN = f"public/data/world/forecast-{HORIZON}d.bin"
 OUT_JSON = "public/data/forecast.json"
+OUT_ROWS = f"models/forecast-rows-{HORIZON}d.npz"
 
 WEATHER = f"models/weather-forecast-{HORIZON}d.npz"
 WEATHER_STATIC = "models/weather-static.npz"
@@ -210,6 +211,7 @@ def main() -> None:
     # Pass two: everything that needs a cell's own long history.
     out_cells: list[np.ndarray] = []
     out_prob: list[np.ndarray] = []
+    out_rows: list[np.ndarray] = []
     for n, (key, groups) in enumerate(tiles, 1):
         tx, ty = (int(v) for v in key.split("-"))
         grid = load_tile(tx, ty, groups, n_days, side)
@@ -314,6 +316,16 @@ def main() -> None:
         if keep.any():
             out_cells.append(gix[keep].astype(np.uint32))
             out_prob.append(np.round(p[keep] * 255).astype(np.uint8))
+            #
+            # The rows themselves, for the cells that made the cut.
+            #
+            # `build_reasons.py` asks the model what each cell's number
+            # would have been if one thing about it were ordinary, which
+            # needs the row the number came from. Recomputing them later
+            # would mean rebuilding every tile a second time; carrying
+            # them out costs thirteen megabytes and a `.npz`.
+            #
+            out_rows.append(f[keep].astype(np.float32))
 
         del grid, cum, cum_active, clim, clim_ring, clim30, ring_clim30
         if n % 80 == 0:
@@ -321,8 +333,23 @@ def main() -> None:
 
     cells = np.concatenate(out_cells)
     probs = np.concatenate(out_prob)
+    # Named for what it is, and not `rows`: that name is already the
+    # grid's row count, twenty lines up, and shadowing it put a numpy
+    # array into forecast.json and truncated the file mid-write.
+    feat_rows = np.concatenate(out_rows)
     order = np.argsort(cells)
-    cells, probs = cells[order], probs[order]
+    cells, probs, feat_rows = cells[order], probs[order], feat_rows[order]
+
+    # Saved in the grid's own order, so a reason file can be read straight
+    # down beside it without carrying cell indices of its own.
+    np.savez_compressed(
+        OUT_ROWS,
+        cells=cells,
+        rows=feat_rows,
+        features=np.array(ALL_FEATURES),
+        used=np.array(names),
+    )
+    print(f"{OUT_ROWS}  ({feat_rows.nbytes / 1e6:.0f} MB of rows for the reasons)")
 
     buf = bytearray(struct.pack("<I", cells.size))
     buf += cells.astype("<u4").tobytes()
