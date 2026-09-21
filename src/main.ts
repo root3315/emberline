@@ -831,7 +831,6 @@ function showAboutLayout(on: boolean): void {
     lastRecord = location.hash
   }
   aboutScope = on
-  els.footAbout.hidden = on
   pickerField.hidden = on
   els.mode.hidden = on
   els.barAbout.hidden = on
@@ -1049,7 +1048,6 @@ function fillAboutList(host: HTMLElement, name: string): void {
 
 function showFutureLayout(on: boolean): void {
   if (!on) els.pick.hidden = true
-  els.footFuture.hidden = on
   if (on && !futureScope && location.hash && location.hash !== '#/future') {
     lastRecord = location.hash
   }
@@ -4117,6 +4115,20 @@ function applyUrl(): void {
   const here = aboutScope ? 'about' : futureScope ? 'future' : 'record'
   const there = wanted.about ? 'about' : wanted.future ? 'future' : 'record'
   if (here !== there) window.scrollTo({ top: 0, behavior: 'instant' })
+
+  /*
+   * The footer link to the page you are on is hidden, and it is decided
+   * here rather than in the two layout functions.
+   *
+   * There it was wrong on one path: going from the forecast page straight
+   * to the project's page never calls `showFutureLayout(false)` — the
+   * about branch returns above it — so the forecast's own link stayed
+   * hidden and the reader arrived at a footer with nothing in it. This is
+   * the one place that knows the page being asked for whatever the page
+   * being left was.
+   */
+  els.footAbout.hidden = there === 'about'
+  els.footFuture.hidden = there === 'future'
 
   if (wanted.about) {
     if (!aboutScope) void renderAbout().finally(() => (applyingUrl = false))
