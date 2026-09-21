@@ -845,6 +845,18 @@ function showAboutLayout(on: boolean): void {
   if (on) {
     for (const section of dataSections) section.hidden = true
     for (const section of futureSections) section.hidden = true
+    /*
+     * The forecast's hero is not one of `futureSections`, and it showed.
+     *
+     * Those four are the bands the router owns; the hero is turned on and
+     * off inside `showFutureLayout`, which the about branch returns before
+     * ever reaching. So arriving here from the forecast page left its
+     * headline — "83,075 squares carry a real chance of fire" — sitting
+     * above the project's page, which is why the footer underneath looked
+     * like it was pointing at the wrong place. It was the page above it
+     * that was wrong.
+     */
+    els.futureHero.hidden = true
   }
 }
 

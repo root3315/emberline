@@ -446,9 +446,20 @@ export function mountGlobe(
      */
     if (marked) {
       const { cosC, x, y } = project(marked, sinLat0, cosLat0, sinLon0, cosLon0)
-      if (cosC > 0.02) {
-        const mx = cx + x * r
-        const my = cy - y * r
+      const mx = cx + x * r
+      const my = cy - y * r
+      /*
+       * Facing the reader is not the same as being on the disc.
+       *
+       * `cosC` only says the point is on the near side of the sphere. Once
+       * a flight has closed in, the near side is wider than the disc — `r`
+       * is the zoomed radius and the disc is still `radius` — so a point
+       * near the limb projects past the edge, and the ring was drawn on
+       * the black beside the planet, circling nothing. The fire it marks
+       * is clipped away at that point too, so there is nothing to ring.
+       */
+      const onDisc = Math.hypot(mx - cx, my - cy) <= radius
+      if (cosC > 0.02 && onDisc) {
         ctx.save()
         ctx.strokeStyle = rgba(varColor('--ink-primary'), 0.85)
         ctx.lineWidth = Math.max(1.2, width / 420)

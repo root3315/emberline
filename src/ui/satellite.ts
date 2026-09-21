@@ -220,14 +220,30 @@ export async function drawShot(
     ctx.fillRect(px, py, Math.round(cellW), ph)
 
     /*
-     * A glow, then a core.
+     * A shadow, then a glow, then a core.
      *
-     * The glow is what makes it read as fire rather than as a sticker, and
-     * it is drawn with `lighter` so two neighbouring cells build up the
-     * way two fires would instead of the nearer one hiding the further.
-     * The core is opaque and small, so the point still has a position when
-     * the glow has spread over half a valley.
+     * The shadow is the part that was missing. A warm translucent glow
+     * works over forest and disappears over sand: Iraq and the Sahel are
+     * already the colour of the ramp, and the points there were a slightly
+     * warmer patch of desert. Laying a soft dark disc under each one first
+     * gives every point the same dark ground to burn against whatever is
+     * actually underneath, which is what a fire seen from orbit at night
+     * has and this daytime image does not.
+     *
+     * The glow above it is drawn with `lighter` so two neighbouring cells
+     * build up the way two fires would instead of the nearer hiding the
+     * further, and the core is opaque and small so the point still has a
+     * position when the glow has spread over half a valley.
      */
+    const shade = ctx.createRadialGradient(dx, dy, 0, dx, dy, 6 + weight * 34)
+    shade.addColorStop(0, 'rgba(24,10,2,0.5)')
+    shade.addColorStop(0.6, 'rgba(24,10,2,0.26)')
+    shade.addColorStop(1, 'rgba(24,10,2,0)')
+    ctx.fillStyle = shade
+    ctx.beginPath()
+    ctx.arc(dx, dy, 6 + weight * 34, 0, Math.PI * 2)
+    ctx.fill()
+
     /*
      * The glow is warmer than the core, because fire is.
      *
@@ -240,8 +256,8 @@ export async function drawShot(
     const [hr, hg, hb] = heat(Math.min(1, c.p * 0.7))
     const glow = 5 + weight * 32
     const halo = ctx.createRadialGradient(dx, dy, 0, dx, dy, glow)
-    halo.addColorStop(0, `rgba(${hr},${hg},${hb},${0.24 + weight * 0.52})`)
-    halo.addColorStop(0.55, `rgba(${hr},${hg},${hb},${0.09 + weight * 0.24})`)
+    halo.addColorStop(0, `rgba(${hr},${hg},${hb},${0.4 + weight * 0.55})`)
+    halo.addColorStop(0.5, `rgba(${hr},${hg},${hb},${0.16 + weight * 0.34})`)
     halo.addColorStop(1, `rgba(${hr},${hg},${hb},0)`)
     ctx.globalCompositeOperation = 'lighter'
     ctx.fillStyle = halo
@@ -250,9 +266,20 @@ export async function drawShot(
     ctx.fill()
     ctx.globalCompositeOperation = 'source-over'
 
-    ctx.fillStyle = `rgba(${r},${g},${b},${0.45 + weight * 0.5})`
+    /*
+     * The core is opaque, and at the top of the range it is white.
+     *
+     * The ramp's own peak is a pale yellow that a sand-coloured frame
+     * matches almost exactly. Pushing the hottest cells to something
+     * brighter than any terrain gives them somewhere to go that the
+     * landscape cannot follow.
+     */
+    ctx.fillStyle =
+      weight > 0.55
+        ? `rgba(255,${Math.round(238 + weight * 12)},218,${0.8 + weight * 0.2})`
+        : `rgba(${r},${g},${b},${0.7 + weight * 0.3})`
     ctx.beginPath()
-    ctx.arc(dx, dy, 1.3 + weight * 3.4, 0, Math.PI * 2)
+    ctx.arc(dx, dy, 1.6 + weight * 3.6, 0, Math.PI * 2)
     ctx.fill()
   }
 
