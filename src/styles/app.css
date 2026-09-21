@@ -175,12 +175,35 @@ canvas {
 }
 
 @media (max-width: 720px) {
+  /*
+   * On a phone the bar stops sticking.
+   *
+   * Stacked into one column it is 249 pixels tall on the record — the
+   * region picker, the two-way toggle and three buttons — which is
+   * thirty per cent of a phone screen, held there permanently while the
+   * reader scrolls eight thousand pixels of page behind it. A control
+   * strip that large is not a header, it is a wall.
+   *
+   * Letting it scroll away costs the reader nothing they cannot get
+   * back: the controls sit at the top of the page where they are looked
+   * for, and both page links are repeated in the footer, so navigation
+   * is reachable from either end of the scroll rather than from the top
+   * alone.
+   */
   .bar {
-    top: 0;
+    position: static;
+    top: auto;
     margin-top: 0;
     width: 100%;
     border-width: 0 0 1px;
     border-radius: 0;
+  }
+
+  /* No sticky bar to clear, so an anchor jump needs only a little air. */
+  .band,
+  .hero,
+  [id] {
+    scroll-margin-top: var(--s-4);
   }
 }
 
@@ -251,7 +274,10 @@ canvas {
 }
 
 .field__label {
-  font-size: 10px;
+  /* Eleven, not ten. Ten is legible on a desktop at arm's length and is
+     not on a phone held in one hand, and this label is the one that says
+     what the control under it selects. */
+  font-size: 11px;
   font-weight: 600;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -2889,14 +2915,106 @@ canvas {
     grid-template-columns: minmax(0, 1fr);
   }
 
+  /*
+   * Cap the disc, not the figure.
+   *
+   * This capped the figure's height, which was right when the figure was
+   * a canvas and nothing else. It now carries a caption and, on the
+   * forecast page, the card a press opens — and a height cap does not
+   * shrink those, it clips them out of the box. On a phone the caption
+   * came to rest on top of the first line of the paragraph underneath,
+   * which is the sort of thing that reads as a broken page rather than a
+   * tight one.
+   *
+   * Capping the disc leaves the caption and the card free to add their
+   * own height below it, which is what they were always going to do.
+   */
   .globe {
     order: -1;
-    max-height: 320px;
+  }
+
+  .globe__disc {
+    max-width: 320px;
+    margin-inline: auto;
   }
 }
 
 .risk__more {
   margin-top: var(--s-5);
+}
+
+/*
+ * The three-way controls on the narrowest phones.
+ *
+ * "На неделю вперёд" beside "Прямо сейчас" and a year needs 323 pixels
+ * with the usual padding, and a 320-pixel screen has 288 — so the map's
+ * period switch pushed the whole record page sideways by twenty pixels.
+ * Flex items will not shrink past their text (`min-width: auto` is the
+ * default and the right default here, since a clipped label is worse
+ * than a wrapped one), so the padding gives way first and wrapping is
+ * the fallback if a translation is longer still.
+ */
+@media (max-width: 420px) {
+  .segmented label {
+    padding-inline: var(--s-2);
+  }
+
+  .segmented {
+    flex-wrap: wrap;
+  }
+}
+
+/*
+ * Thumbs, where the pointer is a thumb.
+ *
+ * Every control here is 34 to 38 pixels tall, which is a comfortable
+ * mouse target and a mean one for a finger — Apple asks for 44 points and
+ * Android for 48. Rather than grow everything everywhere and loosen a
+ * layout that works, the size follows the input: `pointer: coarse` is
+ * true on a touchscreen and false on a desktop, so a phone gets 44 and a
+ * mouse keeps 36.
+ *
+ * The map's own zoom buttons come from Leaflet's stylesheet at 30 and are
+ * included, because a reader pinching a world map is exactly the reader
+ * who will also reach for the corner.
+ */
+@media (pointer: coarse) {
+  .ghost-btn,
+  .btn,
+  .picker__button {
+    min-height: 44px;
+    height: auto;
+  }
+
+  /* The square ones — theme, the year arrows — are as wide as they are
+     tall, and 36 of those is still a miss with a thumb even once the
+     height is right. */
+  .ghost-btn {
+    min-width: 44px;
+  }
+
+  .segmented label {
+    min-height: 42px;
+  }
+
+  .week__day {
+    padding-block: var(--s-3);
+  }
+
+  /* Leaflet's own touch rule is `.leaflet-touch .leaflet-bar a`, which
+     outranks a single class, so this has to match its specificity rather
+     than argue with it. */
+  .leaflet-touch .leaflet-bar a,
+  .leaflet-bar a {
+    width: 40px;
+    height: 40px;
+    line-height: 40px;
+  }
+
+  .pick__close {
+    min-width: 40px;
+    height: 40px;
+  }
 }
 
 /*
