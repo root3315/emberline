@@ -321,10 +321,17 @@ export function mountGlobe(
      * actually is, it costs one path, and it is the same shape whatever
      * the zoom has done to the shading inside it.
      */
+    /*
+     * The line is the ocean's own shadow on a pale theme, and the ember
+     * only where the ember reads as air. A thin `--ember` circle around a
+     * white planet is a drawn ring, not an edge: it was the first thing
+     * the eye found on the page and it looked like clip art.
+     */
+    const line: Rgb = bright > 0.5 ? [ocean[0] * 0.74, ocean[1] * 0.72, ocean[2] * 0.68, 1] : rim
     ctx.beginPath()
     ctx.arc(cx, cy, disc, 0, Math.PI * 2)
-    ctx.strokeStyle = rgba(rim, 0.45)
-    ctx.lineWidth = Math.max(1, width / 520)
+    ctx.strokeStyle = rgba(line, bright > 0.5 ? 0.5 : 0.35)
+    ctx.lineWidth = Math.max(1, width / 560)
     ctx.stroke()
   }
 
@@ -411,14 +418,24 @@ export function mountGlobe(
       const px = (cx + x * r) | 0
       const py = (cy - y * r) | 0
       if (px < 0 || py < 0 || px + dot >= width || py + dot >= height) continue
-      const a = 0.35 + 0.65 * cosC
+      /*
+       * Toward the limb the land fades out, not down.
+       *
+       * This used to multiply the colour by `a` and leave the alpha at
+       * 255, which does not dim a dot — it makes it darker. Against the
+       * night theme's near-black ocean the difference does not show and
+       * it passed for shading. Against paper it was the opposite of
+       * shading: the grey of the continents ran to black exactly where
+       * the projection crowds the dots together, and the day globe came
+       * out wearing a hard black crust around its edge.
+       *
+       * Written into the alpha channel instead, a dot at the limb is a
+       * faint version of whatever ocean is under it, in either theme.
+       */
+      const a = 0.28 + 0.72 * cosC
       for (let oy = 0; oy < dot; oy++) {
         for (let ox = 0; ox < dot; ox++) {
-          const i = ((py + oy) * width + px + ox) * 4
-          data[i] = inkLand[0] * a
-          data[i + 1] = inkLand[1] * a
-          data[i + 2] = inkLand[2] * a
-          data[i + 3] = 255
+          over(data, px + ox, py + oy, inkLand, a)
         }
       }
     }
@@ -445,15 +462,15 @@ export function mountGlobe(
       const glow = heat(heatScale(f.p, 1, 0.55))
       const a = Math.min(1, f.p * pulse * cosC * 1.5)
 
-      paint(data, px, py, glow, a)
+      over(data, px, py, glow, a)
       if (f.p > 0.55) {
         // Only the strongest spill into their neighbours, or the planet
         // turns into one bright smear.
         const spill = a * 0.3
-        paint(data, px + 1, py, glow, spill)
-        paint(data, px - 1, py, glow, spill)
-        paint(data, px, py + 1, glow, spill)
-        paint(data, px, py - 1, glow, spill)
+        over(data, px + 1, py, glow, spill)
+        over(data, px - 1, py, glow, spill)
+        over(data, px, py + 1, glow, spill)
+        over(data, px, py - 1, glow, spill)
       }
     }
 
@@ -515,13 +532,29 @@ export function mountGlobe(
     ctx.restore()
   }
 
-  /** Screen blending, so overlapping fires build up rather than replace. */
-  function paint(data: Uint8ClampedArray, px: number, py: number, rgb: Rgb, a: number): void {
+  /**
+   * One mark over whatever is already in the buffer, alpha and all.
+   *
+   * The old version blended the colour toward the mark and then forced the
+   * pixel opaque. On a transparent pixel that means blending *from black*,
+   * so a faint fire over open water came out as a dark speck — invisible
+   * on the night theme, and a pepper of soot on the day theme's white
+   * ocean. Proper source-over in straight alpha costs four more lines and
+   * is right on both, and overlapping fires still build up because the
+   * alpha accumulates.
+   */
+  function over(data: Uint8ClampedArray, px: number, py: number, rgb: Rgb, a: number): void {
+    if (a <= 0) return
     const i = (py * width + px) * 4
-    data[i] = data[i] + (rgb[0] - data[i]) * a
-    data[i + 1] = data[i + 1] + (rgb[1] - data[i + 1]) * a
-    data[i + 2] = data[i + 2] + (rgb[2] - data[i + 2]) * a
-    data[i + 3] = 255
+    const was = data[i + 3] / 255
+    const out = a + was * (1 - a)
+    if (out <= 0) return
+    const keep = (was * (1 - a)) / out
+    const put = a / out
+    data[i] = rgb[0] * put + data[i] * keep
+    data[i + 1] = rgb[1] * put + data[i + 1] * keep
+    data[i + 2] = rgb[2] * put + data[i + 2] * keep
+    data[i + 3] = out * 255
   }
 
   /*

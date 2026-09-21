@@ -66,22 +66,65 @@ export interface Shot {
 }
 
 /**
- * A flame, in a box one unit tall, centred on its own base.
+ * One tongue of flame: pointed at the tip, round at the base, leaning.
  *
- * A filled circle is the honest mark for a cell — the model is talking
- * about a square of ground, not a point — but on a photograph of Borneo
- * it reads as a map pin, and a reader has to be told what it means. A
- * flame is understood before it is read. The square underneath is still
- * drawn, faintly, so the footprint is not lost to the symbol.
+ * Built from three curves so the two ends can be shaped independently —
+ * `curl` pushes the tip sideways and `width` fattens the belly, and those
+ * two numbers are the whole difference between a flame and a raindrop.
+ */
+function tongue(
+  ctx: CanvasRenderingContext2D,
+  tipX: number,
+  tipY: number,
+  baseX: number,
+  baseY: number,
+  w: number,
+  curl: number,
+): void {
+  const mx = (tipX + baseX) / 2
+  const my = (tipY + baseY) / 2
+  ctx.moveTo(tipX, tipY)
+  ctx.bezierCurveTo(
+    tipX + curl, tipY + (my - tipY) * 0.45,
+    mx + w, my - w * 0.3,
+    baseX + w * 0.95, baseY - w * 0.35,
+  )
+  ctx.bezierCurveTo(
+    baseX + w, baseY + w * 0.5,
+    baseX - w, baseY + w * 0.5,
+    baseX - w * 0.95, baseY - w * 0.35,
+  )
+  ctx.bezierCurveTo(
+    mx - w, my - w * 0.1,
+    tipX - curl * 0.3, tipY + (my - tipY) * 0.5,
+    tipX, tipY,
+  )
+  ctx.closePath()
+}
+
+/**
+ * A flame: a tall tongue with a shorter one beside it.
+ *
+ * One tongue on its own is a teardrop however its tip is curled — that
+ * was the first two attempts, and both read as water. The second tongue
+ * is what makes the silhouette fire, and it is also the part that
+ * survives being drawn at a quarter of the size, because the notch
+ * between the two stays legible after the detail inside has gone.
+ *
+ * `s` is the height from the base to the tip. The shape is drawn about a
+ * point that sits a little below its own middle, so a flame marks the
+ * ground it stands on rather than floating over it.
  */
 function flame(ctx: CanvasRenderingContext2D, x: number, y: number, s: number): void {
   ctx.beginPath()
-  ctx.moveTo(x, y - s)
-  ctx.bezierCurveTo(x + 0.3 * s, y - 0.42 * s, x + 0.8 * s, y - 0.22 * s, x + 0.64 * s, y + 0.24 * s)
-  ctx.bezierCurveTo(x + 0.52 * s, y + 0.88 * s, x - 0.52 * s, y + 0.88 * s, x - 0.64 * s, y + 0.24 * s)
-  ctx.bezierCurveTo(x - 0.8 * s, y - 0.22 * s, x - 0.3 * s, y - 0.42 * s, x, y - s)
-  ctx.closePath()
-  ctx.fill()
+  tongue(ctx, x + 0.1 * s, y - 1.0 * s, x + 0.04 * s, y + 0.24 * s, 0.42 * s, 0.22 * s)
+  tongue(ctx, x - 0.44 * s, y - 0.54 * s, x - 0.16 * s, y + 0.26 * s, 0.3 * s, -0.2 * s)
+}
+
+/** The hot part, low in the main tongue. */
+function flameCore(ctx: CanvasRenderingContext2D, x: number, y: number, s: number): void {
+  ctx.beginPath()
+  tongue(ctx, x + 0.04 * s, y - 0.46 * s, x + 0.02 * s, y + 0.22 * s, 0.21 * s, 0.08 * s)
 }
 
 function lonToX(lon: number, n: number): number {
@@ -181,7 +224,15 @@ export async function drawShot(
    * the ramp something to be brighter than, and says which square is the
    * subject before any outline has to.
    */
-  ctx.fillStyle = 'rgba(8,6,4,0.34)'
+  /*
+   * A third was too much once every mark grew a shadow of its own.
+   *
+   * Taiga is dark to begin with, and between this and a soft black disc
+   * under each fire the photograph arrived looking like it had been taken
+   * at dusk. The marks carry their own contrast now, so the frame only
+   * needs enough of a drop to say which square is the subject.
+   */
+  ctx.fillStyle = 'rgba(8,6,4,0.18)'
   ctx.fillRect(0, 0, FRAME, my)
   ctx.fillRect(0, my + mhr, FRAME, FRAME - my - mhr)
   ctx.fillRect(0, my, mx, mhr)
@@ -239,29 +290,16 @@ export async function drawShot(
     ctx.fillRect(px, py, Math.round(cellW), ph)
 
     /*
-     * A shadow, then a glow, then a core.
+     * A glow under the mark, drawn with `lighter` so two neighbouring
+     * cells build up the way two fires would rather than the nearer one
+     * hiding the further.
      *
-     * The shadow is the part that was missing. A warm translucent glow
-     * works over forest and disappears over sand: Iraq and the Sahel are
-     * already the colour of the ramp, and the points there were a slightly
-     * warmer patch of desert. Laying a soft dark disc under each one first
-     * gives every point the same dark ground to burn against whatever is
-     * actually underneath, which is what a fire seen from orbit at night
-     * has and this daytime image does not.
-     *
-     * The glow above it is drawn with `lighter` so two neighbouring cells
-     * build up the way two fires would instead of the nearer hiding the
-     * further, and the core is opaque and small so the point still has a
-     * position when the glow has spread over half a valley.
+     * A big soft dark disc used to go under this as well, to give the
+     * mark something to stand against over pale ground. It is gone: with
+     * twenty-five of them in a frame the photograph came out dim, and the
+     * outline on the mark itself does the same job in a fraction of the
+     * area.
      */
-    const shade = ctx.createRadialGradient(dx, dy, 0, dx, dy, 6 + weight * 34)
-    shade.addColorStop(0, 'rgba(24,10,2,0.5)')
-    shade.addColorStop(0.6, 'rgba(24,10,2,0.26)')
-    shade.addColorStop(1, 'rgba(24,10,2,0)')
-    ctx.fillStyle = shade
-    ctx.beginPath()
-    ctx.arc(dx, dy, 6 + weight * 34, 0, Math.PI * 2)
-    ctx.fill()
 
     /*
      * The glow is warmer than the core, because fire is.
@@ -298,31 +336,48 @@ export async function drawShot(
      * is whatever colour the scene was, and a symbol with no outline
      * disappears over sand exactly as the glow did.
      */
-    const size = 4 + weight * 9
-    const hot = weight > 0.5
-    const core = hot
-      ? `rgba(255,${Math.round(236 + weight * 14)},214,${0.86 + weight * 0.14})`
-      : `rgba(${r},${g},${b},${0.78 + weight * 0.22})`
+    /*
+     * A flame above about a fifth, a dot below it.
+     *
+     * The threshold is not taste. Below it the whole glyph is four pixels
+     * tall, the notch between the two tongues closes up, and what is left
+     * is a blob with a bump — noise pretending to be a symbol. Those cells
+     * keep the dot they can honestly be.
+     *
+     * The outline is a stroke rather than a larger copy of the shape
+     * underneath: a copy grows from the centre, so it comes out thick at
+     * the tip and thin at the base, which looks like a mistake. A stroke
+     * is the same width all the way round, which is what an outline is.
+     */
+    const size = 7 + weight * 12
+    const core = weight > 0.5
+      ? `rgba(255,${Math.round(236 + weight * 14)},214,${0.9 + weight * 0.1})`
+      : `rgba(${r},${g},${b},${0.82 + weight * 0.18})`
 
-    if (weight > 0.25) {
-      ctx.save()
-      ctx.shadowColor = 'rgba(20,8,0,0.75)'
-      ctx.shadowBlur = 5
-      ctx.fillStyle = 'rgba(28,12,2,0.75)'
-      flame(ctx, dx, dy - size * 0.1, size * 1.16)
-      ctx.restore()
+    ctx.save()
+    ctx.strokeStyle = 'rgba(26,11,2,0.82)'
+    ctx.lineJoin = 'round'
+    if (weight > 0.2) {
+      ctx.lineWidth = Math.max(1.5, size * 0.22)
+      flame(ctx, dx, dy - size * 0.12, size)
+      ctx.stroke()
       ctx.fillStyle = core
-      flame(ctx, dx, dy - size * 0.1, size)
-    } else {
-      ctx.save()
-      ctx.shadowColor = 'rgba(20,8,0,0.7)'
-      ctx.shadowBlur = 4
-      ctx.fillStyle = core
-      ctx.beginPath()
-      ctx.arc(dx, dy, 1.6 + weight * 3.6, 0, Math.PI * 2)
       ctx.fill()
-      ctx.restore()
+      // The hot part, only while it is big enough to be a shape.
+      if (size > 11) {
+        flameCore(ctx, dx, dy - size * 0.12, size)
+        ctx.fillStyle = `rgba(255,240,206,${0.55 + weight * 0.35})`
+        ctx.fill()
+      }
+    } else {
+      ctx.lineWidth = 1.5
+      ctx.beginPath()
+      ctx.arc(dx, dy, 1.8 + weight * 4, 0, Math.PI * 2)
+      ctx.stroke()
+      ctx.fillStyle = core
+      ctx.fill()
     }
+    ctx.restore()
   }
 
   /*
