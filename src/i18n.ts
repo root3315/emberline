@@ -16,6 +16,7 @@ const en: Dict = {
 
   areaOfInterest: 'Area',
   seriesMode: 'Series',
+  modeLegend: 'How the years are counted',
   modeHarmonized: 'Reconciled',
   modeRaw: 'As recorded',
   modeExplainHarmonized:
@@ -368,6 +369,7 @@ const ru: Dict = {
 
   areaOfInterest: 'Район',
   seriesMode: 'Ряд',
+  modeLegend: 'Как считаются годы',
   modeHarmonized: 'Сведено',
   modeRaw: 'Как снято',
   modeExplainHarmonized:
@@ -883,7 +885,7 @@ const aboutLists: Record<Lang, Record<string, readonly AboutRow[]>> = {
       ['Every square that has ever burned, on every fourth day of 24 years, becomes one question: given what was known that morning, did it burn in the week that followed? Three million questions with the answers attached.', ''],
       ['Fires are rare \u2014 five squares in a hundred \u2014 so most of the quiet ones are set aside. Otherwise the shortest way to be right would be to answer \u201cno fire\u201d every time and score ninety-five per cent, and the model would learn exactly that. What it gives back is corrected afterwards so the numbers still mean what they say.', ''],
       ['The years are split by time, never shuffled: it learns on 2003\u20132013, is adjusted on 2014\u20132017, and sees 2018\u20132021 once, at the very end. Shuffling would let it learn from a Tuesday to answer about the Monday beside it, and the score would be a lie.', ''],
-      ['1,500 small decision trees, each correcting what the ones before it got wrong. Nothing deep and nothing fashionable: on a table of thirty columns this beats a neural network and, unlike one, can be asked why it said what it said \u2014 which is the chart above.', ''],
+      ['{trees} small decision trees, each correcting what the ones before it got wrong. Nothing deep and nothing fashionable: on a table of {features} columns this beats a neural network and, unlike one, can be asked why it said what it said \u2014 which is the chart above.', ''],
     ],
     aboutCheckList: [
     ['The forecast is scored against reality', 'The week on the map was computed before it happened. verify_forecast.py asks NASA what has burned since and scores it \u2014 ranking from day one, calibration once the week closes. The answer did not exist when the question was asked.'],
@@ -904,7 +906,7 @@ const aboutLists: Record<Lang, Record<string, readonly AboutRow[]>> = {
       ['Каждый квадрат, где когда-либо горело, на каждый четвёртый день 24 лет становится вопросом: если знать только то, что было известно тем утром, — загорелось ли там в ближайшую неделю? Три миллиона вопросов с уже известными ответами.', ''],
       ['Пожары редки — пять квадратов из ста, — поэтому большую часть спокойных мы откладываем в сторону. Иначе самый лёгкий способ быть правой — всегда отвечать «не загорится» и попадать в 95% случаев, и модель именно этому бы и научилась. То, что она потом выдаёт, поправляется обратно, чтобы числа значили то, что говорят.', ''],
       ['Годы делятся по времени, а не вперемешку: учёба на 2003–2013, настройка на 2014–2017, а 2018–2021 она видит один раз, в самом конце. Если перемешать, модель сможет подглядеть во вторник, чтобы ответить про соседний понедельник, и оценка будет врать.', ''],
-      ['1 500 маленьких решающих деревьев, каждое правит ошибки предыдущих. Ничего глубокого и ничего модного: на таблице из тридцати колонок это обходит нейросеть и, в отличие от неё, умеет объяснить, почему сказала именно так — это и есть график выше.', ''],
+      ['{trees} маленьких решающих деревьев, каждое правит ошибки предыдущих. Ничего глубокого и ничего модного: на таблице из {features} колонок это обходит нейросеть и, в отличие от неё, умеет объяснить, почему сказала именно так — это и есть график выше.', ''],
     ],
     aboutCheckList: [
     ['Прогноз сверяется с реальностью', 'Неделя на карте посчитана до того, как она случилась. verify_forecast.py спрашивает у NASA, что сгорело с тех пор, и считает оценку: ранжирование с первого дня, калибровка когда неделя закроется. Ответа не существовало в момент вопроса.'],

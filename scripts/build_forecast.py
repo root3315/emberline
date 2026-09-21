@@ -366,6 +366,22 @@ def main() -> None:
         indent=2,
     )
 
+    #
+    # This file is written whole, and two things live in it that are put
+    # there afterwards by `name_hotspots.py`: the twenty named places and
+    # the calibration ladder. Rebuilding therefore deletes them, and it
+    # did — twice in one afternoon, the second time unnoticed, which left
+    # the forecast page showing an empty "twenty places to watch" and the
+    # project's page a calibration chart with nothing in it.
+    #
+    # It still writes whole, because carrying the old names forward would
+    # be worse: they would be the previous model's places, silently.
+    # Instead it says plainly what has to be run next.
+    #
+    print("\n  hotspot names and the calibration ladder were in this file")
+    print("  and are now gone. Run: python scripts/name_hotspots.py "
+          f"{HORIZON}")
+
     print(f"\n{cells.size:,} cells above 1%   {len(blob) / 1048576:.2f} MB")
     print(f"  mean {probs.mean() / 255:.3f}   above 50%: {(probs > 127).sum():,}")
     print(f"{OUT_BIN}.gz\n{OUT_JSON}")

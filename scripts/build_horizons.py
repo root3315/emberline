@@ -129,6 +129,12 @@ def main() -> None:
         for h in order
     ]
     META.write_text(json.dumps(meta, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+
+    # The named places and the calibration ladder live in the same file and
+    # are put there by a separate script, so anything that rewrites the
+    # file has to put them back. Last in the chain, after the index, since
+    # it reads the file it is adding to.
+    run(["scripts/name_hotspots.py", str(LONGEST)])
     print(f"\nwrote {META}  ({len(order)} horizons)  in {(time.time() - started) / 60:.0f} min")
 
 

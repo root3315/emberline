@@ -160,6 +160,7 @@ const els = {
   futureStats: $('future-stats'),
   futureMapNote: $('future-map-note'),
   futureMapSlot: $('future-map-slot'),
+  futureRisk: $('future-risk'),
   futureRiskList: $('future-risk-list'),
   calibCanvas: $<HTMLCanvasElement>('calib-canvas'),
   calibCaption: $('calib-caption'),
@@ -938,7 +939,7 @@ async function renderAbout(): Promise<void> {
 
   fillAboutList(els.aboutBuiltList, 'aboutBuiltList')
   fillAboutList(els.aboutCheckList, 'aboutCheckList')
-  fillSteps()
+  fillSteps(formatNumber(card?.trees ?? 500), features)
   drawSeam()
   void drawModelCharts()
   void aboutRing()
@@ -969,11 +970,19 @@ async function renderAbout(): Promise<void> {
  * The four steps, numbered, because "how it learns" is a sequence and a
  * bulleted list of it reads as four unrelated facts.
  */
-function fillSteps(): void {
+/**
+ * The four steps, with the two numbers in them read from the model.
+ *
+ * They were written into the sentence — fifteen hundred trees, thirty
+ * columns — and both went stale the first time the model was refitted.
+ * The page then described a model that no longer exists, in the one
+ * paragraph whose whole purpose is to say how this one works.
+ */
+function fillSteps(trees: string, features: string): void {
   els.aboutSteps.innerHTML = ''
   for (const [text] of aboutList('aboutSteps')) {
     const item = document.createElement('li')
-    item.textContent = text
+    item.textContent = text.replace('{trees}', trees).replace('{features}', features)
     els.aboutSteps.append(item)
   }
 }
@@ -1524,6 +1533,18 @@ async function showDoor(): Promise<void> {
  */
 function renderRisk(): void {
   const all = [...(forecast?.meta.hotspots ?? [])].sort((a, b) => b.near - a.near)
+  /*
+   * No names, no band.
+   *
+   * The names are added to the forecast file by a second script, so a
+   * rebuild that has not been followed by that script leaves the file
+   * without them — and this band drew its heading, its explanation and
+   * then nothing at all, which reads as a page that broke rather than as
+   * data that has not arrived. It has happened once; folding the band
+   * means it will not be visible the next time.
+   */
+  els.futureRisk.hidden = all.length === 0
+  if (!all.length) return
   const spots = riskAll ? all : all.slice(0, RISK_SHOWN)
   els.futureRiskList.innerHTML = ''
   const lang = getLang()
@@ -4255,6 +4276,20 @@ function applyUrl(): void {
   els.footFuture.hidden = there === 'future'
 
   if (wanted.about) {
+    /*
+     * Leaving the forecast page has to be said out loud, even on the way
+     * to somewhere that is not the record.
+     *
+     * This branch used to return without it, so `futureScope` stayed true
+     * all the while the project's page was open. The next press of "what
+     * happens next week" then found the flag already set, decided there
+     * was nothing to render, and left the reader on the record's layout
+     * under a #/future address — the record's hero, the record's
+     * calendar, and the forecast nowhere. The two patches before this one
+     * hid the symptoms, a stray headline and an empty footer; this is the
+     * flag itself.
+     */
+    if (futureScope) showFutureLayout(false)
     if (!aboutScope) void renderAbout().finally(() => (applyingUrl = false))
     else applyingUrl = false
     return
