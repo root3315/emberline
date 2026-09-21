@@ -37,6 +37,12 @@ import numpy as np
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 HORIZON = int(sys.argv[1]) if len(sys.argv) > 1 else 7
+
+# A shorter horizon writes its grid and keeps quiet about the metadata.
+# `forecast.json` describes the week the page opens on, and a run for
+# "by Tuesday" must not overwrite it; `build_horizons.py` collects the
+# shorter ones into an index afterwards.
+SECONDARY = "secondary" in sys.argv[2:]
 DAYS_DIR = "public/data/world/days"
 INDEX = "public/data/world/days-index.json"
 MODEL = f"models/fire-{HORIZON}d.pkl"
@@ -325,6 +331,11 @@ def main() -> None:
     os.makedirs(os.path.dirname(OUT_BIN), exist_ok=True)
     with open(OUT_BIN + ".gz", "wb") as fh:
         fh.write(blob)
+
+    if SECONDARY:
+        print(f"{cells.size:,} cells above 1%   (secondary: the index is untouched)")
+        print(f"{OUT_BIN}.gz")
+        return
 
     meta = json.load(open(META, encoding="utf-8"))
     from_day = LAST + timedelta(days=1)

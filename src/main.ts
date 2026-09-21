@@ -41,6 +41,7 @@ import { aboutList } from './i18n'
 import { loadLand } from './core/land'
 import { mountGlobe, type GlobeFire, type GlobeHandle, type GlobePick } from './ui/globe'
 import { drawShot } from './ui/satellite'
+import { loadHorizon } from './core/forecast'
 import { daysInYear, dayOfYear, yearOf } from './core/grid'
 import {
   MIN_RATIO_SAMPLES,
@@ -202,6 +203,9 @@ const els = {
   lookBy: $('look-by'),
   lookFacts: $('look-facts'),
   lookNote: $('look-note'),
+  week: $('week'),
+  weekDays: $('week-days'),
+  weekRead: $('week-read'),
   footAbout: $('foot-about'),
   footFuture: $('foot-future'),
   impactBars: $<HTMLCanvasElement>('impact-bars'),
@@ -424,13 +428,28 @@ function setRange(mode: string): void {
  * own part of it. The colour runs on probability against a ceiling of one,
  * which is the only scale a probability can honestly have.
  */
+/**
+ * Which day of the week the map is answering for.
+ *
+ * Zero means the whole week, which is the model the page has always
+ * shipped and the state it opens in. Anything else is one of the shorter
+ * horizons: a separate model, asked a separate question.
+ */
+let weekDay = 0
+
+/** The grid for the chosen day, once it has arrived. */
+let weekCells: ForecastCell[] | null = null
+
 function renderMapForecast(box: Bounds | null, name: string | null, fitKey: string): void {
   const got = forecast
   if (!got) {
     els.mapNote.textContent = t('forecastMissing')
     return
   }
-  const { meta, cells } = got
+  const meta = got.meta
+  // The day strip only ever applies to the forecast page's own map; a
+  // region's framed forecast is always the full week.
+  const cells = weekDay && weekCells && fitKey === 'future' ? weekCells : got.cells
   const half = meta.degrees / 2
   const inside = box
     ? cells.filter(
@@ -458,11 +477,14 @@ function renderMapForecast(box: Bounds | null, name: string | null, fitKey: stri
   const pct = (v: number) => `${(v * 100).toFixed(0)}%`
   // Name the area when there is one, so a framed forecast does not read as
   // a statement about the planet.
+  const picked = weekDay && fitKey === 'future'
+    ? meta.horizons?.find((h) => h.days === weekDay)
+    : undefined
   els.mapNote.textContent =
     (name ? `${name}. ` : '') +
     t('forecastNote', {
-      from: meta.from,
-      to: meta.to,
+      from: picked?.from ?? meta.from,
+      to: picked?.to ?? meta.to,
       asOf: meta.asOf,
       cell: t('cellQuarter'),
     })
@@ -1157,6 +1179,7 @@ async function renderFuture(): Promise<void> {
     if (back) back.href = lastRecord || '#/'
 
     els.futureMapNote.textContent = t('futureMapNote')
+    fillWeek()
     renderMapForecast(null, null, 'future')
     renderRisk()
     renderTrust()
@@ -1366,6 +1389,76 @@ function nameNear(lat: number, lon: number): string | null {
     }
   }
   return best
+}
+
+/**
+ * Build the week strip, or leave it hidden.
+ *
+ * Hidden is the honest default: a build that made only the seven-day
+ * model has nothing to put in it, and a control that offers days the
+ * data cannot answer for is worse than no control.
+ */
+function fillWeek(): void {
+  const list = forecast?.meta.horizons
+  els.week.hidden = !list || list.length < 2
+  if (!list || list.length < 2) return
+
+  const all = [...list].sort((a, b) => a.days - b.days)
+  els.weekDays.innerHTML = ''
+  for (const h of all) {
+    const day = new Date(`${h.to}T00:00:00Z`)
+    const btn = document.createElement('button')
+    btn.type = 'button'
+    btn.className = 'week__day'
+    btn.setAttribute('role', 'tab')
+    // The last horizon is the whole week, which is what `weekDay = 0`
+    // means, so both spellings of "everything" select the same thing.
+    const isAll = h.days === forecast!.meta.horizonDays
+    const mine = isAll ? weekDay === 0 || weekDay === h.days : weekDay === h.days
+    btn.dataset.on = h.days <= (weekDay || forecast!.meta.horizonDays) ? 'yes' : 'no'
+    btn.dataset.end = mine ? 'yes' : 'no'
+    btn.setAttribute('aria-selected', mine ? 'true' : 'false')
+
+    const name = document.createElement('span')
+    name.className = 'week__name'
+    name.textContent = day.toLocaleDateString(getLang() === 'ru' ? 'ru-RU' : 'en-GB', {
+      weekday: 'short',
+      timeZone: 'UTC',
+    })
+    const date = document.createElement('span')
+    date.className = 'week__date'
+    date.textContent = String(day.getUTCDate())
+    btn.append(name, date)
+    btn.addEventListener('click', () => void pickDay(isAll ? 0 : h.days))
+    els.weekDays.append(btn)
+  }
+
+  const now = all.find((h) => h.days === (weekDay || forecast!.meta.horizonDays))
+  const read = document.createElement('span')
+  read.textContent = t(weekDay ? 'weekBy' : 'weekAll', {
+    to: now?.to ?? forecast!.meta.to,
+  })
+  els.weekRead.innerHTML = ''
+  els.weekRead.append(read)
+  if (now) {
+    const n = document.createElement('b')
+    n.textContent = formatNumber(now.cells)
+    els.weekRead.append(document.createTextNode(' \u00b7 '), n,
+      document.createTextNode(` ${t('weekCells')}`))
+  }
+}
+
+/** Fetch the day's grid if it is not here yet, then redraw. */
+async function pickDay(days: number): Promise<void> {
+  if (days === weekDay) return
+  weekDay = days
+  weekCells = days ? await loadHorizon(days) : null
+  if (days && !weekCells) {
+    // The file did not arrive. Fall back rather than draw the wrong week.
+    weekDay = 0
+  }
+  fillWeek()
+  renderMapForecast(null, null, 'future')
 }
 
 /**
@@ -3835,6 +3928,9 @@ function switchLang(lang: Lang): void {
   localStorage.setItem('emberline.lang', lang)
   els.lang.textContent = lang === 'en' ? 'RU' : 'EN'
   applyStaticStrings()
+  // The weekday names in the strip come from the locale, not from the
+  // dictionary, so `applyStaticStrings` cannot reach them.
+  if (futureScope) fillWeek()
   fillAoiOptions()
   paintRangeLabel()
   /*

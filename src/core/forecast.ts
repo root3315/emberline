@@ -59,6 +59,23 @@ export interface Reliability {
   burned: number
 }
 
+/**
+ * One of the shorter weeks, for the day-by-day view.
+ *
+ * The model answers one question — will this cell burn in the next N
+ * days — so a reader who wants to know about Tuesday needs a model that
+ * was asked about Tuesday. There is one per horizon, and this is the
+ * index of their grids. Absent from a build that only made the week, and
+ * the page then behaves as it did before.
+ */
+export interface ForecastHorizon {
+  days: number
+  file: string
+  from: string
+  to: string
+  cells: number
+}
+
 export interface ForecastMeta {
   horizonDays: number
   degrees: number
@@ -75,6 +92,8 @@ export interface ForecastMeta {
   skill: ForecastSkill
   tested: string
   target: string
+  /** Absent from a build that only made the full week. */
+  horizons?: ForecastHorizon[]
   /** Absent from an older build; the page copes without them. */
   hotspots?: Hotspot[]
   reliability?: Reliability[]
@@ -107,35 +126,66 @@ export async function loadForecast(
     if (!metaRes.ok) return null
     const m = (await metaRes.json()) as ForecastMeta
 
-    const res = await fetch(`${base}/${m.file}`)
-    if (!res.ok) return null
-    let raw = await res.arrayBuffer()
-    const head = new Uint8Array(raw, 0, Math.min(2, raw.byteLength))
-    if (head[0] === 0x1f && head[1] === 0x8b) {
-      raw = await new Response(
-        new Blob([raw]).stream().pipeThrough(new DecompressionStream('gzip')),
-      ).arrayBuffer()
-    }
-
-    const view = new DataView(raw)
-    const n = view.getUint32(0, true)
-    const half = m.degrees / 2
-    const out: ForecastCell[] = new Array(n)
-    for (let k = 0; k < n; k++) {
-      const cell = view.getUint32(4 + k * 4, true)
-      const row = Math.floor(cell / m.cols)
-      const col = cell - row * m.cols
-      out[k] = {
-        lat: row * m.degrees - 90 + half,
-        lon: col * m.degrees - 180 + half,
-        p: view.getUint8(4 + n * 4 + k) / 255,
-      }
-    }
+    const out = await readGrid(`${base}/${m.file}`, m)
+    if (!out) return null
     meta = m
     cells = out
     return { meta: m, cells: out }
   })().catch(() => null)
   return wanted
+}
+
+/** One grid file, decompressed if it arrived that way, as cells. */
+async function readGrid(url: string, m: ForecastMeta): Promise<ForecastCell[] | null> {
+  const res = await fetch(url)
+  if (!res.ok) return null
+  let raw = await res.arrayBuffer()
+  const head = new Uint8Array(raw, 0, Math.min(2, raw.byteLength))
+  if (head[0] === 0x1f && head[1] === 0x8b) {
+    raw = await new Response(
+      new Blob([raw]).stream().pipeThrough(new DecompressionStream('gzip')),
+    ).arrayBuffer()
+  }
+
+  const view = new DataView(raw)
+  const n = view.getUint32(0, true)
+  const half = m.degrees / 2
+  const out: ForecastCell[] = new Array(n)
+  for (let k = 0; k < n; k++) {
+    const cell = view.getUint32(4 + k * 4, true)
+    const row = Math.floor(cell / m.cols)
+    const col = cell - row * m.cols
+    out[k] = {
+      lat: row * m.degrees - 90 + half,
+      lon: col * m.degrees - 180 + half,
+      p: view.getUint8(4 + n * 4 + k) / 255,
+    }
+  }
+  return out
+}
+
+/**
+ * The grid for one of the shorter weeks, fetched once and kept.
+ *
+ * Each is about two hundred kilobytes, and a reader who never touches the
+ * day strip should pay for none of them — so they are asked for on the
+ * press that needs them rather than with the page. The full week is the
+ * one already loaded and is returned from there.
+ */
+const byHorizon = new Map<number, Promise<ForecastCell[] | null>>()
+
+export async function loadHorizon(days: number, base = '/data'): Promise<ForecastCell[] | null> {
+  const got = await loadForecast(base)
+  if (!got) return null
+  if (days === got.meta.horizonDays) return got.cells
+  const found = got.meta.horizons?.find((h) => h.days === days)
+  if (!found) return null
+  let job = byHorizon.get(days)
+  if (!job) {
+    job = readGrid(`${base}/${found.file}`, got.meta).catch(() => null)
+    byHorizon.set(days, job)
+  }
+  return job
 }
 
 /**

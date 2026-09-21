@@ -2521,6 +2521,108 @@ canvas {
 }
 
 /*
+ * The week over the map: seven days, filling up as you go right.
+ *
+ * A segmented control would have been the reflex — the page already has
+ * two — but a segment says "one of these", and these are not alternatives.
+ * They are a running total: the chance by Tuesday contains the chance by
+ * Monday. So the chosen day and every day before it are lit, the rest are
+ * quiet, and the shape of the control carries the arithmetic before the
+ * caption underneath has to explain it.
+ */
+.week {
+  display: grid;
+  gap: var(--s-3);
+  margin-bottom: var(--s-4);
+}
+
+.week__days {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 4px;
+  padding: 4px;
+  border: 1px solid var(--edge);
+  border-radius: var(--r-control);
+  background: var(--ash-input);
+}
+
+.week__day {
+  display: grid;
+  gap: 1px;
+  padding: var(--s-2) 4px;
+  border: 0;
+  border-radius: var(--r-tight);
+  background: transparent;
+  color: var(--ink-muted);
+  font-family: inherit;
+  text-align: center;
+  cursor: pointer;
+  transition:
+    background var(--t-fast) var(--ease-out),
+    color var(--t-fast) var(--ease-out);
+}
+
+.week__day:hover:not([data-on='yes']) {
+  background: color-mix(in srgb, var(--ink-primary) 7%, transparent);
+  color: var(--ink-secondary);
+}
+
+.week__name {
+  font-size: var(--t-caption);
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.week__date {
+  font-family: var(--font-mono);
+  font-size: var(--t-small);
+  font-variant-numeric: tabular-nums;
+}
+
+/*
+ * Covered, but not the one that was chosen: the days the running total
+ * already includes. Dimmer than the end of the range, brighter than the
+ * days beyond it.
+ */
+.week__day[data-on='yes'] {
+  background: color-mix(in srgb, var(--ember) 22%, transparent);
+  color: var(--ink-secondary);
+}
+
+.week__day[data-on='yes'][data-end='yes'] {
+  background: var(--ember);
+  color: var(--on-ember);
+}
+
+.week__day[data-on='yes'][data-end='yes'] .week__name {
+  color: var(--on-ember);
+}
+
+.week__day:focus-visible {
+  outline: 2px solid var(--edge-focus);
+  outline-offset: 1px;
+}
+
+.week__read {
+  margin: 0;
+  font-size: var(--t-caption);
+  color: var(--ink-muted);
+}
+
+.week__read b {
+  color: var(--ink-primary);
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+
+@media (max-width: 560px) {
+  .week__days {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+/*
  * A planet and a photograph, side by side.
  *
  * Two panels of deliberately unequal weight. The globe is the control: the

@@ -710,6 +710,28 @@
             <p class="note" id="future-map-note"></p>
           </div>
         </header>
+        <!--
+          The week, one day at a time.
+
+          Pressing a day asks a different model. There is one per horizon
+          — the seven-day model the page started with answers "some time
+          this week", and a reader who wants to know about Tuesday needs
+          the model that was asked about Tuesday — so the strip is a row
+          of questions, not a filter over one answer.
+
+          It is cumulative, and the fill says so: choosing Wednesday
+          lights Saturday through Wednesday, because the number is the
+          chance of fire arriving *by* then. Reading left to right, the
+          map warms.
+
+          Hidden until the shorter horizons exist in the data, so a build
+          that made only the week behaves exactly as it did before.
+        -->
+        <div class="week" id="week" hidden>
+          <div class="week__days" id="week-days" role="tablist"></div>
+          <p class="week__read" id="week-read"></p>
+        </div>
+
         <!-- The live map is moved in here, not rebuilt: one Leaflet, one state. -->
         <div class="future__slot" id="future-map-slot"></div>
         <!--
