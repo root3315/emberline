@@ -3223,6 +3223,44 @@ canvas {
   list-style: none;
 }
 
+/*
+ * A header, because the row carries two numbers and only one was labelled.
+ *
+ * Each row reads "Zambezia, Mozambique 98% ... 218", with the bar between
+ * them sizing the 218 rather than the 98%. The paragraph above the list
+ * does explain it, four lines up, which is not where anyone looks when
+ * they are wondering what a column is — it was asked about within a day
+ * of shipping, which is the usual life expectancy of an unlabelled
+ * number. The header shares the row's grid so each caption lands on the
+ * column it describes.
+ */
+.risk__head {
+  display: grid;
+  grid-template-columns: 2.2ch minmax(0, 1fr) minmax(60px, 12vw) 4.5ch;
+  gap: var(--s-4);
+  align-items: end;
+  padding: 0 var(--s-2) var(--s-2) 0;
+  border-bottom: 1px solid var(--edge);
+  font-size: var(--t-caption);
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-muted);
+}
+
+/* Spans the bar and the count, because one is the other drawn. */
+.risk__head-near {
+  grid-column: 3 / 5;
+  text-align: right;
+}
+
+@media (max-width: 560px) {
+  .risk__head {
+    font-size: 10px;
+    letter-spacing: 0.02em;
+  }
+}
+
 .risk__row {
   display: grid;
   grid-template-columns: 2.2ch minmax(0, 1fr) minmax(60px, 12vw) 4.5ch;

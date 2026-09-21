@@ -824,6 +824,22 @@
             <p class="note" data-i18n="futureRiskNote"></p>
           </div>
         </header>
+        <!--
+          A header, because the row carries two numbers and only one of
+          them was labelled.
+
+          Each row reads "Zambezia, Mozambique 98% ... 218", and the bar
+          in between sizes the 218 rather than the 98%. The paragraph
+          above does explain it, four lines up, which is not where anyone
+          looks when they are wondering what a column is. Asked about it
+          within a day of shipping, which is the usual life expectancy of
+          an unlabelled number.
+        -->
+        <div class="risk__head" aria-hidden="true">
+          <span></span>
+          <span data-i18n="riskHeadPlace">Place and its chance</span>
+          <span class="risk__head-near" data-i18n="riskHeadNear">Squares likely to burn within 200 km</span>
+        </div>
         <ol class="risk" id="future-risk-list"></ol>
         <button type="button" class="ghost-btn ghost-btn--wide risk__more" id="risk-more"></button>
       </section>

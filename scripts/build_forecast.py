@@ -160,6 +160,11 @@ def main() -> None:
     # and the model's own list picks from it by name.
     #
     from train_fire_model import FEATURES as ALL_FEATURES
+    from train_fire_model import load_people, people_at
+
+    # The same two columns the training side adds, read from the same
+    # file. Absent, the model simply was not fitted with them.
+    people = load_people() if "pop" in names else None
 
     missing = [n for n in names if n not in ALL_FEATURES]
     if missing:
@@ -304,7 +309,13 @@ def main() -> None:
             wr = np.clip(((lat + 90) / WEATHER_DEG).astype(np.int32), 0, weather["tall"] - 1)
             wc = np.clip(((lon + 180) / WEATHER_DEG).astype(np.int32), 0, weather["wide"] - 1)
             block = weather["table"][wr * weather["wide"] + wc]
-            f[:, 24:] = np.nan_to_num(block, nan=0.0)
+            f[:, 24:24 + block.shape[1]] = np.nan_to_num(block, nan=0.0)
+
+        if people is not None:
+            at = ALL_FEATURES.index("pop")
+            plat = (ty * step - 90) + (cells // side + 0.5) * deg
+            plon = (tx * step - 180) + (cells % side + 0.5) * deg
+            f[:, at], f[:, at + 1] = people_at(people, plat, plon)
 
         raw = model.predict_proba(f[:, pick])[:, 1]
         eps = 1e-9

@@ -48,10 +48,7 @@ OUT = Path("models/population.npz")
 DEGREES = 0.25
 COLS, ROWS = int(360 / DEGREES), int(180 / DEGREES)
 
-# 30 arc-seconds is 1/120 of a degree, so a quarter degree is thirty of
-# them. Asserted rather than assumed, because a different product would
-# silently produce a shifted world.
-PER = 30
+NEWLINE = chr(10)
 
 
 def download() -> Path:
@@ -113,32 +110,58 @@ def main() -> None:
 
     tif = download()
     with rasterio.open(tif) as src:
-        print(f"{src.width} x {src.height}, {src.dtypes[0]}")
-        if src.width != COLS * PER or src.height != ROWS * PER:
-            raise SystemExit(
-                f"expected {COLS * PER} x {ROWS * PER} for a {DEGREES} degree grid at "
-                f"{PER} cells a side; this raster is {src.width} x {src.height}"
-            )
+        t = src.transform
+        px_w, px_h = t.a, -t.e
+        west, north = t.c, t.f
+        print(f"{src.width} x {src.height}, pixel {px_w:.8f} deg, "
+              f"north {north:.3f}, west {west:.3f}")
 
-        # Rows run north to south in the file and south to north in this
-        # project's grid, so the output is filled from the bottom up.
-        pop = np.zeros((ROWS, COLS), dtype=np.float32)
-        nodata = src.nodata
-        for r in range(ROWS):
+        #
+        # Placed by its own geography, not by an assumed shape.
+        #
+        # The first version divided the raster into equal blocks on the
+        # assumption that it was a clean 43,200 by 21,600 covering the
+        # whole planet. It is 43,202 by 21,384: GHSL clips at about 89
+        # degrees, where nobody lives, and overhangs the date line by a
+        # pixel at each end. Blocking that up would have shifted every
+        # person on Earth north and west by a fraction of a cell, and
+        # nothing would have looked wrong. Each source pixel is asked for
+        # its own latitude and longitude instead.
+        #
+        if abs(px_w - 1 / 120) > 1e-6 or abs(px_h - 1 / 120) > 1e-6:
+            raise SystemExit(f"expected 30 arc-second pixels, got {px_w} x {px_h}")
+
+        lon = west + (np.arange(src.width) + 0.5) * px_w
+        ocol = np.clip(((lon + 180) / DEGREES).astype(np.int32), 0, COLS - 1)
+
+        flat = np.zeros(ROWS * COLS, dtype=np.float64)
+        strip = 120
+        for r0 in range(0, src.height, strip):
+            h = min(strip, src.height - r0)
             band = src.read(
-                1, window=rasterio.windows.Window(0, r * PER, src.width, PER)
-            ).astype(np.float32)
-            if nodata is not None:
-                band[band == nodata] = 0.0
+                1, window=rasterio.windows.Window(0, r0, src.width, h)
+            ).astype(np.float64)
+            if src.nodata is not None:
+                band[band == src.nodata] = 0.0
+            band[~np.isfinite(band)] = 0.0
             band[band < 0] = 0.0
-            pop[ROWS - 1 - r] = band.reshape(PER, COLS, PER).sum(axis=(0, 2))
-            if r % 200 == 0:
-                print(f"  row {r}/{ROWS}  {pop.sum() / 1e9:.2f} billion so far")
 
+            lat = north - (np.arange(r0, r0 + h) + 0.5) * px_h
+            orow = np.clip(((lat + 90) / DEGREES).astype(np.int32), 0, ROWS - 1)
+
+            # One bincount for the whole strip: the destination of every
+            # pixel as a single flat index, summed in one pass.
+            idx = (orow[:, None] * COLS + ocol[None, :]).ravel()
+            flat += np.bincount(idx, weights=band.ravel(), minlength=ROWS * COLS)
+            if r0 % (strip * 30) == 0:
+                print(f"  row {r0}/{src.height}  {flat.sum() / 1e9:.2f} billion so far")
+
+    pop = flat.reshape(ROWS, COLS).astype(np.float32)
     total = float(pop.sum())
-    print(f"\n{total / 1e9:.2f} billion people, {(pop > 0).mean() * 100:.1f}% of cells inhabited")
+    print(f"{NEWLINE}{total / 1e9:.2f} billion people, "
+          f"{(pop > 0).mean() * 100:.1f}% of cells inhabited")
     if not 6e9 < total < 9e9:
-        print("  WARNING: that is not a plausible world population; check the product")
+        raise SystemExit("that is not a plausible world population; check the product")
 
     # The eight neighbours, summed. A cell with nobody in it and a town
     # next door is not the same as a cell with nobody in it for a hundred

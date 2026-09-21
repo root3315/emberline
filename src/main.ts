@@ -1884,7 +1884,6 @@ function rebuild(): void {
   if (!state.years.includes(state.year)) {
     state.year = state.years[state.years.length - 1] ?? new Date().getUTCFullYear()
   }
-  state.analysis = state.clim ? analyzeYear(state.year, state.grid, state.clim) : null
 }
 
 /* ------------------------------------------------------------ render */
@@ -1892,6 +1891,25 @@ function rebuild(): void {
 function render(): void {
   const ds = state.dataset
   if (!ds || !state.clim) return
+
+  /*
+   * The year's analysis is computed here, where it is read.
+   *
+   * It used to live in `rebuild`, which runs when the area or the mode
+   * changes — and not when the year does. Stepping through years with
+   * the arrows therefore redrew everything from an analysis belonging to
+   * whichever year happened to be open when the area was loaded: the
+   * heading, the date and the day counts all moved, while "1.7x of
+   * normal", the count of hot days and every date shift stayed frozen on
+   * the old year. Four numbers that look like measurements of the year
+   * you are looking at, and were measurements of a different one.
+   *
+   * It is the only part of `rebuild` that depends on the year, and it
+   * costs a pass over twenty-six season shapes, so it belongs on the
+   * render path rather than behind a flag someone has to remember to
+   * set.
+   */
+  state.analysis = analyzeYear(state.year, state.grid, state.clim)
 
   // A searched place writes its own wording under the calendar heading; a
   // region must put the general one back, or it inherits the last city's.
@@ -2539,16 +2557,16 @@ function renderReading(): void {
       shift === null || Math.abs(shift) < 4
         ? t('shiftOnTime')
         : shift < 0
-          ? t('shiftEarlier', { n: Math.abs(shift) })
-          : t('shiftLater', { n: shift })
+          ? t('shiftEarlier', { n: formatDays(Math.abs(shift)) })
+          : t('shiftLater', { n: formatDays(shift) })
 
     const peakShift = a.peakShiftDays
     const peakText =
       peakShift === null || Math.abs(peakShift) < 4
         ? t('peakOnTime')
         : peakShift < 0
-          ? t('peakEarlier', { n: Math.abs(peakShift) })
-          : t('peakLater', { n: peakShift })
+          ? t('peakEarlier', { n: formatDays(Math.abs(peakShift)) })
+          : t('peakLater', { n: formatDays(peakShift) })
 
     els.verdict.append(highlight(sentence), document.createTextNode(` ${shiftText}, ${peakText}.`))
   }
@@ -2605,7 +2623,7 @@ function renderReading(): void {
     const meta = document.createElement('span')
     meta.className = 'period__meta'
     const ratioLabel = Number.isFinite(p.ratio) ? t('periodRatio', { n: p.ratio.toFixed(1) }) : ''
-    meta.textContent = `${t('periodDays', { n: p.days })} · ${ratioLabel}`
+    meta.textContent = `${formatDays(p.days)} · ${ratioLabel}`
 
     li.append(span, meta)
     els.periods.append(li)

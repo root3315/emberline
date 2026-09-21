@@ -60,6 +60,8 @@ import struct
 import sys
 from datetime import date, timedelta
 
+from pathlib import Path
+
 import numpy as np
 
 # The horizon is a command-line argument so the same feature code serves the
@@ -126,6 +128,50 @@ if WITH_WEATHER:
     from weather_features import COLUMNS as WEATHER_COLUMNS
 
     FEATURES = FEATURES + list(WEATHER_COLUMNS)
+
+#
+# And the people, last.
+#
+# Everything above this line is about fire: where it has been, when it is
+# usual, what the weather will do to whatever is there to burn. Nothing is
+# about the people who light most of it. The model has been inferring them
+# from where fire has happened before, which holds until the habit
+# changes, and habits are the part that changes.
+#
+PEOPLE = ["pop", "pop_ring"]
+if Path("models/population.npz").exists():
+    FEATURES = FEATURES + PEOPLE
+
+
+#
+# Where the people are, if it has been fetched.
+#
+# Optional on purpose. The rest of this pipeline predates it and has to
+# keep running without it — a missing file drops two columns rather than
+# stopping a build — and the columns go on the end so that every index
+# above them stays where it was.
+#
+POPULATION = Path("models/population.npz")
+
+
+def load_people():
+    """The two population layers on this project's own grid, or None."""
+    if not POPULATION.exists():
+        return None
+    got = np.load(POPULATION)
+    deg = float(got["degrees"])
+    if abs(deg - 0.25) > 1e-9:
+        print(f"  population is on a {deg} degree grid, not 0.25; ignoring it")
+        return None
+    return {"pop": got["pop"], "ring": got["ring"]}
+
+
+def people_at(people, lat, lon):
+    """The two columns for a set of points, already logged at build time."""
+    rows, cols = people["pop"].shape
+    r = np.clip(((lat + 90) / 0.25).astype(np.int32), 0, rows - 1)
+    c = np.clip(((lon + 180) / 0.25).astype(np.int32), 0, cols - 1)
+    return people["pop"][r, c], people["ring"][r, c]
 
 
 def day_index(y: int, doy1: int) -> int:
@@ -248,7 +294,8 @@ def load_oni():
         return {}
 
 
-def tile_rows(grid, tx, ty, idx, n_days, doy_of, year_of, oni_by_day, weather=None):
+def tile_rows(grid, tx, ty, idx, n_days, doy_of, year_of, oni_by_day, weather=None,
+              people=None):
     side, deg, step = idx["tileCells"], idx["degrees"], idx["tileDegrees"]
 
     ever = grid.max(axis=1) > 0
@@ -372,7 +419,13 @@ def tile_rows(grid, tx, ty, idx, n_days, doy_of, year_of, oni_by_day, weather=No
             lat = lat0 + (cells // side + 0.5) * deg
             lon = (tx * step - 180) + (cells % side + 0.5) * deg
             wx, wy = weather.index_of(lat, lon)
-            feats[:, 24:] = weather.window(wx, wy, dd)
+            feats[:, 24:24 + len(WEATHER_COLUMNS)] = weather.window(wx, wy, dd)
+
+        if people is not None:
+            at = FEATURES.index("pop")
+            lat = lat0 + (cells // side + 0.5) * deg
+            lon = (tx * step - 180) + (cells % side + 0.5) * deg
+            feats[:, at], feats[:, at + 1] = people_at(people, lat, lon)
 
         chunks.append((feats, y, np.full(y.size, split, dtype=np.int8)))
 
@@ -406,6 +459,11 @@ def main() -> None:
         weather = Weather(HORIZON)
         print(f"weather: {weather.days:,} days from {weather.first} at {weather.degrees} deg")
 
+    people = load_people()
+    if people is not None:
+        lived = (people["pop"] > 0).mean()
+        print(f"people: {lived * 100:.1f}% of the grid has somebody on it")
+
     tiles = sorted(idx["tiles"].items())
     print(f"{len(tiles)} tiles, {n_days} days, horizon {HORIZON}d, MODIS only")
     print(f"features: {len(FEATURES)}{' with weather' if WITH_WEATHER else ' , fire only'}")
@@ -417,7 +475,9 @@ def main() -> None:
         grid = load_tile(tx, ty, groups, n_days, side)
         if grid is None:
             continue
-        got = tile_rows(grid, tx, ty, idx, n_days, doy_of, year_of, oni_by_day, weather)
+        got = tile_rows(
+            grid, tx, ty, idx, n_days, doy_of, year_of, oni_by_day, weather, people
+        )
         del grid
         gc.collect()
         if got is None:
