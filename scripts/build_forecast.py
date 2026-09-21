@@ -30,9 +30,11 @@ import os
 import pickle
 import struct
 import sys
-from datetime import date, timedelta
+from datetime import timedelta
 
 import numpy as np
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 HORIZON = int(sys.argv[1]) if len(sys.argv) > 1 else 7
 DAYS_DIR = "public/data/world/days"
@@ -48,8 +50,11 @@ WEATHER_STATIC = "models/weather-static.npz"
 WEATHER_DEG = 1.5
 DRY_MM = 1.0
 
-EPOCH = date(2003, 1, 1)
-LAST = date(2026, 9, 19)
+# Imported rather than repeated. The archive's last day was written out
+# by hand in three files, and the forecast is wrong in a quiet way if they
+# ever disagree: the window, the weather and the feature windows would each
+# be counting from a different day.
+from train_fire_model import EPOCH, LAST  # noqa: E402
 TRAIN_ERA = (2003, 2018)
 RECENT = 31
 
@@ -80,6 +85,22 @@ def weather_table() -> dict | None:
     except FileNotFoundError:
         print("  no weather forecast; the model will be asked without it")
         return None
+
+    #
+    # Say so when the weather is for a different week.
+    #
+    # This went wrong silently for every build until it was noticed by
+    # reading the two files side by side. A forecast quietly fed the wrong
+    # week is worse than one that refuses to build, because it looks
+    # exactly like a forecast.
+    #
+    want = [str(LAST + timedelta(days=d + 1)) for d in range(HORIZON)]
+    have = [str(d) for d in got["days"]] if "days" in got else []
+    if have and have != want:
+        print(f"  WEATHER WINDOW MISMATCH: file has {have[0]}..{have[-1]}, "
+              f"the forecast needs {want[0]}..{want[-1]}")
+        print("  re-run scripts/fetch_gfs.py; refusing to build on the wrong week")
+        raise SystemExit(1)
 
     wide = int(360 / WEATHER_DEG)
     tall = int(180 / WEATHER_DEG)
@@ -119,10 +140,30 @@ def main() -> None:
     model, names = bundle["model"], bundle["features"]
     trained_rate, true_rate = bundle["trained_rate"], bundle["true_rate"]
 
+    #
+    # The columns below are filled by position, and a model may want fewer
+    # of them than there are.
+    #
+    # Every `f[:, n] = ...` in this function writes a named feature to a
+    # number it agreed on with the training script, which was fine while
+    # every model used all thirty. A model fitted without some of them
+    # would have had its columns silently shifted — the weather block
+    # landing on El Nino, and a forecast that is wrong everywhere without
+    # being wrong anywhere in particular. So the full set is always built
+    # and the model's own list picks from it by name.
+    #
+    from train_fire_model import FEATURES as ALL_FEATURES
+
+    missing = [n for n in names if n not in ALL_FEATURES]
+    if missing:
+        raise SystemExit(f"model wants features this script cannot build: {missing}")
+    pick = [ALL_FEATURES.index(n) for n in names]
+
     oni = {tuple(int(x) for x in k.split("-")): v for k, v in json.load(open(ONI_FILE)).items()}
     oni_now = oni.get(((EPOCH + timedelta(days=today)).year, (EPOCH + timedelta(days=today)).month), 0.0)
 
-    weather = weather_table() if len(names) > 24 else None
+    # Asked for by name rather than by counting columns, for the same reason.
+    weather = weather_table() if any(n.startswith("w_") for n in names) else None
 
     tiles = sorted(idx["tiles"].items())
     print(f"{len(tiles)} tiles, forecast from day {LAST} over {HORIZON}d, {len(names)} features")
@@ -219,7 +260,7 @@ def main() -> None:
         def ring_win(w: int) -> np.ndarray:
             return cum_ring_g[gix, last_ix] - cum_ring_g[gix, max(last_ix - w, 0)]
 
-        f = np.empty((cells.size, len(names)), dtype=np.float32)
+        f = np.empty((cells.size, len(ALL_FEATURES)), dtype=np.float32)
         for i, w in enumerate((1, 3, 7, 14, 30, 90)):
             f[:, i] = np.log1p(window(cum, cells, dd, w))
         for i, w in enumerate((1, 3, 7, 30), start=6):
@@ -257,7 +298,7 @@ def main() -> None:
             block = weather["table"][wr * weather["wide"] + wc]
             f[:, 24:] = np.nan_to_num(block, nan=0.0)
 
-        raw = model.predict_proba(f)[:, 1]
+        raw = model.predict_proba(f[:, pick])[:, 1]
         eps = 1e-9
         pc = np.clip(raw, eps, 1 - eps)
         shift = np.log((trained_rate / (1 - trained_rate)) / (true_rate / (1 - true_rate)))

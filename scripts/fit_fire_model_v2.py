@@ -62,10 +62,17 @@ from train_fire_model import ERAS as _ERAS  # noqa: E402
 HORIZON = int(sys.argv[1]) if len(sys.argv) > 1 else 7
 ERAS = [_ERAS[i] for i in (0, 1, 2)]
 
-FEATURES_NPZ = f"models/features-{HORIZON}d.npz"
-OLD_META = f"models/fire-{HORIZON}d.json"
-OUT_MODEL = f"models/fire-{HORIZON}d-v2.pkl"
-OUT_META = f"models/fire-{HORIZON}d-v2.json"
+# `dry` fits the same rows without the weather columns. The comparison the
+# site prints — what the weather is worth — is only honest if both sides
+# were fitted the same way, so the weather-free model has to come through
+# this script too rather than being left behind on the old protocol.
+DRY = "dry" in sys.argv[2:]
+TAG = "-dry" if DRY else ""
+
+FEATURES_NPZ = f"models/features-{HORIZON}d{TAG}.npz"
+OLD_META = f"models/fire-{HORIZON}d{TAG}.json"
+OUT_MODEL = f"models/fire-{HORIZON}d{TAG}-v2.pkl"
+OUT_META = f"models/fire-{HORIZON}d{TAG}-v2.json"
 
 SEED = 20260920
 

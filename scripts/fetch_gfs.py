@@ -45,6 +45,10 @@ import numpy as np
 
 warnings.filterwarnings("ignore")
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+# The archive's last day, from the one file that defines it.
+from train_fire_model import EPOCH, LAST  # noqa: E402
+
 HORIZON = int(sys.argv[1]) if len(sys.argv) > 1 else 7
 # The grid has to be the one the training half was read on, or the model
 # learns from one field and is asked about another. ERA5 comes off the
@@ -81,7 +85,7 @@ def weather_points() -> dict:
 
     idx = json.loads(Path("public/data/world/days-index.json").read_text(encoding="utf-8"))
     side, cols, deg = idx["tileCells"], idx["cols"], idx["degrees"]
-    n_days = (date(2026, 9, 19) - date(2003, 1, 1)).days + 1
+    n_days = (LAST - EPOCH).days + 1
     wide = int(360 / WEATHER_DEG)
 
     keys: set[int] = set()
@@ -107,29 +111,51 @@ def weather_points() -> dict:
     return out
 
 
-def newest_cycle() -> tuple[datetime, str]:
+def cycle_for(start: date) -> tuple[datetime, int, str]:
     """
-    The most recent run that has finished publishing.
+    The run that covers the week beginning `start`, and how far behind it is.
 
-    A cycle appears a few hours after its nominal time and fills in step by
-    step, so the test is whether the last step we need is on the server, not
-    whether the directory exists.
+    ── Why this is not simply the newest run ──────────────────────────────
+
+    It used to be, and that was a quiet mismatch between training and
+    serving. The model learned on the weather of exactly the days its
+    target counted fires over; the forecast window begins the day after the
+    *archive's* last day, and the archive lags the calendar. Taking the
+    newest cycle and labelling its first day "tomorrow" therefore produced
+    weather for the seven days beginning tomorrow — one day later than the
+    seven days being predicted. Six of the seven overlapped, so nothing
+    looked broken, and the model was being handed the wrong week by a day
+    every single build.
+
+    Starting instead from 00z on the first day of the window makes day zero
+    exactly that calendar day, which is what the training rows contain. If
+    that run is not on the server the search steps back six hours at a
+    time; the labels stay right and only the alignment loosens, which is
+    the correct thing to give up.
+
+    Returns the cycle, the hours between it and the window's start, and a
+    label.
     """
-    now = datetime.now(timezone.utc)
-    for back in range(0, 8):
-        when = now - timedelta(hours=6 * back)
-        cycle = when.replace(hour=when.hour // 6 * 6, minute=0, second=0, microsecond=0)
-        url = step_url(cycle, HORIZON * 24)
+    want = datetime(start.year, start.month, start.day, tzinfo=timezone.utc)
+    for back in range(0, 9):
+        cycle = want - timedelta(hours=6 * back)
+        if cycle > datetime.now(timezone.utc):
+            continue
+        lag = int((want - cycle).total_seconds() // 3600)
+        url = step_url(cycle, lag + HORIZON * 24)
         try:
             request = urllib.request.Request(url, method="HEAD")
             with urllib.request.urlopen(request, timeout=60) as got:
                 if got.status == 200:
-                    return cycle, cycle.strftime("%Y%m%d %Hz")
+                    return cycle, lag, cycle.strftime("%Y%m%d %Hz")
         except urllib.error.HTTPError:
             continue
         except (urllib.error.URLError, TimeoutError):
             time.sleep(3)
-    raise SystemExit("no complete GFS cycle found in the last two days")
+    raise SystemExit(
+        f"no GFS run on the server covers the week from {start}; "
+        "the archive may be further behind than GFS keeps history"
+    )
 
 
 def step_url(cycle: datetime, hour: int) -> str:
@@ -209,8 +235,9 @@ def main() -> None:
 
     cells = weather_points()
     key = cells["key"]
-    cycle, label = newest_cycle()
-    print(f"GFS cycle {label}, {HORIZON} days, {STEP_HOURS}-hourly")
+    start = LAST + timedelta(days=1)
+    cycle, lag, label = cycle_for(start)
+    print(f"GFS cycle {label} (+{lag}h to the window), {HORIZON} days from {start}")
 
     SCRATCH.mkdir(parents=True, exist_ok=True)
     rows, cols = int(180 / WEATHER_DEG), int(360 / WEATHER_DEG)
@@ -221,11 +248,14 @@ def main() -> None:
     wind = np.full((HORIZON, flat), -np.inf, dtype=np.float32)
     rain_at = np.zeros((HORIZON + 1, flat), dtype=np.float32)
 
-    hours = list(range(STEP_HOURS, HORIZON * 24 + 1, STEP_HOURS))
+    # Every step is offset by the lag, so hour zero of the series is the
+    # first moment of the first day being forecast rather than the moment
+    # the run was made.
+    hours = list(range(lag + STEP_HOURS, lag + HORIZON * 24 + 1, STEP_HOURS))
     for n, hour in enumerate(hours, 1):
         path = download(step_url(cycle, hour), SCRATCH / f"f{hour:03d}.grb2")
         got = read_step(path)
-        day = min((hour - 1) // 24, HORIZON - 1)
+        day = min((hour - lag - 1) // 24, HORIZON - 1)
 
         if "2t" in got:
             tmax[day] = np.maximum(tmax[day], got["2t"].ravel() - 273.15)
@@ -234,8 +264,8 @@ def main() -> None:
         if "10u" in got and "10v" in got:
             speed = np.hypot(got["10u"], got["10v"]).ravel() * 3.6  # m/s to km/h
             wind[day] = np.maximum(wind[day], speed)
-        if "tp" in got and hour % 24 == 0:
-            rain_at[hour // 24] = got["tp"].ravel()
+        if "tp" in got and (hour - lag) % 24 == 0:
+            rain_at[(hour - lag) // 24] = got["tp"].ravel()
 
         if n % 8 == 0 or n == len(hours):
             print(f"  +{hour:03d}h  {n}/{len(hours)}")
@@ -244,8 +274,7 @@ def main() -> None:
     precip = np.diff(rain_at, axis=0)
     precip[precip < 0] = 0.0  # a reset bucket reads as a negative difference
 
-    day_zero = cycle.date() + timedelta(days=1)
-    days = [str(day_zero + timedelta(days=d)) for d in range(HORIZON)]
+    days = [str(start + timedelta(days=d)) for d in range(HORIZON)]
 
     def take(block: np.ndarray) -> np.ndarray:
         picked = block[:, key].T.astype(np.float32)
