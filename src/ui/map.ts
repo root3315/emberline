@@ -55,6 +55,19 @@ export interface MapModel {
    */
   ceiling?: number
   /**
+   * What kind of number `days` is, because the two are drawn differently.
+   *
+   * Counts of fire are heavy-tailed — one catastrophic week is worth
+   * hundreds of ordinary ones — so they are raised to a power that keeps
+   * the quiet season legible instead of black. A probability has no tail
+   * to correct: it is already on nought to one and its middle is its
+   * middle. Curving it the same way put a cell with a one-per-cent chance
+   * a twentieth of the way up the ramp at thirty per cent opacity, and the
+   * forecast map came out claiming that most of the planet was about to
+   * burn.
+   */
+  scale?: 'count' | 'probability'
+  /**
    * Individual detections, drawn instead of the grid when they are present.
    *
    * Past about a kilometre a cell is a lie of precision: a MODIS pixel is a
@@ -131,6 +144,7 @@ const FireLayer = L.Layer.extend({
     this._cells = []
     this._cellKm = 5
     this._ceiling = 1
+    this._scale = 'count'
     this._drawnZoom = 0
     this._drawnCenter = null
   },
@@ -174,11 +188,13 @@ const FireLayer = L.Layer.extend({
     cellDeg?: number,
     ceiling?: number,
     points?: MapPoint[],
+    scale: 'count' | 'probability' = 'count',
   ) {
     this._points = points
     this._cells = cells
     this._cellKm = cellKm
     this._cellDeg = cellDeg
+    this._scale = scale
     if (ceiling && ceiling > 0) {
       this._ceiling = ceiling
     } else {
@@ -298,7 +314,11 @@ const FireLayer = L.Layer.extend({
 
     for (const cell of this._cells) {
       if (cell.lat > bounds.getNorth() || cell.lat < bounds.getSouth()) continue
-      const t = heatScale(cell.days, this._ceiling, 0.62)
+      // Linear for a probability, curved for a count. See `scale` above.
+      const t =
+        this._scale === 'probability'
+          ? Math.min(1, Math.max(0, cell.days / this._ceiling))
+          : heatScale(cell.days, this._ceiling, 0.62)
       if (t <= 0) continue
 
       const dLon = deg ?? dLat / Math.max(Math.cos((cell.lat * Math.PI) / 180), 0.05)
@@ -311,7 +331,16 @@ const FireLayer = L.Layer.extend({
        * the colour means a quiet cell is a tint over the imagery and only a
        * genuinely busy one blocks it out.
        */
-      ctx.fillStyle = rgba(heat(t), 0.25 + t * 0.65)
+      /*
+       * And the floor goes with it.
+       *
+       * A quarter of opacity on the faintest cell is right for a count,
+       * where the smallest thing on the map is still a fire that happened.
+       * The faintest cell on the forecast is a one-per-cent chance, which
+       * is nearly nothing and should look like nearly nothing.
+       */
+      const floor = this._scale === 'probability' ? 0.05 : 0.25
+      ctx.fillStyle = rgba(heat(t), floor + t * (0.9 - floor))
 
       const lon = cell.lon + shift
       if (lon + dLon < bounds.getWest() || lon - dLon > bounds.getEast()) continue
@@ -343,6 +372,7 @@ interface FireLayerInstance extends Omit<L.Layer, '_map'> {
   _cellKm: number
   _cellDeg?: number
   _ceiling: number
+  _scale: 'count' | 'probability'
   _drawnZoom: number
   _drawnCenter: L.LatLng | null
   _transform(center: L.LatLng, zoom: number): void
@@ -353,6 +383,7 @@ interface FireLayerInstance extends Omit<L.Layer, '_map'> {
     cellDeg?: number,
     ceiling?: number,
     points?: MapPoint[],
+    scale?: 'count' | 'probability',
   ): void
   _reset(): void
   _animateZoom(e: L.ZoomAnimEvent): void
@@ -538,7 +569,14 @@ export function updateMap(model: MapModel | null, fit: boolean): void {
   aoiFrame = null
   if (model.frame === false) {
     if (fit) map.fitBounds(b, { padding: [14, 14], animate: false })
-    fire.setData(model.cells, model.cellKm, model.cellDeg, model.ceiling, model.points)
+    fire.setData(
+      model.cells,
+      model.cellKm,
+      model.cellDeg,
+      model.ceiling,
+      model.points,
+      model.scale,
+    )
     return
   }
   aoiFrame = L.rectangle(b, {

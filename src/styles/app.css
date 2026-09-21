@@ -1287,6 +1287,7 @@ canvas {
 
 .map__scale {
   position: absolute;
+  z-index: 1100;
   bottom: var(--s-3);
   left: var(--s-3);
   padding: 3px var(--s-2);
@@ -1549,8 +1550,19 @@ canvas {
 }
 
 /* Hover readout: coordinates and how often that square burned. */
+/*
+ * Above Leaflet's own stack, which starts at 100 and ends at 1000.
+ *
+ * The rule below sets `isolation` on `.map` so none of those numbers can
+ * outrank anything outside the map — but inside it they still rank, and
+ * these two overlays had no `z-index` at all. At zero they were painted
+ * under the tiles: the readout appeared on hover and the basemap covered
+ * its lower half, which looked like the panel falling apart rather than
+ * like a stacking order nobody had set.
+ */
 .map__probe {
   position: absolute;
+  z-index: 1100;
   top: var(--s-3);
   right: var(--s-3);
   padding: 4px var(--s-3);

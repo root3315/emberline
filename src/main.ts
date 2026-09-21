@@ -450,6 +450,7 @@ function renderMapForecast(box: Bounds | null, name: string | null, fitKey: stri
       cellDeg: meta.degrees,
       frame: box !== null,
       ceiling: 1,
+      scale: 'probability',
     },
     claimFit(fitKey),
   )
@@ -4167,7 +4168,18 @@ function applyUrl(): void {
    * not. Unhiding empty bands is worse than a moment of loading.
    */
   if (futureScope || leavingAbout) {
-    if (futureScope) showFutureLayout(false)
+    /*
+     * Unconditionally, because the about page turns the forecast's bands
+     * off and only this can turn them back on.
+     *
+     * `showAboutLayout(true)` hides every one of `futureSections`, and one
+     * of them — `future-cta` — is the door to the forecast that lives at
+     * the foot of the record. Coming back from the project's page without
+     * ever having been on the forecast page left `futureScope` false, so
+     * this was skipped, and the record lost its door until a reload. The
+     * call is cheap when there is nothing to undo.
+     */
+    showFutureLayout(false)
     /*
      * And the period goes back with it.
      *
