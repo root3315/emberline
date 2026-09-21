@@ -45,6 +45,11 @@
   --heat-100: hsl(44 96% 82%);
 
   --ember: var(--heat-75);
+  /* What goes on top of an ember fill. The night theme's ember is a bright
+     orange and wants dark type; the day theme's is a deep red and wants
+     light. One token so a button does not have to know which theme it is
+     in. */
+  --on-ember: hsl(24 40% 8%);
   --ember-dim: hsl(31 60% 42%);
   --ember-glow: hsl(31 92% 58% / 0.18);
 
@@ -128,6 +133,7 @@
   --heat-100: hsl(2 68% 24%);
 
   --ember: hsl(14 80% 45%);
+  --on-ember: hsl(36 40% 97%);
   --ember-dim: hsl(18 48% 58%);
   --ember-glow: hsl(14 80% 45% / 0.14);
 

@@ -65,6 +65,25 @@ export interface Shot {
   attribution: string
 }
 
+/**
+ * A flame, in a box one unit tall, centred on its own base.
+ *
+ * A filled circle is the honest mark for a cell — the model is talking
+ * about a square of ground, not a point — but on a photograph of Borneo
+ * it reads as a map pin, and a reader has to be told what it means. A
+ * flame is understood before it is read. The square underneath is still
+ * drawn, faintly, so the footprint is not lost to the symbol.
+ */
+function flame(ctx: CanvasRenderingContext2D, x: number, y: number, s: number): void {
+  ctx.beginPath()
+  ctx.moveTo(x, y - s)
+  ctx.bezierCurveTo(x + 0.3 * s, y - 0.42 * s, x + 0.8 * s, y - 0.22 * s, x + 0.64 * s, y + 0.24 * s)
+  ctx.bezierCurveTo(x + 0.52 * s, y + 0.88 * s, x - 0.52 * s, y + 0.88 * s, x - 0.64 * s, y + 0.24 * s)
+  ctx.bezierCurveTo(x - 0.8 * s, y - 0.22 * s, x - 0.3 * s, y - 0.42 * s, x, y - s)
+  ctx.closePath()
+  ctx.fill()
+}
+
 function lonToX(lon: number, n: number): number {
   return ((lon + 180) / 360) * n
 }
@@ -267,20 +286,43 @@ export async function drawShot(
     ctx.globalCompositeOperation = 'source-over'
 
     /*
-     * The core is opaque, and at the top of the range it is white.
+     * The mark itself: a flame above about a quarter, a dot below it.
      *
-     * The ramp's own peak is a pale yellow that a sand-coloured frame
-     * matches almost exactly. Pushing the hottest cells to something
-     * brighter than any terrain gives them somewhere to go that the
-     * landscape cannot follow.
+     * The threshold is not taste. A flame drawn at four pixels is a blob
+     * with a bump on it — the shape carries no meaning at that size and
+     * only adds noise — so the faint cells keep the dot they can be, and
+     * the ones worth looking at get the shape that says what they are
+     * without a caption.
+     *
+     * Both are drawn twice: once in a dark outline, once filled. Imagery
+     * is whatever colour the scene was, and a symbol with no outline
+     * disappears over sand exactly as the glow did.
      */
-    ctx.fillStyle =
-      weight > 0.55
-        ? `rgba(255,${Math.round(238 + weight * 12)},218,${0.8 + weight * 0.2})`
-        : `rgba(${r},${g},${b},${0.7 + weight * 0.3})`
-    ctx.beginPath()
-    ctx.arc(dx, dy, 1.6 + weight * 3.6, 0, Math.PI * 2)
-    ctx.fill()
+    const size = 4 + weight * 9
+    const hot = weight > 0.5
+    const core = hot
+      ? `rgba(255,${Math.round(236 + weight * 14)},214,${0.86 + weight * 0.14})`
+      : `rgba(${r},${g},${b},${0.78 + weight * 0.22})`
+
+    if (weight > 0.25) {
+      ctx.save()
+      ctx.shadowColor = 'rgba(20,8,0,0.75)'
+      ctx.shadowBlur = 5
+      ctx.fillStyle = 'rgba(28,12,2,0.75)'
+      flame(ctx, dx, dy - size * 0.1, size * 1.16)
+      ctx.restore()
+      ctx.fillStyle = core
+      flame(ctx, dx, dy - size * 0.1, size)
+    } else {
+      ctx.save()
+      ctx.shadowColor = 'rgba(20,8,0,0.7)'
+      ctx.shadowBlur = 4
+      ctx.fillStyle = core
+      ctx.beginPath()
+      ctx.arc(dx, dy, 1.6 + weight * 3.6, 0, Math.PI * 2)
+      ctx.fill()
+      ctx.restore()
+    }
   }
 
   /*

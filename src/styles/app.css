@@ -434,7 +434,7 @@ canvas {
   border: 1px solid transparent;
   border-radius: var(--r-control);
   background: var(--ember);
-  color: hsl(24 40% 8%);
+  color: var(--on-ember);
   font-size: var(--t-body);
   font-weight: 600;
   cursor: pointer;

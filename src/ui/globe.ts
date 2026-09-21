@@ -266,7 +266,7 @@ export function mountGlobe(
      * ocean gets a fraction of the shading.
      */
     const bright = (ocean[0] * 0.299 + ocean[1] * 0.587 + ocean[2] * 0.114) / 255
-    const depth = bright > 0.5 ? 0.15 : 0.55
+    const depth = bright > 0.5 ? 0.08 : 0.55
     const edge: Rgb = [
       ocean[0] * (1 - depth),
       ocean[1] * (1 - depth),
@@ -284,11 +284,22 @@ export function mountGlobe(
      * ocean on top leaves only the ring outside the sphere showing, which
      * is the part that was ever wanted.
      */
-    const air = ctx.createRadialGradient(cx, cy, r, cx, cy, r + 16)
+    /*
+     * The air belongs to the disc, not to the sphere.
+     *
+     * `r` is the sphere's radius after the zoom and the disc stays at
+     * `radius`, so once a flight closed in the halo was drawn out at
+     * `r + 16` — well outside the clip — and vanished. On the night theme
+     * that cost a nicety. On the day theme it cost the planet: a pale
+     * ocean with no rim and no air around it is a white circle on cream
+     * paper, and the globe on the project's page simply was not there.
+     */
+    const disc = Math.min(radius, r)
+    const air = ctx.createRadialGradient(cx, cy, disc, cx, cy, disc + 16)
     air.addColorStop(0, rgba(rim, 0.3))
     air.addColorStop(1, rgba(rim, 0))
     ctx.beginPath()
-    ctx.arc(cx, cy, r + 16, 0, Math.PI * 2)
+    ctx.arc(cx, cy, disc + 16, 0, Math.PI * 2)
     ctx.fillStyle = air
     ctx.fill()
 
@@ -300,6 +311,21 @@ export function mountGlobe(
     ctx.arc(cx, cy, r, 0, Math.PI * 2)
     ctx.fillStyle = fill
     ctx.fill()
+
+    /*
+     * And then one clean line where the planet ends.
+     *
+     * The limb used to be a gradient alone, which on paper reads as a
+     * smudge rather than an edge — the day theme's rim came out a muddy
+     * grey and looked like a rendering fault. A stroke is what an edge
+     * actually is, it costs one path, and it is the same shape whatever
+     * the zoom has done to the shading inside it.
+     */
+    ctx.beginPath()
+    ctx.arc(cx, cy, disc, 0, Math.PI * 2)
+    ctx.strokeStyle = rgba(rim, 0.45)
+    ctx.lineWidth = Math.max(1, width / 520)
+    ctx.stroke()
   }
 
   function resize(): void {
