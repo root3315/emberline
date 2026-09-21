@@ -76,15 +76,27 @@ OUT_META = f"models/fire-{HORIZON}d{TAG}-v2.json"
 
 SEED = 20260920
 
-# Where to look along the boosting curve. Sparse early, because nothing is
-# decided there, and out past the old cap because the old cap is the thing
-# under suspicion.
-CHECKPOINTS = [250, 500, 750, 1000, 1250, 1500, 1800, 2100, 2500, 3000]
+# Where to look along the boosting curve. A deep tree reaches its best in
+# a couple of hundred rounds, so the ladder starts low; it still runs out
+# past a thousand in case a horizon shorter than a week wants more.
+CHECKPOINTS = [100, 150, 200, 300, 400, 500, 750, 1000]
 
+#
+# Chosen by `tune_fire_model.py` rather than by whoever typed first.
+#
+# Every model this project shipped used 31 leaves at a rate of 0.05, and
+# those numbers had never been varied — they were the first thing written
+# down. Eighteen configurations scored on 2014-2017 put the whole top of
+# the table at 127 leaves whatever the learning rate: on three million
+# rows and twenty-five columns, 31 leaves was simply too small a tree to
+# hold the interactions, and no amount of boosting rounds substitutes for
+# that. The winner is worth +0.0023 validation AP over what shipped, and
+# it gets there in 200 rounds instead of 500.
+#
 PARAMS = dict(
     loss="log_loss",
     learning_rate=0.05,
-    max_leaf_nodes=31,
+    max_leaf_nodes=127,
     min_samples_leaf=200,
     l2_regularization=1.0,
     early_stopping=False,
