@@ -2642,9 +2642,36 @@ canvas {
   font-weight: 600;
 }
 
+/*
+ * Seven across on a phone too, just tighter.
+ *
+ * Wrapping to four and three was the first attempt and it broke the one
+ * thing the control is for: a week read left to right, filling up as it
+ * goes. Over two rows the running total stops being obvious, and the
+ * empty cell at the end of the second row reads as a button that failed
+ * to load. Seven columns of thirty-six pixels is narrow and still says
+ * "a week" at a glance, which the wrapped version did not.
+ */
 @media (max-width: 560px) {
   .week__days {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 2px;
+    padding: 3px;
+  }
+
+  .week__day {
+    padding-inline: 2px;
+  }
+
+  .week__name {
+    letter-spacing: 0.02em;
+  }
+}
+
+/* The thumb rule above adds twelve pixels of padding to every control;
+   seven of these in a row do not have the width to spare for it. */
+@media (pointer: coarse) and (max-width: 560px) {
+  .week__day {
+    padding-block: var(--s-2);
   }
 }
 
