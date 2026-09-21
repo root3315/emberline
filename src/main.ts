@@ -765,7 +765,16 @@ const FUTURE_SINCE = 2003
  * written here next to a comment saying where to correct them: in
  * `train_fire_model.py`, which is the one place that decides.
  */
-const FEATURE_COUNT = 30
+/**
+ * How many things the model looks at, when the card has not arrived.
+ *
+ * This was a constant of thirty, and it went stale the moment the model
+ * was first fitted on fewer columns: the page went on saying thirty while
+ * the file beside it said twenty-five. A number that describes the model
+ * belongs to the model, so it is read from the card now, and this is only
+ * the stand-in for a card that failed to load.
+ */
+const FEATURES_FALLBACK = 25
 const ABOUT_SPLITS = { train: '2003\u20132013', validate: '2014\u20132017' }
 
 const calendarSection = document.getElementById('calendar')!
@@ -876,6 +885,12 @@ async function renderAbout(): Promise<void> {
   forecast ??= await loadForecast()
   const meta = forecast?.meta
 
+  // Fetched here rather than only inside the charts, because the
+  // headline stat and the opening paragraph both quote it and both
+  // run before the charts do.
+  const card = await loadModelCard().catch(() => null)
+  const features = String(card?.features ?? FEATURES_FALLBACK)
+
   const totals = worldIndex?.totals ?? []
   const detections = totals.reduce((sum, y) => sum + y.modis + y.viirs, 0)
 
@@ -890,7 +905,7 @@ async function renderAbout(): Promise<void> {
     statInto(els.aboutStats, t('aboutStatDetections'), compact(detections), '')
   }
   if (meta) {
-    statInto(els.aboutStats, t('aboutStatModel'), String(FEATURE_COUNT), '')
+    statInto(els.aboutStats, t('aboutStatModel'), features, '')
     statInto(
       els.aboutStats,
       t('aboutStatCells'),
@@ -910,7 +925,7 @@ async function renderAbout(): Promise<void> {
   if (meta) {
     const splits = ABOUT_SPLITS
     els.aboutModelBody.textContent = t('aboutModelBody', {
-      features: String(FEATURE_COUNT),
+      features,
       train: splits.train,
       validate: splits.validate,
       // The model card writes its span with a hyphen and the two typed

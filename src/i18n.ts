@@ -289,7 +289,7 @@ const en: Dict = {
   aboutModelNote:
     'A gradient-boosted classifier, trained on the archive and on the weather of the week it is asked about.',
   aboutModelBody:
-    'It reads {features} things about every 25 km square of the planet: how often it burns at this time of year, how recently it burned, what its neighbours are doing, how far the year is from its own normal, where El Ni\u00f1o stands \u2014 and the forecast weather of the week ahead, which is the half the fire archive cannot supply. It learns on {train}, is tuned on {validate}, and is marked on {test} \u2014 years it had never seen. The weather roughly doubles how far it gets past a simple seasonal guess.',
+    'It reads {features} things about every 25 km square of the planet: how often it burns at this time of year, how recently it burned, what its neighbours are doing, how far the year is from its own normal, where El Ni\u00f1o stands \u2014 and the forecast weather of the week ahead, which is the half the fire archive cannot supply. It learns on {train}, is tuned on {validate}, and is marked on {test} \u2014 years it had never seen. The weather widens how far it gets past a simple seasonal guess by about half again.',
   aboutModelNumbers: 'Measured',
   aboutScoreGloss:
     'One number, from 0 to 1, for how well a method sorts squares by risk: put every square in its order, walk down the list, and see how much of it is fire before the guesses run out. Picking at random scores 0.05, because one square in twenty burns. Nothing reaches 1, because the same weather over the same ground sometimes burns and sometimes does not.',
@@ -335,7 +335,7 @@ const en: Dict = {
   skillPersistence: 'It burned last week',
   skillRandom: 'Picking at random',
   futureSkillNote:
-    'Average precision on {tested}. The season alone is a hard baseline; with the weather the model roughly doubles its margin over it, from 2.0% to 3.9%. One qualifier, because it matters: the model learned from the weather that actually happened, and the live map is driven by a forecast of it. So this is what is reachable if the weather forecast is right \u2014 an upper bound, not a promise.',
+    'Average precision on {tested}. The season alone is a hard baseline; the weather widens the model’s margin over it by half again, from 2.7% to 4.1%. One qualifier, because it matters: the model learned from the weather that actually happened, and the live map is driven by a forecast of it. So this is what is reachable if the weather forecast is right \u2014 an upper bound, not a promise.',
   futureBack: 'Back to the record',
   globeHint: 'Drag to turn',
   globeCall: 'Press a fire to see the detail',
@@ -638,7 +638,7 @@ const ru: Dict = {
   aboutModelNote:
     'Градиентный бустинг, обученный на архиве и на погоде той недели, о которой его спрашивают.',
   aboutModelBody:
-    'Она смотрит на {features} вещей про каждый квадрат 25 на 25 километров: как часто здесь горит в это время года, как давно горело, что делается у соседей, насколько год отошёл от своей нормы, где сейчас Эль-Ниньо — и прогноз погоды на ближайшую неделю, то есть ту половину, которую архив пожаров дать не может. Учится на {train}, настраивается на {validate}, а оценивается на {test} — годах, которых ни разу не видела. Погода почти вдвое увеличивает её отрыв от простой сезонной догадки.',
+    'Она смотрит на {features} вещей про каждый квадрат 25 на 25 километров: как часто здесь горит в это время года, как давно горело, что делается у соседей, насколько год отошёл от своей нормы, где сейчас Эль-Ниньо — и прогноз погоды на ближайшую неделю, то есть ту половину, которую архив пожаров дать не может. Учится на {train}, настраивается на {validate}, а оценивается на {test} — годах, которых ни разу не видела. Погода увеличивает её отрыв от простой сезонной догадки примерно в полтора раза.',
   aboutModelNumbers: 'Измерено',
   aboutScoreGloss:
     'Одно число от 0 до 1 — насколько хорошо способ расставляет квадраты по риску: выстройте все квадраты в порядке, идите по списку сверху и считайте, сколько из него действительно загорелось. Случайный выбор даёт 0.05, потому что горит один квадрат из двадцати. Единицы не достигает никто: одна и та же погода на одной и той же земле иногда даёт пожар, а иногда нет.',
@@ -684,7 +684,7 @@ const ru: Dict = {
   skillPersistence: 'Горело на прошлой неделе',
   skillRandom: 'Случайный выбор',
   futureSkillNote:
-    'Средняя точность на {tested}. Один только сезон — очень сильная база; с погодой модель почти удваивает перевес над ней, с 2.0% до 3.9%. Одна оговорка, и она важная: модель училась на погоде, которая была на самом деле, а живая карта идёт по прогнозу погоды. То есть это то, что достижимо, если прогноз погоды верен, — верхняя граница, а не обещание.',
+    'Средняя точность на {tested}. Один только сезон — очень сильная база; с погодой перевес над ней становится в полтора раза больше — с 2.7% до 4.1%. Одна оговорка, и она важная: модель училась на погоде, которая была на самом деле, а живая карта идёт по прогнозу погоды. То есть это то, что достижимо, если прогноз погоды верен, — верхняя граница, а не обещание.',
   futureBack: 'Назад к архиву',
   globeHint: 'Потяните, чтобы повернуть',
   globeCall: 'Нажмите огонь, чтобы увидеть подробности',

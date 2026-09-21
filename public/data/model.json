@@ -217,11 +217,11 @@
     }
   ],
   "without": {
-    "model": 0.5432,
-    "rocAuc": 0.9219
+    "model": 0.5472,
+    "rocAuc": 0.9253
   },
   "edge": {
-    "without": 0.0196,
+    "without": 0.0271,
     "with": 0.0414
   }
 }
