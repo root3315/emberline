@@ -2994,6 +2994,91 @@ canvas {
 }
 
 /*
+ * The scorecard: a ladder on the left, the totals on the right.
+ *
+ * The ladder is the argument — the cells it liked most are the ones that
+ * burned, and the rate falls as you go down the list, which is what
+ * "ranked well" means and is almost impossible to say in a sentence.
+ */
+.proof {
+  display: grid;
+  grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr);
+  gap: var(--s-10);
+  align-items: start;
+}
+
+.proof__rungs {
+  display: grid;
+  gap: var(--s-4);
+  margin: var(--s-4) 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.proof__rung {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 2px var(--s-4);
+  align-items: baseline;
+}
+
+.proof__label {
+  font-size: var(--t-small);
+  color: var(--ink-secondary);
+}
+
+.proof__pct {
+  font-family: var(--font-display);
+  font-size: var(--t-h3);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--ember);
+}
+
+.proof__bar {
+  grid-column: 1 / -1;
+  height: 6px;
+  border-radius: var(--r-pill);
+  background: var(--ash-input);
+  overflow: hidden;
+}
+
+.proof__bar i {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--ember);
+  /* Grown from nothing on first paint, because a bar that was always
+     there is a picture and a bar that fills is a measurement arriving. */
+  animation: proof-fill var(--t-slow) var(--ease-out);
+}
+
+@keyframes proof-fill {
+  from {
+    transform: scaleX(0);
+    transform-origin: left;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .proof__bar i {
+    animation: none;
+  }
+}
+
+.proof__side {
+  display: grid;
+  gap: var(--s-4);
+}
+
+@media (max-width: 860px) {
+  .proof {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--s-6);
+  }
+}
+
+/*
  * The three-way controls on the narrowest phones.
  *
  * "На неделю вперёд" beside "Прямо сейчас" and a year needs 323 pixels

@@ -780,6 +780,36 @@
         <p class="note note--tight" data-i18n="rampForecastNote"></p>
       </section>
 
+      <!--
+        What happened to the forecast that is on this page.
+
+        Every other figure here is measured on years the model did not
+        learn from — the right way to measure, and still a measurement
+        taken indoors. This one was computed before the week began and
+        checked against NASA afterwards, so the answer did not exist when
+        the question was asked. It is the only claim on the site a reader
+        can settle without taking anybody's word.
+
+        Hidden until scripts/verify_forecast.py has been run. A stale
+        scorecard would be worse than none.
+      -->
+      <section class="band" id="future-proof" hidden>
+        <header class="band__head band__head--wide">
+          <div><h2 data-i18n="proofTitle">Checked against what happened</h2></div>
+          <p class="note band__head-note" id="proof-when"></p>
+        </header>
+        <div class="proof">
+          <div class="proof__ladder">
+            <h3 class="subhead" data-i18n="proofLadderTitle">Of the cells it ranked highest</h3>
+            <ul class="proof__rungs" id="proof-rungs"></ul>
+          </div>
+          <div class="proof__side">
+            <dl class="metrics metrics--about" id="proof-stats"></dl>
+            <p class="note note--tight" id="proof-note"></p>
+          </div>
+        </div>
+      </section>
+
       <section class="band" id="future-risk" hidden>
         <header class="band__head">
           <div>

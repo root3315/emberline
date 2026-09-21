@@ -42,6 +42,7 @@ import { loadLand } from './core/land'
 import { mountGlobe, type GlobeFire, type GlobeHandle, type GlobePick } from './ui/globe'
 import { drawShot } from './ui/satellite'
 import { loadHorizon } from './core/forecast'
+import { loadVerify } from './core/verify'
 import { daysInYear, dayOfYear, yearOf } from './core/grid'
 import {
   MIN_RATIO_SAMPLES,
@@ -210,6 +211,11 @@ const els = {
   weekRead: $('week-read'),
   weekPlay: $<HTMLButtonElement>('week-play'),
   weekPlayText: $('week-play-text'),
+  futureProof: $('future-proof'),
+  proofWhen: $('proof-when'),
+  proofRungs: $('proof-rungs'),
+  proofStats: $('proof-stats'),
+  proofNote: $('proof-note'),
   footAbout: $('foot-about'),
   footFuture: $('foot-future'),
   impactBars: $<HTMLCanvasElement>('impact-bars'),
@@ -695,7 +701,13 @@ const ALWAYS_ON = new Set(['calendar', 'impact'])
  * the fourth is the door to it, which is the one thing on the record's page
  * that should disappear once the reader has gone through.
  */
-const FUTURE_SECTIONS = ['future-cta', 'future-map', 'future-risk', 'future-trust']
+const FUTURE_SECTIONS = [
+  'future-cta',
+  'future-map',
+  'future-proof',
+  'future-risk',
+  'future-trust',
+]
 
 /** The about page's bands, which belong to the route and not to the area. */
 const ABOUT_SECTIONS = [
@@ -1197,6 +1209,7 @@ async function renderFuture(): Promise<void> {
     els.futureMapNote.textContent = t('futureMapNote')
     fillWeek()
     renderMapForecast(null, null, 'future')
+    void renderProof()
     renderRisk()
     renderTrust()
     writeUrl()
@@ -1522,6 +1535,69 @@ function stopWeek(): void {
   weekTimer = 0
   els.weekPlay.dataset.on = 'no'
   els.weekPlayText.textContent = t('weekPlay')
+}
+
+/**
+ * What became of the forecast that is on this page.
+ *
+ * The band stays hidden until the verification has been run, and it is
+ * hidden rather than filled with dashes because this is the claim a
+ * reader is most likely to take on trust. A scorecard that cannot say
+ * which week it scored is worth less than no scorecard.
+ */
+async function renderProof(): Promise<void> {
+  const got = await loadVerify().catch(() => null)
+  els.futureProof.hidden = !got
+  if (!got) return
+
+  els.proofWhen.textContent = t('proofWhen', {
+    computed: got.computed,
+    checked: got.checked,
+    elapsed: String(got.elapsed),
+    detections: formatNumber(got.detections),
+  })
+
+  /*
+   * The ladder, longest bar first.
+   *
+   * Scaled to the best rung rather than to a hundred per cent: the
+   * argument is that the rate *falls* as the list lengthens, and against
+   * a full-width axis every bar would be short and the fall invisible.
+   */
+  const top = Math.max(...got.ranking.map((r) => r.burned), 0.01)
+  els.proofRungs.innerHTML = ''
+  for (const rung of got.ranking) {
+    const li = document.createElement('li')
+    li.className = 'proof__rung'
+
+    const label = document.createElement('span')
+    label.className = 'proof__label'
+    label.textContent =
+      rung.top >= got.flagged
+        ? t('proofAll')
+        : t('proofTop', { n: formatNumber(rung.top) })
+
+    const pct = document.createElement('span')
+    pct.className = 'proof__pct'
+    pct.textContent = `${(rung.burned * 100).toFixed(1)}%`
+
+    const bar = document.createElement('span')
+    bar.className = 'proof__bar'
+    const fill = document.createElement('i')
+    fill.style.width = `${Math.max(1, (rung.burned / top) * 100)}%`
+    bar.append(fill)
+
+    li.append(label, pct, bar)
+    els.proofRungs.append(li)
+  }
+
+  const recall = got.burnedCells ? got.caught / got.burnedCells : 0
+  els.proofStats.innerHTML = ''
+  statInto(els.proofStats, t('proofRecall'), `${(recall * 100).toFixed(1)}%`, '')
+  statInto(els.proofStats, t('proofCaught'), formatNumber(got.caught), t('cellsUnit'))
+  statInto(els.proofStats, t('proofMissed'), formatNumber(got.missed), t('cellsUnit'))
+
+  els.proofNote.textContent = got.whole ? t('proofWhole') : t('proofPartial')
 }
 
 /** Fetch the day's grid if it is not here yet, then redraw. */

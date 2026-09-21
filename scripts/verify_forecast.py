@@ -64,6 +64,12 @@ def fetch(day: date, span: int, token: str) -> str:
         raise SystemExit(f"FIRMS refused: {err.code} {err.reason}") from err
 
 
+
+# The page reads this; the terminal output above is for whoever ran it.
+OUT_JSON = Path("public/data/verify.json")
+NEWLINE = chr(10)
+
+
 def main() -> None:
     meta = json.loads(META.read_text(encoding="utf-8"))
     deg, cols = meta["degrees"], meta["cols"]
@@ -106,6 +112,20 @@ def main() -> None:
         burned.add(r * cols + c)
 
     print(f"NASA reports {rows:,} MODIS detections in the window so far, in {len(burned):,} cells")
+    report = {
+        "from": str(start),
+        "to": str(finish),
+        "elapsed": elapsed,
+        "whole": whole,
+        "flagged": int(n),
+        "detections": int(rows),
+        "burnedCells": len(burned),
+        # Two different days, and the page needs both: the one the
+        # forecast was computed on, which is what makes it a forecast,
+        # and the one this check ran on, which is what makes it fresh.
+        "computed": str(meta["asOf"]),
+        "checked": str(date.today()),
+    }
     if not burned:
         raise SystemExit("nothing came back; too early in the day, or the feed is down")
 
@@ -115,12 +135,16 @@ def main() -> None:
     order = np.argsort(-probs)
     print()
     print("  of the cells the model ranked...      burned")
+    report["ranking"] = []
     for top in (1000, 5000, 20000, n):
         take = order[:top]
         label = "all it flagged" if top == n else f"top {top:,}"
         print(f"    {label:<22} {hit[take].mean() * 100:6.1f}%")
+        report["ranking"].append({"top": int(top), "burned": float(hit[take].mean())})
 
     missed = len(burned) - int(hit.sum())
+    report["caught"] = int(hit.sum())
+    report["missed"] = int(missed)
     print()
     print(f"  cells that burned and were flagged: {int(hit.sum()):,}")
     print(f"  cells that burned and were not:     {missed:,}")
@@ -145,6 +169,7 @@ def main() -> None:
     else:
         print(f"  the model said      cells    expected by day {elapsed}   actually burned")
 
+    report["bands"] = []
     edges = [0.0, 0.02, 0.05, 0.1, 0.2, 0.4, 0.7, 1.01]
     for lo, hi in zip(edges, edges[1:]):
         band = (probs >= lo) & (probs < hi)
@@ -152,6 +177,18 @@ def main() -> None:
             continue
         said = float(probs[band].mean())
         seen = float(hit[band].mean())
+        report["bands"].append({
+            "from": lo,
+            "to": min(hi, 1.0),
+            "n": int(band.sum()),
+            "said": said,
+            "burned": seen,
+            # What the seven-day number implies for the days that have
+            # actually passed, if fire arrived at a steady rate. It does
+            # not, so this is an order-of-magnitude check and the page
+            # labels it as one.
+            "dueByNow": float(1 - (1 - said) ** span),
+        })
         if whole:
             print(
                 f"    {lo:.2f}-{min(hi, 1):.2f}   {band.sum():>9,}"
@@ -167,8 +204,22 @@ def main() -> None:
 
     if not whole:
         print()
-        print(f"  the third column assumes fire arrives evenly across the week,")
+        print("  the third column assumes fire arrives evenly across the week,")
         print(f"  which it does not. Run this again on {finish} for the real one.")
+
+    #
+    # Written where the site can read it.
+    #
+    # Everything else on the forecast page is a measurement taken before
+    # the week began. This is the one number that could not have been
+    # arranged, and a number like that is worth nothing sitting in a
+    # terminal on one laptop.
+    #
+    OUT_JSON.parent.mkdir(parents=True, exist_ok=True)
+    OUT_JSON.write_text(
+        json.dumps(report, indent=2, ensure_ascii=False) + "\n", encoding="utf-8"
+    )
+    print(f"{NEWLINE}wrote {OUT_JSON}")
 
 
 if __name__ == "__main__":
