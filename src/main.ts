@@ -185,6 +185,7 @@ const els = {
   aboutModelBody: $('about-model-body'),
   aboutModelStats: $('about-model-stats'),
   aboutCheckList: $('about-check-list'),
+  aboutLimitsList: $('about-limits-list'),
   aboutYear: $<HTMLCanvasElement>('about-year'),
   aboutYearRead: $('about-year-read'),
   aboutYearModes: $<HTMLFieldSetElement>('about-year-modes'),
@@ -700,6 +701,7 @@ const ABOUT_SECTIONS = [
   'about-built',
   'about-model',
   'about-check',
+  'about-limits',
   'about-look',
 ]
 
@@ -939,6 +941,7 @@ async function renderAbout(): Promise<void> {
 
   fillAboutList(els.aboutBuiltList, 'aboutBuiltList')
   fillAboutList(els.aboutCheckList, 'aboutCheckList')
+  fillAboutList(els.aboutLimitsList, 'aboutLimitsList')
   fillSteps(formatNumber(card?.trees ?? 500), features)
   drawSeam()
   void drawModelCharts()

@@ -297,6 +297,8 @@ const en: Dict = {
   aboutModelCaveat:
     'One thing to hold on to: the model learned from weather that had already happened, and the live map runs on a forecast of it. These figures are what is reachable if the weather forecast turns out right.',
 
+  aboutLimitsTitle: 'What it cannot see',
+  aboutLimitsNote: 'Every limit below is one a reader could otherwise find the hard way, by trusting a number further than it deserves.',
   aboutCheckTitle: 'Check us',
   aboutCheckNote:
     'Every claim on this site is either visible in the interface or reproducible from the code. Nothing rests on trusting the authors.',
@@ -650,6 +652,8 @@ const ru: Dict = {
   aboutModelCaveat:
     'Одно важное: модель училась на погоде, которая уже случилась, а живая карта идёт по прогнозу погоды. Эти цифры — то, что достижимо, если прогноз погоды окажется верным.',
 
+  aboutLimitsTitle: 'Чего модель не знает',
+  aboutLimitsNote: 'Каждое ограничение ниже — из тех, что иначе находят на своей шкуре, поверив числу дальше, чем оно того стоит.',
   aboutCheckTitle: 'Проверьте нас',
   aboutCheckNote:
     'Каждое утверждение на этом сайте либо видно в интерфейсе, либо воспроизводится из кода. Верить авторам не требуется нигде.',
@@ -875,6 +879,7 @@ export type AboutRow = readonly [string, string]
 const aboutLists: Record<Lang, Record<string, readonly AboutRow[]>> = {
   en: {
     aboutBuiltList: [
+    ['A day at a time', 'Seven models, not one: the target is “will this square burn within N days”, so Tuesday needs a model that was asked about Tuesday. Each picks its own features and its own number of trees, and the shorter windows are held below the longer ones so the week can only ever warm as it runs.'],
     ['The reconciliation', 'The sensitivity ratio between the two instruments, measured separately for every area and season rather than assumed, and applied so the years before 2012 read on the same scale as the years after.'],
     ['A pyramid of resolutions', 'The whole planet at one degree by month, down to a hundredth of a degree by year \u2014 four levels, drawn from the level the zoom can actually use, so the globe loads as fast as a city.'],
     ['A day at a time', 'Every day of 24 years at a quarter degree, which is what makes a calendar of 9,000 days possible for any point on Earth.'],
@@ -887,7 +892,15 @@ const aboutLists: Record<Lang, Record<string, readonly AboutRow[]>> = {
       ['The years are split by time, never shuffled: it learns on 2003\u20132013, is adjusted on 2014\u20132017, and sees 2018\u20132021 once, at the very end. Shuffling would let it learn from a Tuesday to answer about the Monday beside it, and the score would be a lie.', ''],
       ['{trees} small decision trees, each correcting what the ones before it got wrong. Nothing deep and nothing fashionable: on a table of {features} columns this beats a neural network and, unlike one, can be asked why it said what it said \u2014 which is the chart above.', ''],
     ],
+    aboutLimitsList: [
+    ['The weather is six times coarser than the forecast', 'Every cell is 25 km across; the weather driving it comes off a 167 km grid, so 36 neighbouring cells are told about the same hot, dry, windy day. Fire weather is mostly synoptic and survives that, but a reader in a mountain valley should know the model is being told about the mountain.'],
+    ['It knows nothing about people', 'Not population, not roads, not fields — and most fire on this planet is lit by someone. The model infers human activity only from where fire has been before, which works until the pattern changes.'],
+    ['It was marked on 2018-2021 and is running in 2026', 'The public ERA5 mirror ends in 2021, so the weather-fed model cannot be scored past it. Five years of drift are unmeasured here, which is why the forecast is also checked against fresh detections every week.'],
+    ['It learned on weather that happened', 'The live map runs on a forecast of the weather instead. The skill figures are what is reachable if that forecast is right \u2014 an upper bound, not a promise.'],
+    ['A detection is not a fire', 'It is one satellite pass finding one pixel hot enough. A fire under cloud, or one that starts and dies between passes, is not in the record and so is not in the model.'],
+    ],
     aboutCheckList: [
+    ['Nothing was chosen on the test years', 'How many trees, which features to keep, how deep to grow — every one of those was decided on 2014–2017 and the test years were opened once, at the end. Picking any of them by the test score is how a model flatters itself, and the scripts are written so that it cannot.'],
     ['The forecast is scored against reality', 'The week on the map was computed before it happened. verify_forecast.py asks NASA what has burned since and scores it \u2014 ranking from day one, calibration once the week closes. The answer did not exist when the question was asked.'],
     ['The reconciliation is a switch', 'Every chart has "as recorded" beside "reconciled". If the correction were doing something dishonest, it would be visible in one click.'],
     ['The skill figure is the unflattering one', 'Average precision against a seasonal baseline that already knows where fires usually are \u2014 not accuracy against a 5% base rate, which would read as 95% and mean nothing.'],
@@ -896,6 +909,7 @@ const aboutLists: Record<Lang, Record<string, readonly AboutRow[]>> = {
   },
   ru: {
     aboutBuiltList: [
+    ['День за днём', 'Семь моделей, а не одна: цель — «загорится ли этот квадрат за N дней», поэтому про вторник надо спрашивать модель, которую спрашивали про вторник. Каждая сама выбрала себе набор признаков и число деревьев, а короткие окна удержаны ниже длинных — чтобы неделя только набирала, а не проседала.'],
     ['Сведение приборов', 'Отношение чувствительности двух сенсоров — измеренное для каждой местности и сезона, а не принятое на веру, — и применённое так, что годы до 2012-го читаются в одной шкале с последующими.'],
     ['Пирамида разрешений', 'Вся планета от градуса помесячно до сотой градуса погодно — четыре уровня, и берётся тот, который зум реально может показать. Поэтому глобус грузится так же быстро, как город.'],
     ['Сутки за сутками', 'Каждый день 24 лет на четверти градуса — именно это делает возможным календарь на 9 000 дней для любой точки Земли.'],
@@ -908,7 +922,15 @@ const aboutLists: Record<Lang, Record<string, readonly AboutRow[]>> = {
       ['Годы делятся по времени, а не вперемешку: учёба на 2003–2013, настройка на 2014–2017, а 2018–2021 она видит один раз, в самом конце. Если перемешать, модель сможет подглядеть во вторник, чтобы ответить про соседний понедельник, и оценка будет врать.', ''],
       ['{trees} маленьких решающих деревьев, каждое правит ошибки предыдущих. Ничего глубокого и ничего модного: на таблице из {features} колонок это обходит нейросеть и, в отличие от неё, умеет объяснить, почему сказала именно так — это и есть график выше.', ''],
     ],
+    aboutLimitsList: [
+    ['Погода в шесть раз грубее прогноза', 'Ячейка — 25 км, а погода к ней приходит с сетки в 167 км: 36 соседних ячеек узнают про один и тот же жаркий, сухой и ветреный день. Пожарная погода в основном синоптическая и это переживает, но читатель в горной долине должен знать, что модели рассказали про гору.'],
+    ['Про людей она не знает ничего', 'Ни населения, ни дорог, ни полей — а большинство пожаров на планете зажигает человек. О людях модель догадывается только по тому, где горело раньше, и это работает, пока привычка не меняется.'],
+    ['Оценена на 2018–2021, работает в 2026-м', 'Публичное зеркало ERA5 кончается 2021 годом, поэтому модель с погодой дальше не на чем оценивать. Пять лет сноса здесь не измерены — именно поэтому прогноз ещё и сверяется со свежими засечками каждую неделю.'],
+    ['Училась на погоде, которая случилась', 'А живая карта идёт по прогнозу погоды. Цифры точности — это то, что достижимо, если прогноз верен: верхняя граница, а не обещание.'],
+    ['Засечка — это не пожар', 'Это один пролёт спутника, нашедший один пиксель достаточно горячим. Пожар под облаком или тот, что начался и погас между пролётами, в архив не попал — значит, его нет и в модели.'],
+    ],
     aboutCheckList: [
+    ['Ничто не выбиралось по тестовым годам', 'Сколько деревьев, какие признаки оставить, насколько глубоко растить — всё это решалось на 2014–2017, а тестовые годы открыли один раз, в самом конце. Подобрать что-нибудь по тесту — это и есть способ модели польстить себе, и скрипты написаны так, чтобы она не смогла.'],
     ['Прогноз сверяется с реальностью', 'Неделя на карте посчитана до того, как она случилась. verify_forecast.py спрашивает у NASA, что сгорело с тех пор, и считает оценку: ранжирование с первого дня, калибровка когда неделя закроется. Ответа не существовало в момент вопроса.'],
     ['Сведение — это переключатель', 'У каждого графика рядом с «сведено» есть «как снято». Если бы поправка делала что-то нечестное, это было бы видно в один клик.'],
     ['Цифра точности — самая невыгодная', 'Средняя точность против сезонной базы, которая уже знает, где обычно горит, — а не «доля верных ответов» при базе 5%, которая дала бы 95% и не значила бы ничего.'],
