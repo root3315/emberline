@@ -952,7 +952,7 @@ async function renderAbout(): Promise<void> {
       els.aboutStats,
       t('aboutStatCells'),
       formatNumber(meta.cells),
-      t('cellsUnit'),
+      t('unitCellSize'),
     )
   }
 
@@ -1187,7 +1187,7 @@ async function renderFuture(): Promise<void> {
     )
 
     els.futureStats.innerHTML = ''
-    statInto(els.futureStats, t('futureStatCells'), formatNumber(meta.cells), t('cellsUnit'))
+    statInto(els.futureStats, t('futureStatCells'), formatNumber(meta.cells), t('unitCellSize'))
     const spread = [...(meta.hotspots ?? [])].sort((a, b) => b.near - a.near)[0]
     if (spread)
       statInto(
@@ -1668,8 +1668,8 @@ async function renderProof(): Promise<void> {
   const recall = got.burnedCells ? got.caught / got.burnedCells : 0
   els.proofStats.innerHTML = ''
   statInto(els.proofStats, t('proofRecall'), `${(recall * 100).toFixed(1)}%`, '')
-  statInto(els.proofStats, t('proofCaught'), formatNumber(got.caught), t('cellsUnit'))
-  statInto(els.proofStats, t('proofMissed'), formatNumber(got.missed), t('cellsUnit'))
+  statInto(els.proofStats, t('proofCaught'), formatNumber(got.caught), t('unitCells'))
+  statInto(els.proofStats, t('proofMissed'), formatNumber(got.missed), t('unitCells'))
 
   els.proofNote.textContent = got.whole ? t('proofWhole') : t('proofPartial')
 }
@@ -2046,7 +2046,7 @@ function renderHero(ds: Dataset): void {
     heroStat(t('statThisYear'), `${formatDoy(a.shape.start, state.year)} – ${formatDoy(a.shape.end, state.year)}`, String(state.year))
   }
   heroStat(t('statWatching'), ds.range.from.slice(0, 4), formatYears(state.years.length))
-  heroStat(t('statFires'), compact(totalFires), t('cellsUnit'))
+  heroStat(t('statFires'), compact(totalFires), '')
 }
 
 /** Put the accent on the dates, which is what the sentence is actually about. */
@@ -2149,7 +2149,7 @@ function renderMetrics(ds: Dataset, totals: Map<number, number>): void {
   const trend = annualTrend(state.grid)
 
   metric(t('metricYears'), String(state.years.length), `${ds.range.from.slice(0, 4)}–${ds.range.to.slice(0, 4)}`)
-  metric(t('metricActive'), compact(activeCellDays), t('cellsUnit'))
+  metric(t('metricActive'), compact(activeCellDays), '')
   metric(t('metricDetections'), compact(ds.totals.rawDetections), '')
   metric(t('metricMerged'), `${mergedPct.toFixed(0)}%`, t('mergedNote'))
 
@@ -2577,7 +2577,7 @@ function renderReading(): void {
   fact(
     t('factPeak'),
     formatDoy(a.shape.peak, state.year),
-    `${formatNumber(Math.round(a.shape.peakValue))} ${t('cellsUnit')}`,
+    `${formatNumber(Math.round(a.shape.peakValue))} ${t('unitDetections')}`,
   )
   fact(t('factSeason'), `${formatDoy(a.shape.start, state.year)}`, `→ ${formatDoy(a.shape.end, state.year)}`)
   fact(

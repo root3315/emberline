@@ -37,7 +37,6 @@ const en: Dict = {
   statTypical: 'Typical season',
   statThisYear: 'Selected year',
   statWatching: 'Watched since',
-  statFires: 'Fires counted',
 
   sectionCalendar: 'When does it burn here?',
   sectionCalendarNote:
@@ -57,7 +56,6 @@ const en: Dict = {
   median: 'usual',
 
   metricYears: 'Years of record',
-  metricActive: 'Fires counted',
   metricDetections: 'Detections',
   metricMerged: 'Duplicates removed',
   mergedNote: 'same fire, several satellites',
@@ -87,7 +85,11 @@ const en: Dict = {
   factConcentration: 'Half the year in',
   factTotal: 'vs a usual year',
   daysUnit: 'days',
-  cellsUnit: 'fires',
+  unitCells: 'cells',
+  unitCellSize: '25 km each',
+  unitDetections: 'detections',
+  statFires: 'Square-days with fire',
+  metricActive: 'Square-days with fire',
   ofNormal: 'of a usual year',
 
   shiftEarlier: 'It started {n} days earlier than usual',
@@ -360,7 +362,7 @@ const en: Dict = {
   weekLoading: 'Loading the days\u2026',
   weekAll: 'The whole week, to {to}',
   weekBy: 'By the end of {to}',
-  weekCells: 'squares at risk',
+  weekCells: 'cells at risk',
   proofTitle: 'Checked against what happened',
   proofLadderTitle: 'Of the cells it ranked highest, this share has burned',
   proofWhen: 'The week on this page was computed on {computed}, before it began. Checked on {checked}, {elapsed} of its 7 days had passed and NASA had reported {detections} MODIS detections inside the window.',
@@ -427,7 +429,6 @@ const ru: Dict = {
   statTypical: 'Обычный сезон',
   statThisYear: 'Выбранный год',
   statWatching: 'Наблюдаем с',
-  statFires: 'Очагов насчитано',
 
   sectionCalendar: 'Когда здесь горит?',
   sectionCalendarNote:
@@ -447,7 +448,6 @@ const ru: Dict = {
   median: 'обычно',
 
   metricYears: 'Лет наблюдений',
-  metricActive: 'Очагов насчитано',
   metricDetections: 'Засечек',
   metricMerged: 'Дублей убрано',
   mergedNote: 'один очаг, несколько спутников',
@@ -477,7 +477,11 @@ const ru: Dict = {
   factConcentration: 'Половина года за',
   factTotal: 'к обычному году',
   daysUnit: 'дней',
-  cellsUnit: 'очагов',
+  unitCells: 'ячеек',
+  unitCellSize: 'по 25 км',
+  unitDetections: 'засечек',
+  statFires: 'Квадрато-дней с огнём',
+  metricActive: 'Квадрато-дней с огнём',
   ofNormal: 'от обычного года',
 
   shiftEarlier: 'Он начался на {n} раньше обычного',
@@ -750,7 +754,7 @@ const ru: Dict = {
   weekLoading: 'Загружаем дни…',
   weekAll: 'Вся неделя, по {to}',
   weekBy: 'К концу {to}',
-  weekCells: 'квадратов в зоне риска',
+  weekCells: 'ячеек в зоне риска',
   proofTitle: 'Сверено с тем, что случилось',
   proofLadderTitle: 'Из ячеек, которые модель поставила выше всех, уже сгорело',
   proofWhen: 'Неделя на этой странице посчитана {computed} — до того, как она началась. На {checked} из её 7 дней прошло {elapsed}, и NASA сообщила о {detections} засечках MODIS внутри окна.',
