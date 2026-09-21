@@ -1,7 +1,7 @@
 {
   "horizonDays": 7,
   "features": 25,
-  "trees": 500,
+  "trees": 200,
   "target": "at least one MODIS detection in the cell over the next 7 days",
   "population": "cells with at least one MODIS detection in 2003-2026",
   "splits": {
@@ -11,8 +11,8 @@
   },
   "grid": 0.25,
   "scores": {
-    "model": 0.5548,
-    "rocAuc": 0.9271,
+    "model": 0.5579,
+    "rocAuc": 0.9258,
     "climatology": 0.5328,
     "persistence": 0.3869,
     "baseRate": 0.05
@@ -24,7 +24,7 @@
         "ru": "Как часто здесь горит в это время года"
       },
       "kind": "archive",
-      "drop": 0.3836
+      "drop": 0.3896
     },
     {
       "name": {
@@ -32,15 +32,7 @@
         "ru": "Широта"
       },
       "kind": "archive",
-      "drop": 0.0659
-    },
-    {
-      "name": {
-        "en": "Neighbours burning above their normal",
-        "ru": "Соседи горят выше своей нормы"
-      },
-      "kind": "archive",
-      "drop": 0.017
+      "drop": 0.0613
     },
     {
       "name": {
@@ -48,15 +40,15 @@
         "ru": "Дождь по прогнозу на неделю"
       },
       "kind": "weather",
-      "drop": 0.0155
+      "drop": 0.0182
     },
     {
       "name": {
-        "en": "How often this cell burns at all",
-        "ru": "Как часто эта ячейка горит вообще"
+        "en": "Neighbours burning above their normal",
+        "ru": "Соседи горят выше своей нормы"
       },
       "kind": "archive",
-      "drop": 0.0154
+      "drop": 0.0146
     },
     {
       "name": {
@@ -64,7 +56,7 @@
         "ru": "Насколько будет жарко"
       },
       "kind": "weather",
-      "drop": 0.0148
+      "drop": 0.0135
     },
     {
       "name": {
@@ -72,7 +64,7 @@
         "ru": "Низкая растительность: трава, пашня"
       },
       "kind": "ground",
-      "drop": 0.011
+      "drop": 0.0104
     },
     {
       "name": {
@@ -80,7 +72,15 @@
         "ru": "Высокая растительность: лес"
       },
       "kind": "ground",
-      "drop": 0.0106
+      "drop": 0.0093
+    },
+    {
+      "name": {
+        "en": "How often this cell burns at all",
+        "ru": "Как часто эта ячейка горит вообще"
+      },
+      "kind": "archive",
+      "drop": 0.0073
     },
     {
       "name": {
@@ -88,15 +88,7 @@
         "ru": "Сухих дней по прогнозу"
       },
       "kind": "weather",
-      "drop": 0.006
-    },
-    {
-      "name": {
-        "en": "This cell burning above its normal",
-        "ru": "Эта ячейка выше своей нормы"
-      },
-      "kind": "archive",
-      "drop": 0.0046
+      "drop": 0.0059
     },
     {
       "name": {
@@ -104,7 +96,15 @@
         "ru": "Как идёт год к этому дню"
       },
       "kind": "archive",
-      "drop": 0.0045
+      "drop": 0.0057
+    },
+    {
+      "name": {
+        "en": "This cell burning above its normal",
+        "ru": "Эта ячейка выше своей нормы"
+      },
+      "kind": "archive",
+      "drop": 0.0043
     },
     {
       "name": {
@@ -112,15 +112,7 @@
         "ru": "Горело здесь за две недели"
       },
       "kind": "archive",
-      "drop": 0.0028
-    },
-    {
-      "name": {
-        "en": "Neighbours burning in the last three days",
-        "ru": "Соседи горели за три дня"
-      },
-      "kind": "archive",
-      "drop": 0.0022
+      "drop": 0.003
     },
     {
       "name": {
@@ -128,23 +120,15 @@
         "ru": "Насколько сильный ветер"
       },
       "kind": "weather",
-      "drop": 0.0021
+      "drop": 0.002
     },
     {
       "name": {
-        "en": "Neighbours burning yesterday",
-        "ru": "Соседи горели вчера"
+        "en": "Neighbours burning in the last three days",
+        "ru": "Соседи горели за три дня"
       },
       "kind": "archive",
-      "drop": 0.0018
-    },
-    {
-      "name": {
-        "en": "Burned here in the last three days",
-        "ru": "Горело здесь за три дня"
-      },
-      "kind": "archive",
-      "drop": 0.0017
+      "drop": 0.002
     },
     {
       "name": {
@@ -156,72 +140,64 @@
     },
     {
       "name": {
-        "en": "Burned here in the last month",
-        "ru": "Горело здесь за месяц"
+        "en": "Neighbours burning yesterday",
+        "ru": "Соседи горели вчера"
       },
       "kind": "archive",
       "drop": 0.0016
     },
     {
       "name": {
-        "en": "Neighbours burning in the last month",
-        "ru": "Соседи горели за месяц"
+        "en": "Burned here in the last three days",
+        "ru": "Горело здесь за три дня"
       },
       "kind": "archive",
-      "drop": 0.0015
-    },
-    {
-      "name": {
-        "en": "Time of year",
-        "ru": "Время года"
-      },
-      "kind": "archive",
-      "drop": 0.0015
+      "drop": 0.0016
     }
   ],
   "reliability": [
     {
-      "said": 0.0025,
+      "said": 0.0023,
       "burned": 0.0062,
-      "n": 992965
+      "n": 992186
     },
     {
-      "said": 0.0333,
-      "burned": 0.0481,
-      "n": 97509
+      "said": 0.0331,
+      "burned": 0.0473,
+      "n": 101623
     },
     {
-      "said": 0.0718,
-      "burned": 0.084,
-      "n": 80162
+      "said": 0.0717,
+      "burned": 0.0865,
+      "n": 78474
     },
     {
-      "said": 0.1423,
-      "burned": 0.1449,
-      "n": 68875
+      "said": 0.1426,
+      "burned": 0.1458,
+      "n": 67005
     },
     {
-      "said": 0.2806,
-      "burned": 0.2846,
-      "n": 47588
+      "said": 0.2812,
+      "burned": 0.2822,
+      "n": 47489
     },
     {
       "said": 0.5266,
-      "burned": 0.5608,
-      "n": 24062
+      "burned": 0.5567,
+      "n": 24870
     },
     {
-      "said": 0.8451,
-      "burned": 0.8816,
-      "n": 13249
+      "said": 0.843,
+      "burned": 0.9022,
+      "n": 12763
     }
   ],
   "without": {
-    "model": 0.5472,
-    "rocAuc": 0.9253
+    "model": 0.546,
+    "rocAuc": 0.9258
   },
   "edge": {
-    "without": 0.0271,
-    "with": 0.0414
+    "without": 0.0248,
+    "with": 0.0472
   }
 }

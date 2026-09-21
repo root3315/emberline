@@ -58,6 +58,24 @@ GRID = {
     "max_leaf_nodes": [31, 63, 127],
     "min_samples_leaf": [50, 200],
 }
+
+#
+# `depth` sweeps the one knob that turned out to matter, and nothing else.
+#
+# The full grid put every good configuration at 127 leaves whatever the
+# learning rate, so for a second model — the weather-free one, which has
+# seventeen columns rather than twenty-five and wants a different depth
+# because of it — three fits answer the question that eighteen answered
+# the first time. The point is that both sides of the "what the weather
+# bought" comparison get their own best tree, rather than one of them
+# being handed the other's.
+#
+if "depth" in sys.argv[2:]:
+    GRID = {
+        "learning_rate": [0.05],
+        "max_leaf_nodes": [31, 63, 127],
+        "min_samples_leaf": [200],
+    }
 L2 = 1.0
 
 # A deep tree reaches its best in far fewer rounds, so the ladder has to
