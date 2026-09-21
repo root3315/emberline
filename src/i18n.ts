@@ -205,6 +205,8 @@ const en: Dict = {
   rampLow: 'burned once',
   rampHigh: 'burns often',
   rampUnlikely: 'unlikely',
+  rampForecastNote:
+    'The bar is linear: the colour halfway along it is an even chance, and a cell painted at a tenth of the way is a one-in-ten cell. Anything under one per cent is left off the map entirely.',
   rampLikely: 'near certain',
 
   dataSource: 'Data source',
@@ -552,6 +554,8 @@ const ru: Dict = {
   rampLow: 'горел однажды',
   rampHigh: 'горит часто',
   rampUnlikely: 'маловероятно',
+  rampForecastNote:
+    'Полоса линейная: цвет ровно посередине — это равные шансы, а ячейка, окрашенная на десятую часть пути, — одна из десяти. Всё ниже одного процента на карту не попадает вовсе.',
   rampLikely: 'почти наверняка',
 
   dataSource: 'Источник данных',

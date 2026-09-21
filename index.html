@@ -712,11 +712,21 @@
         </header>
         <!-- The live map is moved in here, not rebuilt: one Leaflet, one state. -->
         <div class="future__slot" id="future-map-slot"></div>
+        <!--
+          Numbers on this one, words on the record's.
+
+          The forecast is now painted on a linear scale, so a position
+          along the bar *is* a probability and can be labelled with one.
+          The record's ramp counts fires on a curve, where the middle of
+          the bar is not the middle of anything, and it keeps its words.
+        -->
         <div class="ramp" aria-hidden="true"></div>
         <p class="ramp__labels">
-          <span data-i18n="rampUnlikely">unlikely</span>
-          <span data-i18n="rampLikely">near certain</span>
+          <span>0%</span>
+          <span>50%</span>
+          <span>100%</span>
         </p>
+        <p class="note note--tight" data-i18n="rampForecastNote"></p>
       </section>
 
       <section class="band" id="future-risk" hidden>
