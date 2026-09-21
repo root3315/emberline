@@ -760,9 +760,19 @@
           look like the site. These are the same ghost control the header
           uses, which is what every other clickable thing here already is.
         -->
+        <!--
+          Whichever of these points at the page you are already on is
+          hidden. A door back into the room you are standing in is not a
+          navigation option, it is a dead control that makes the reader
+          wonder what they missed.
+        -->
         <nav class="colophon__links">
-          <a class="ghost-btn" href="#/about" data-i18n="aboutLink">About the project</a>
-          <a class="ghost-btn" href="#/future" data-i18n="ctaButton">What happens next week</a>
+          <a class="ghost-btn" id="foot-about" href="#/about" data-i18n="aboutLink">
+            About the project
+          </a>
+          <a class="ghost-btn" id="foot-future" href="#/future" data-i18n="ctaButton">
+            What happens next week
+          </a>
         </nav>
       </div>
     </footer>

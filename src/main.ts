@@ -202,6 +202,8 @@ const els = {
   lookBy: $('look-by'),
   lookFacts: $('look-facts'),
   lookNote: $('look-note'),
+  footAbout: $('foot-about'),
+  footFuture: $('foot-future'),
   impactBars: $<HTMLCanvasElement>('impact-bars'),
   impactBarsNote: $('impact-bars-note'),
   rampLow: $('ramp-low'),
@@ -829,6 +831,7 @@ function showAboutLayout(on: boolean): void {
     lastRecord = location.hash
   }
   aboutScope = on
+  els.footAbout.hidden = on
   pickerField.hidden = on
   els.mode.hidden = on
   els.barAbout.hidden = on
@@ -1046,6 +1049,7 @@ function fillAboutList(host: HTMLElement, name: string): void {
 
 function showFutureLayout(on: boolean): void {
   if (!on) els.pick.hidden = true
+  els.footFuture.hidden = on
   if (on && !futureScope && location.hash && location.hash !== '#/future') {
     lastRecord = location.hash
   }
