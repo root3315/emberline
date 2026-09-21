@@ -355,6 +355,9 @@ const en: Dict = {
   lookFail: 'The imagery for this square did not come down. The figures beside it are unaffected.',
   lookNote:
     'Every point of light is a place the model expects to burn in the coming week, the brighter the likelier. The white outline is the square that was pressed \u2014 about 25 km on a side, which is one cell of the grid the whole forecast is made on.',
+  weekPlay: 'Play the week',
+  weekStop: 'Stop',
+  weekLoading: 'Loading the days\u2026',
   weekAll: 'The whole week, to {to}',
   weekBy: 'By the end of {to}',
   weekCells: 'squares at risk',
@@ -710,6 +713,9 @@ const ru: Dict = {
   lookFail: 'Снимок этого квадрата не загрузился. На числа рядом это не влияет.',
   lookNote:
     'Каждая светящаяся точка — место, где модель ждёт огонь на ближайшей неделе: чем ярче, тем вероятнее. Белым обведён тот самый квадрат — около 25 км в поперечнике, одна ячейка сетки, на которой считается весь прогноз.',
+  weekPlay: 'Прокрутить неделю',
+  weekStop: 'Стоп',
+  weekLoading: 'Загружаем дни…',
   weekAll: 'Вся неделя, по {to}',
   weekBy: 'К концу {to}',
   weekCells: 'квадратов в зоне риска',

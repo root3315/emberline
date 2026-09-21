@@ -2630,6 +2630,29 @@ canvas {
   outline-offset: 1px;
 }
 
+.week__foot {
+  display: flex;
+  gap: var(--s-4);
+  align-items: center;
+  justify-content: space-between;
+}
+
+.week__play {
+  flex: none;
+}
+
+/*
+ * While it is running, the button is the one lit thing on the row.
+ *
+ * A play control that looks the same running as stopped leaves the
+ * reader watching the map change and wondering whether they caused it.
+ */
+.week__play[data-on='yes'] {
+  border-color: color-mix(in srgb, var(--ember) 55%, transparent);
+  background: color-mix(in srgb, var(--ember) 18%, transparent);
+  color: var(--ink-primary);
+}
+
 .week__read {
   margin: 0;
   font-size: var(--t-caption);

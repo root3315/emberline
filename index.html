@@ -748,7 +748,17 @@
         -->
         <div class="week" id="week" hidden>
           <div class="week__days" id="week-days" role="tablist"></div>
-          <p class="week__read" id="week-read"></p>
+          <!--
+            The play control sits on the readout line rather than beside
+            the days, because the days are already down to thirty-eight
+            pixels each on a phone and have no width to lend.
+          -->
+          <div class="week__foot">
+            <p class="week__read" id="week-read"></p>
+            <button type="button" class="ghost-btn week__play" id="week-play">
+              <span id="week-play-text" data-i18n="weekPlay">Play the week</span>
+            </button>
+          </div>
         </div>
 
         <!-- The live map is moved in here, not rebuilt: one Leaflet, one state. -->

@@ -208,6 +208,8 @@ const els = {
   week: $('week'),
   weekDays: $('week-days'),
   weekRead: $('week-read'),
+  weekPlay: $<HTMLButtonElement>('week-play'),
+  weekPlayText: $('week-play-text'),
   footAbout: $('foot-about'),
   footFuture: $('foot-future'),
   impactBars: $<HTMLCanvasElement>('impact-bars'),
@@ -1110,6 +1112,8 @@ function fillAboutList(host: HTMLElement, name: string): void {
 
 function showFutureLayout(on: boolean): void {
   if (!on) els.pick.hidden = true
+  // An interval left running against a hidden map is a leak with a view.
+  if (!on && weekTimer) stopWeek()
   if (on && !futureScope && location.hash && location.hash !== '#/future') {
     lastRecord = location.hash
   }
@@ -1415,6 +1419,10 @@ function fillWeek(): void {
   els.week.hidden = !list || list.length < 2
   if (!list || list.length < 2) return
 
+  // Somebody who has asked for less movement is not offered a control
+  // whose only purpose is movement; the days themselves still work.
+  els.weekPlay.hidden = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+
   const all = [...list].sort((a, b) => a.days - b.days)
   els.weekDays.innerHTML = ''
   for (const h of all) {
@@ -1441,7 +1449,11 @@ function fillWeek(): void {
     date.className = 'week__date'
     date.textContent = String(day.getUTCDate())
     btn.append(name, date)
-    btn.addEventListener('click', () => void pickDay(isAll ? 0 : h.days))
+    btn.addEventListener('click', () => {
+      // A hand on the strip takes it back from the animation.
+      if (weekTimer) stopWeek()
+      void pickDay(isAll ? 0 : h.days)
+    })
     els.weekDays.append(btn)
   }
 
@@ -1458,6 +1470,58 @@ function fillWeek(): void {
     els.weekRead.append(document.createTextNode(' \u00b7 '), n,
       document.createTextNode(` ${t('weekCells')}`))
   }
+}
+
+/**
+ * Run the week forward, a day at a time.
+ *
+ * The strip already says the forecast is cumulative; playing it *shows*
+ * that, which is a different kind of knowing — the eye follows fire
+ * spreading out of the places it starts, and the shape of a fire season
+ * arrives without a sentence explaining it.
+ *
+ * Every grid is fetched before the first frame rather than during it. On
+ * a first play that is seven files, and asking for them one at a time as
+ * the animation reached each day made the early days snap past and the
+ * later ones stall — the reader would have seen the network, not the
+ * week.
+ */
+let weekTimer = 0
+
+async function playWeek(): Promise<void> {
+  if (weekTimer) return stopWeek()
+  const all = forecast?.meta.horizons
+  if (!all || all.length < 2) return
+
+  els.weekPlay.disabled = true
+  els.weekPlayText.textContent = t('weekLoading')
+  await Promise.all(all.map((h) => loadHorizon(h.days)))
+  els.weekPlay.disabled = false
+
+  els.weekPlay.dataset.on = 'yes'
+  els.weekPlayText.textContent = t('weekStop')
+
+  const order = [...all].map((h) => h.days).sort((a, b) => a - b)
+  let at = 0
+  // Restarting from the first day, because pressing play on the last one
+  // and watching nothing happen is the obvious way to get this wrong.
+  void pickDay(order[0])
+
+  // Slow enough to read the figure under the map, quick enough that the
+  // week is one gesture rather than a slideshow.
+  weekTimer = window.setInterval(() => {
+    at += 1
+    if (at >= order.length) return stopWeek()
+    const last = order[order.length - 1]
+    void pickDay(order[at] === last ? 0 : order[at])
+  }, 1100)
+}
+
+function stopWeek(): void {
+  if (weekTimer) window.clearInterval(weekTimer)
+  weekTimer = 0
+  els.weekPlay.dataset.on = 'no'
+  els.weekPlayText.textContent = t('weekPlay')
 }
 
 /** Fetch the day's grid if it is not here yet, then redraw. */
@@ -4035,6 +4099,8 @@ function wire(): void {
     els.pick.hidden = true
     globe?.reset()
   })
+
+  els.weekPlay.addEventListener('click', () => void playWeek())
 
   els.riskMore.addEventListener('click', () => {
     riskAll = !riskAll
