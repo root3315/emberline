@@ -163,29 +163,59 @@ describe('sensitivity ratio', () => {
     expect(ratio.k).toBe(1)
   })
 
-  it('scales only the era before VIIRS, and leaves the overlap untouched', () => {
+  it('drives the whole series from MODIS, and keeps the raw count beside it', () => {
     const ratio = { k: 3, lo: 2.5, hi: 3.6, samples: 40, overlapFrom: '2012-01-20' }
     const days = [
       { day: '2005-07-01', activeCells: 10, modisOnly: 10, viirsOnly: 0, both: 0, frp: 0, raw: 10 },
       { day: '2015-07-01', activeCells: 30, modisOnly: 2, viirsOnly: 20, both: 8, frp: 0, raw: 40 },
     ]
-    const out = applySensitivity(days, ratio, '2012-01-20')
+    const out = applySensitivity(days, ratio)
 
+    // Before VIIRS there is nothing else to measure with, so this is as
+    // it always was.
     expect(out[0].adjusted).toBe(true)
     expect(out[0].raw).toBe(10)
     expect(out[0].value).toBeCloseTo(30)
     expect(out[0].lo).toBeCloseTo(25)
     expect(out[0].hi).toBeCloseTo(36)
 
-    expect(out[1].adjusted).toBe(false)
-    expect(out[1].value).toBe(30)
-    expect(out[1].lo).toBe(30)
+    // In the overlap it is MODIS cell-days -- 2 alone plus 8 shared --
+    // times the ratio, not the combined 30. The combined count survives
+    // as `raw`, which is what "as recorded" draws.
+    expect(out[1].adjusted).toBe(true)
+    expect(out[1].raw).toBe(30)
+    expect(out[1].value).toBeCloseTo(30)
+    expect(out[1].lo).toBeCloseTo(25)
+    expect(out[1].hi).toBeCloseTo(36)
+  })
+
+  it('does not step when another VIIRS satellite joins', () => {
+    /*
+     * The defect this replaces, in four days.
+     *
+     * MODIS sees the same ten cells burning on every one of them. The
+     * combined count climbs anyway, because S-NPP arrives, then NOAA-20,
+     * then NOAA-21. The old rule scaled the first day up to meet the
+     * combined count and left the rest of it to keep climbing, so the
+     * comparable series carried a step at every launch. It must not move.
+     */
+    const ratio = { k: 3, lo: 2.5, hi: 3.6, samples: 40, overlapFrom: '2012-01-20' }
+    const days = [
+      { day: '2005-07-01', activeCells: 10, modisOnly: 10, viirsOnly: 0, both: 0, frp: 0, raw: 10 },
+      { day: '2015-07-01', activeCells: 25, modisOnly: 0, viirsOnly: 15, both: 10, frp: 0, raw: 25 },
+      { day: '2020-07-01', activeCells: 40, modisOnly: 0, viirsOnly: 30, both: 10, frp: 0, raw: 40 },
+      { day: '2025-07-01', activeCells: 55, modisOnly: 0, viirsOnly: 45, both: 10, frp: 0, raw: 55 },
+    ]
+    const out = applySensitivity(days, ratio)
+    expect(out.map((d) => d.value)).toEqual([30, 30, 30, 30])
+    // And every step is still there in the raw series, on purpose.
+    expect(out.map((d) => d.raw)).toEqual([10, 25, 40, 55])
   })
 
   it('leaves everything raw when the ratio is not measurable', () => {
     const ratio = { k: 1, lo: 1, hi: 1, samples: 2, overlapFrom: null }
     const days = [{ day: '2005-07-01', activeCells: 10, modisOnly: 10, viirsOnly: 0, both: 0, frp: 0, raw: 10 }]
-    const out = applySensitivity(days, ratio, '2012-01-20')
+    const out = applySensitivity(days, ratio)
     expect(out[0].adjusted).toBe(false)
     expect(out[0].value).toBe(10)
   })

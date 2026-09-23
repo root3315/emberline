@@ -223,6 +223,7 @@ const els = {
   futureProof: $('future-proof'),
   proofWhen: $('proof-when'),
   proofRungs: $('proof-rungs'),
+  proofLegend: $('proof-legend'),
   proofStats: $('proof-stats'),
   proofNote: $('proof-note'),
   footAbout: $('foot-about'),
@@ -1670,9 +1671,14 @@ async function renderProof(): Promise<void> {
    * argument is that the rate *falls* as the list lengthens, and against
    * a full-width axis every bar would be short and the fall invisible.
    */
-  const top = Math.max(...got.ranking.map((r) => r.burned), 0.01)
+  const base = got.baselines?.persistence
+  const top = Math.max(
+    ...got.ranking.map((r) => r.burned),
+    ...(base ?? []).map((r) => r.burned),
+    0.01,
+  )
   els.proofRungs.innerHTML = ''
-  for (const rung of got.ranking) {
+  got.ranking.forEach((rung, i) => {
     const li = document.createElement('li')
     li.className = 'proof__rung'
 
@@ -1693,17 +1699,52 @@ async function renderProof(): Promise<void> {
     fill.style.width = `${Math.max(1, (rung.burned / top) * 100)}%`
     bar.append(fill)
 
+    /*
+     * The free opponent, on the same rung.
+     *
+     * "It burned in the last seven days" needs no model and, over a
+     * seven-day window in peak season, it is nearly as good: on the week
+     * this page was checked against it reached 71.3% of the top thousand
+     * where the model reached 72.4%. Drawing it as a mark on the model's
+     * own bar rather than as a second bar keeps the comparison to one
+     * line per rung, and keeps the reader from having to hold two
+     * ladders in their head.
+     */
+    const other = base?.[i]
+    if (other) {
+      const mark = document.createElement('u')
+      mark.className = 'proof__base'
+      mark.style.left = `${Math.min(100, Math.max(0, (other.burned / top) * 100))}%`
+      mark.title = t('proofBaseline', { pct: `${(other.burned * 100).toFixed(1)}%` })
+      bar.append(mark)
+    }
+
     li.append(label, pct, bar)
     els.proofRungs.append(li)
+  })
+
+  els.proofLegend.hidden = !base
+  if (base) {
+    els.proofLegend.textContent = t('proofBaselineLegend', {
+      model: `${(got.ranking[0].burned * 100).toFixed(1)}%`,
+      base: `${(base[0].burned * 100).toFixed(1)}%`,
+    })
   }
 
   const recall = got.burnedCells ? got.caught / got.burnedCells : 0
   els.proofStats.innerHTML = ''
-  statInto(els.proofStats, t('proofRecall'), `${(recall * 100).toFixed(1)}%`, '')
+  statInto(
+    els.proofStats,
+    t('proofRecall'),
+    `${(recall * 100).toFixed(1)}%`,
+    t('proofRecallNote', { flagged: formatNumber(got.flagged) }),
+  )
   statInto(els.proofStats, t('proofCaught'), formatNumber(got.caught), t('unitCells'))
   statInto(els.proofStats, t('proofMissed'), formatNumber(got.missed), t('unitCells'))
 
-  els.proofNote.textContent = got.whole ? t('proofWhole') : t('proofPartial')
+  els.proofNote.textContent = got.whole
+    ? t('proofWhole')
+    : t('proofPartial', { days: formatDays(got.elapsed) })
 }
 
 /** Fetch the day's grid if it is not here yet, then redraw. */
@@ -2195,7 +2236,12 @@ function renderMetrics(ds: Dataset, totals: Map<number, number>): void {
 
   if (trend && Math.abs(trend.slopePct) >= 0.01) {
     const pct = trend.slopePct * 100
-    metric(t('metricTrend'), `${pct > 0 ? '+' : ''}${pct.toFixed(1)}%`, '', pct > 0 ? 'up' : 'down')
+    metric(
+      t('metricTrend'),
+      `${pct > 0 ? '+' : ''}${pct.toFixed(1)}%`,
+      t('trendOnModis'),
+      pct > 0 ? 'up' : 'down',
+    )
   } else {
     metric(t('metricTrend'), '—', t('trendFlat'))
   }

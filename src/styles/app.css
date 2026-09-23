@@ -3098,11 +3098,32 @@ canvas {
 }
 
 .proof__bar {
+  position: relative;
   grid-column: 1 / -1;
   height: 6px;
   border-radius: var(--r-pill);
   background: var(--ash-input);
   overflow: hidden;
+}
+
+/*
+ * Where the free method got to, cut into the model's own bar.
+ *
+ * A second bar per rung would double the ladder and ask the reader to
+ * hold two of them at once; a slit in the fill says "this much of it was
+ * free" in the same glance. Drawn in the page's own background so it
+ * reads as a gap rather than as a third colour, and it always lands
+ * inside the fill because the model leads on every rung — if that ever
+ * stops being true the notch will sit past the end of the fill, which is
+ * exactly the right way for it to look.
+ */
+.proof__base {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  margin-left: -1px;
+  background: var(--ash-void);
 }
 
 .proof__bar i {

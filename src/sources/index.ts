@@ -34,14 +34,6 @@ export interface Dataset {
   mapCellKm: number
 }
 
-/** First day on which a VIIRS detection actually appears in this record. */
-function viirsOnsetOf(days: readonly DayRecord[]): string | null {
-  for (const d of days) {
-    if (d.viirsOnly > 0 || d.both > 0) return d.day
-  }
-  return null
-}
-
 function sensorsByYearOf(days: readonly DayRecord[]): Map<number, number> {
   const out = new Map<number, number>()
   for (const d of days) {
@@ -84,7 +76,7 @@ export async function loadArchive(aoiId: string): Promise<Dataset> {
     bounds: cube.bounds ?? aoi!.bounds,
     provenance: cube.provenance,
     days,
-    adjusted: applySensitivity(days, cube.sensitivity, viirsOnsetOf(days)),
+    adjusted: applySensitivity(days, cube.sensitivity),
     sensitivity: cube.sensitivity,
     sensors: cube.sensors,
     sensorsByYear: sensorsByYearOf(days),
@@ -140,7 +132,7 @@ export function datasetFromDetections(
     bounds,
     provenance,
     days,
-    adjusted: applySensitivity(days, sensitivity, viirsOnsetOf(days)),
+    adjusted: applySensitivity(days, sensitivity),
     sensitivity,
     sensors: [...record.sensorsPresent],
     sensorsByYear: sensorsByYearOf(days),

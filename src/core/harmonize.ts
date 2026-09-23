@@ -244,20 +244,89 @@ export interface AdjustedDay {
  * untouched — they need no adjustment, and bending real observations to fit a
  * model would be the opposite of the point.
  */
-export function applySensitivity(
-  days: readonly DayRecord[],
-  ratio: SensitivityRatio,
-  viirsFrom: string | null,
-): AdjustedDay[] {
-  const cut = viirsFrom ?? SENSOR_META.viirs_snpp.since
+/**
+ * Step 5, applied. One instrument carries the whole series.
+ *
+ * ── Why not "scale the old part up and leave the rest" ────────────────
+ *
+ * That is what this did, and it closes one seam out of three. VIIRS is not
+ * one instrument arriving once: S-NPP in 2012, NOAA-20 in 2018, NOAA-21 in
+ * 2024. Scaling the pre-2012 days to meet the combined count leaves the
+ * combined count free to keep climbing underneath, once per satellite.
+ *
+ * Measured on the archive this repository ships: Punjab's old series says
+ * the region burned 55% more in 2018-2023 than in 2012-2017, while MODIS
+ * alone — the one instrument present for every year of it — says 9% less.
+ * A 1.7x divergence with no fire behind it. Cerrado showed the same sign.
+ * That is the challenge's own defect, one satellite generation younger.
+ *
+ * ── What it does instead ──────────────────────────────────────────────
+ *
+ * The comparable series is built from MODIS cell-days throughout, scaled
+ * once by the measured ratio. MODIS never changed: Terra and Aqua have
+ * been flying the same 1 km sensor since 2002, so a series driven by them
+ * moves only when fire moves. `k` is a constant, so the product is
+ * homogeneous from the first day to the last — no step at any satellite,
+ * because no satellite enters the arithmetic.
+ *
+ * Before 2012 this is exactly what it was: with no VIIRS in orbit,
+ * `modisOnly + both` is `activeCells`, and the value is unchanged. The
+ * difference is entirely in the modern era, which used to be the
+ * reference frame and is now measured the same way as the rest.
+ *
+ * ── What it costs, said plainly ───────────────────────────────────────
+ *
+ * A day that only VIIRS saw reads as zero here. That is the honest
+ * consequence rather than a bug: MODIS could not see that fire, and it
+ * could not have seen it in 2005 either, so a series meant for comparison
+ * across the record must not contain it. Every raw number survives beside
+ * its adjusted twin — `raw` is still the true combined count, and "as
+ * recorded" shows it — which is the whole reason both are carried.
+ *
+ * `src/ui/fire-year.ts` has drawn the radial year this way from the
+ * start, and `train_fire_model.py` picks MODIS-only targets for the same
+ * reason. This brings the regional series into line with both.
+ *
+ * ── One thing to know about the level ─────────────────────────────────
+ *
+ * `k` is the median of the daily ratios, and a median ratio is not the
+ * ratio of the totals: small-fire days carry the highest ratios, so
+ * summing MODIS x k over a year lands above what the instruments together
+ * actually counted that year. On Punjab's overlap era it is about 40%
+ * above. That is a level, not a slope — the same factor applies to 2005
+ * and to 2020, so every comparison the page makes is unaffected, and the
+ * observed counts are always one click away under "as recorded".
+ *
+ * The consequence worth naming: the reconciled series is now an estimate
+ * for its whole length, in one consistent unit, rather than observations
+ * after 2012 and estimates before it. The mixture was the thing that made
+ * it incomparable in the first place.
+ *
+ * `fire-year.ts` uses the ratio of the sums instead, which matches the
+ * observed totals and therefore sits at a different absolute level. Its
+ * ring prints no counts, so the two never contradict each other on screen
+ * — but making them one estimator means changing the coefficient this
+ * project publishes, and that means rebuilding the archives from FIRMS.
+ * Written down here rather than quietly left as a difference.
+ */
+export function applySensitivity(days: readonly DayRecord[], ratio: SensitivityRatio): AdjustedDay[] {
   const usable = ratio.samples >= MIN_RATIO_SAMPLES
   return days.map((d) => {
     const raw = d.activeCells
-    const pre = d.day < cut
-    if (!pre || !usable) {
+    if (!usable) {
+      // No measurable overlap: there is no honest adjustment to make, so
+      // the series stays raw and says so.
       return { day: d.day, raw, value: raw, lo: raw, hi: raw, adjusted: false }
     }
-    return { day: d.day, raw, value: raw * ratio.k, lo: raw * ratio.lo, hi: raw * ratio.hi, adjusted: true }
+    const modis = d.modisOnly + d.both
+    return {
+      day: d.day,
+      raw,
+      value: modis * ratio.k,
+      lo: modis * ratio.lo,
+      hi: modis * ratio.hi,
+      adjusted: true,
+    }
   })
 }
 

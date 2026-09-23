@@ -33,7 +33,11 @@ By time, never at random. Consecutive days of one cell are nearly the same
 example, so a random split lets the model meet a fire it has already seen and
 produces beautiful numbers with no skill behind them.
 
-    train 2003-2018    validate 2019-2021    test 2022-2026
+    train 2003-2013    validate 2014-2017    test 2018-2021
+
+The test era ends in 2021 because the weather archive does. A fire-only
+model could run to 2026, but then the two would be scored on two
+different questions; `ERAS` below is the single source of these years.
 
 Sampling differs by purpose. Training takes every positive and a few negatives
 each, because under a one-per-cent base rate a model fed raw data learns to

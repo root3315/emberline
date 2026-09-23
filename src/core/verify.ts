@@ -52,6 +52,14 @@ export interface Verify {
   /** The day this check was run, which is what makes it fresh. */
   checked: string
   ranking: VerifyRung[]
+  /**
+   * The same ladder, for methods that cost nothing.
+   *
+   * Persistence is computed from the shipped daily tiles, so it is always
+   * present; climatology needs the feature matrix the forecast was built
+   * from and is absent whenever that has moved on.
+   */
+  baselines?: { persistence?: VerifyRung[]; climatology?: VerifyRung[] }
   bands: VerifyBand[]
 }
 

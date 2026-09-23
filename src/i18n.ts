@@ -251,6 +251,9 @@ const en: Dict = {
   aboutSeamTitle: 'The seam, in the record',
   aboutSeamNote:
     'Detections per year, the two instruments kept apart. VIIRS begins in 2012 and immediately dwarfs MODIS over the same ground. Add the two series and the total jumps; that jump is an instrument, not a planet.',
+  aboutTargetTitle: 'What it is asked',
+  aboutTargetBody:
+    'Reconciling the two instruments is for the reader — so the eye can hold 2005 against 2020. The model is asked about MODIS alone: will the 1 km sensor see fire in this cell. That is the same argument, applied to the question rather than to the record. A target that grows with the satellite fleet would teach the model about satellites instead of about fire — NOAA-20 arrived in 2018 and NOAA-21 in 2024, and “it burned” would quietly come to mean “there are more instruments now”. MODIS has flown the same 1 km sensor since 2002, so the question put to it reads the same in all twenty-four years.',
   aboutHowTitle: 'How it learns',
   aboutWeighsTitle: 'What it weighs',
   aboutWeighsNote:
@@ -279,7 +282,7 @@ const en: Dict = {
 
   aboutProblemTitle: 'The problem',
   aboutProblemBody:
-    'A fire detection is not a fire. It is one satellite pass finding one pixel hot enough to flag, and how many it flags depends on the pixel\u2019s size. The 375-metre sensor resolves small fires the 1-kilometre one averages away; over the same ground on the same day it reports several times as many. The ratio is not a constant \u2014 it is about 4 in dense cropland and over 13 in sparse bush \u2014 so a single global correction is the wrong answer too. It has to be measured per place.',
+    'A fire detection is not a fire. It is one satellite pass finding one pixel hot enough to flag, and how many it flags depends on the pixel\u2019s size. The 375-metre sensor resolves small fires the 1-kilometre one averages away; over the same ground on the same day it reports several times as many. The ratio is not a constant \u2014 about 7 over Punjab\u2019s cropland, where stubble burns in small scattered patches, and under 2 over Yakutian taiga, where a fire is already large enough for a 1 km pixel to catch \u2014 so a single global correction is the wrong answer too. It has to be measured per place.',
   aboutProblemNote:
     'Anyone asking "is it burning more than it used to" is asking a question the raw record cannot answer. Every trend through 2012 is contaminated by the instrument. Switch between "as recorded" and "reconciled" anywhere on this site and watch what happens to the years before 2012 \u2014 that difference is the whole problem, made visible.',
 
@@ -364,10 +367,17 @@ const en: Dict = {
   proofTitle: 'Checked against what happened',
   proofLadderTitle: 'Of the cells it ranked highest, this share has burned',
   proofWhen: 'The week on this page was computed on {computed}, before it began. Checked on {checked}, {elapsed} of its 7 days had passed and NASA had reported {detections} MODIS detections inside the window.',
-  proofPartial: 'Two days is not a week: the shares below can only grow from here, and a rate that looks low on day two may be exactly right by Saturday. What the ladder already shows is the ordering — the cells it liked most are the ones burning first.',
+  proofPartial: '{days} is not a week: the shares below can only grow from here, and a rate that looks low on day two may be exactly right by Saturday. What the ladder already shows is the ordering — the cells it liked most are the ones burning first.',
   proofWhole: 'The window has closed, so these are final.',
   proofTop: 'top {n}',
   proofAll: 'everything it flagged',
+  /* Recall on its own says nothing without the breadth it was bought
+     with: flag every cell and it reaches 100%. */
+  proofBaseline: 'it burned last week: {pct}',
+  proofBaselineLegend:
+    'The notch on each bar is what “it burned in the last seven days” would have given you — no model, no features, free. On the top thousand it reaches {base} against the model’s {model}. The model leads on every rung, and not by much: over a seven-day window in peak season, fire mostly continues where it already is. The gap it earns is over the whole ranking, and in the places that have not just burned.',
+  proofRecallNote: 'with {flagged} cells flagged',
+  trendOnModis: 'on MODIS alone — the ratio cancels',
   proofCaught: 'Burned and flagged',
   proofMissed: 'Burned, not flagged',
   proofRecall: 'Caught',
@@ -639,6 +649,9 @@ const ru: Dict = {
   aboutSeamTitle: 'Шов в самом ряду',
   aboutSeamNote:
     'Засечек за год, приборы порознь. VIIRS начинается в 2012-м и сразу затмевает MODIS на той же земле. Сложите два ряда — и общая кривая прыгнет. Этот скачок — прибор, а не планета.',
+  aboutTargetTitle: 'На каком приборе её спрашивают',
+  aboutTargetBody:
+    'Сведение приборов — для читателя: чтобы глаз мог сравнить 2005 год с 2020-м. А модель мы спрашиваем только про MODIS: увидит ли километровый сенсор огонь в этой ячейке. Это тот же довод, только приложенный к вопросу, а не к записи. Цель, которая растёт вместе с составом группировки, научила бы модель спутникам, а не пожарам: в 2018-м вышел NOAA-20, в 2024-м NOAA-21 — и «загорелось» незаметно стало бы означать «приборов стало больше». MODIS летает с тем же километровым сенсором с 2002 года, поэтому заданный ему вопрос звучит одинаково во все двадцать четыре года.',
   aboutHowTitle: 'Как она учится',
   aboutWeighsTitle: 'На что она опирается',
   aboutWeighsNote:
@@ -667,7 +680,7 @@ const ru: Dict = {
 
   aboutProblemTitle: 'Задача',
   aboutProblemBody:
-    'Засечка — это не пожар. Это один пролёт спутника, нашедший один пиксель достаточно горячим, и сколько таких пикселей найдётся, зависит от размера пикселя. Сенсор 375 м различает мелкие очаги, которые километровый усредняет до нуля. И отношение не постоянное — около 4 на густой пашне и больше 13 в редком кустарнике, — так что один общий коэффициент тоже неверен. Его надо мерить для каждого места отдельно.',
+    'Засечка — это не пожар. Это один пролёт спутника, нашедший один пиксель достаточно горячим, и сколько таких пикселей найдётся, зависит от размера пикселя. Сенсор 375 м различает мелкие очаги, которые километровый усредняет до нуля. И отношение не постоянное — около 7 на пенджабской пашне, где стерня горит мелкими разбросанными пятнами, и меньше 2 в якутской тайге, где пожар и так велик для километрового пикселя, — так что один общий коэффициент тоже неверен. Его надо мерить для каждого места отдельно.',
   aboutProblemNote:
     'Любой, кто спрашивает «горит ли больше, чем раньше», задаёт вопрос, на который сырой ряд ответить не может. Любой тренд через 2012 год испорчен прибором. Переключите «как снято» и «сведено» где угодно на сайте и посмотрите на годы до 2012-го — эта разница и есть вся задача, показанная глазам.',
 
@@ -752,10 +765,15 @@ const ru: Dict = {
   proofTitle: 'Сверено с тем, что случилось',
   proofLadderTitle: 'Из ячеек, которые модель поставила выше всех, уже сгорело',
   proofWhen: 'Неделя на этой странице посчитана {computed} — до того, как она началась. На {checked} из её 7 дней прошло {elapsed}, и NASA сообщила о {detections} засечках MODIS внутри окна.',
-  proofPartial: 'Двое суток — это не неделя: доли ниже могут только расти, и то, что на второй день выглядит скромно, к субботе может оказаться ровно верным. Что лестница показывает уже сейчас — это порядок: ячейки, которые модель поставила выше, горят первыми.',
+  proofPartial: '{days} — это ещё не неделя: доли ниже могут только расти, и то, что на второй день выглядит скромно, к субботе может оказаться ровно верным. Что лестница показывает уже сейчас — это порядок: ячейки, которые модель поставила выше, горят первыми.',
   proofWhole: 'Окно закрылось, так что это окончательные числа.',
   proofTop: 'первые {n}',
   proofAll: 'всё, что отмечено',
+  proofBaseline: 'горело на прошлой неделе: {pct}',
+  proofBaselineLegend:
+    'Засечка на каждой полоске — то, что дало бы «горело за последние семь дней»: без модели, без признаков, бесплатно. На верхней тысяче она берёт {base} против {model} у модели. Модель впереди на каждой ступени, и ненамного: на семидневном окне в разгар сезона огонь в основном продолжается там, где уже идёт. Свой отрыв она зарабатывает на всём ранжировании и там, где только что не горело.',
+  proofRecallNote: 'при {flagged} отмеченных ячейках',
+  trendOnModis: 'по MODIS — коэффициент сокращается',
   proofCaught: 'Сгорело и отмечено',
   proofMissed: 'Сгорело, не отмечено',
   proofRecall: 'Поймано',

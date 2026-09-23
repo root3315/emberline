@@ -570,6 +570,19 @@
         <div class="about__model">
           <div class="about__model-say">
             <p class="about__body" id="about-model-body"></p>
+            <!--
+              Which instrument the question is about.
+
+              This used to be explained only in the header of
+              `train_fire_model.py`, where it reads as a modelling
+              convenience. It is the same argument the rest of this page
+              makes about the record, applied to the target, and a reader
+              who has just been told that the instruments are reconciled
+              will otherwise wonder why the model ignores the reconciled
+              series it was handed.
+            -->
+            <h3 class="subhead" data-i18n="aboutTargetTitle">What it is asked</h3>
+            <p class="about__body" data-i18n="aboutTargetBody"></p>
             <h3 class="subhead" data-i18n="aboutHowTitle">How it learns</h3>
             <ol class="about__steps" id="about-steps"></ol>
           </div>
@@ -818,6 +831,12 @@
           <div class="proof__ladder">
             <h3 class="subhead" data-i18n="proofLadderTitle">Of the cells it ranked highest</h3>
             <ul class="proof__rungs" id="proof-rungs"></ul>
+            <!--
+              What the same ladder gives a method that costs nothing.
+              Hidden when the baseline could not be computed, rather
+              than left as an empty line making a claim by omission.
+            -->
+            <p class="note note--tight" id="proof-legend" hidden></p>
           </div>
           <div class="proof__side">
             <dl class="metrics metrics--about" id="proof-stats"></dl>
