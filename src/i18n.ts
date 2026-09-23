@@ -317,6 +317,12 @@ const en: Dict = {
   ctaButton: 'What happens next week',
   ctaLine: 'Somewhere in <b>{cells}</b> cells, the next seven days carry a real chance of fire.',
 
+  windowRunning: 'day {n} of seven',
+  windowLastDay: 'the last day of it',
+  windowClosed: 'closed {n} ago \u2014 time to build the next one',
+  windowEarly: 'it has not begun yet',
+  calibPartialSlope:
+    'On a part week the two columns cannot be read as calibration, and the shape of the gap is still worth having: on day {n} the cells above 70% have already reached the share their seven-day number implies, while the cells under 5% are running at two thirds of theirs. Either the low end is overstated or its fire is still to come, and only the finished week can say which.',
   futureWhere: '{from} to {to} \u00b7 built {asOf}',
   futureAnswer: 'Somewhere in <em>{cells}</em> cells, the next seven days carry a real chance of fire.',
   futureAside:
@@ -726,6 +732,12 @@ const ru: Dict = {
   ctaButton: 'Что будет на следующей неделе',
   ctaLine: 'В <b>{cells}</b> ячейках ближайшие семь дней несут реальный шанс пожара.',
 
+  windowRunning: 'идёт {n}-й день из семи',
+  windowLastDay: 'последний её день',
+  windowClosed: 'закрылось {n} назад — пора считать следующее',
+  windowEarly: 'ещё не началось',
+  calibPartialSlope:
+    'На неполной неделе две колонки нельзя читать как калибровку, но форма расхождения всё равно чего-то стоит: на {n}-й день ячейки выше 70% уже добрали долю, которую подразумевает их недельное число, а ячейки ниже 5% идут на двух третях от своей. Либо нижний конец завышен, либо его огонь ещё впереди — и сказать, что из двух, может только закрывшаяся неделя.',
   futureWhere: 'с {from} по {to} · считано {asOf}',
   futureAnswer: 'В <em>{cells}</em> ячейках ближайшие семь дней несут реальный шанс пожара.',
   futureAside:

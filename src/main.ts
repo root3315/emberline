@@ -1169,6 +1169,27 @@ function showFutureLayout(on: boolean): void {
   invalidateMapSize(true)
 }
 
+/**
+ * Where today sits inside the forecast's week, in words.
+ *
+ * Four states, because they mean four different things to a reader: the
+ * week has not started, it is running, this is its last day, or it is
+ * over and the page is showing history. The last one is deliberately
+ * blunt — a forecast page whose window closed is out of date, and saying
+ * so is worth more than looking current.
+ */
+function windowStanding(from: string, to: string): string {
+  const day = 86_400_000
+  const today = Date.parse(new Date().toISOString().slice(0, 10))
+  const start = Date.parse(from)
+  const end = Date.parse(to)
+  if (today < start) return t('windowEarly')
+  if (today > end) return t('windowClosed', { n: formatDays(Math.round((today - end) / day)) })
+  const n = Math.round((today - start) / day) + 1
+  return today === end ? t('windowLastDay') : t('windowRunning', { n: String(n) })
+}
+
+
 /** The forecast page, filled from the one file the model ships. */
 async function renderFuture(): Promise<void> {
   const token = ++loadToken
@@ -1205,11 +1226,20 @@ async function renderFuture(): Promise<void> {
     }
     const { meta } = got
 
-    els.futureWhere.textContent = t('futureWhere', {
-      from: formatDate(meta.from),
-      to: formatDate(meta.to),
-      asOf: formatDate(meta.asOf),
-    })
+    /*
+     * The dates, and then where the reader's own today falls among them.
+     *
+     * A window that closed a month ago and one that is running right now
+     * print the same three dates, and a page about a forecast lives or
+     * dies on which of the two it is. Taken from the clock rather than
+     * from the file, so this goes stale on its own and admits it.
+     */
+    els.futureWhere.textContent =
+      t('futureWhere', {
+        from: formatDate(meta.from),
+        to: formatDate(meta.to),
+        asOf: formatDate(meta.asOf),
+      }) + ` \u00b7 ${windowStanding(meta.from, meta.to)}`
     els.futureAnswer.replaceChildren(
       markup(t('futureAnswer', { cells: formatNumber(meta.cells) })),
     )
@@ -1786,6 +1816,17 @@ async function renderProof(): Promise<void> {
     li.append(label, pct, bar)
     els.proofRungs.append(li)
   })
+
+  /*
+   * The calibration chart above cannot be read as calibration until the
+   * week closes, and the slope across its bands can be read at any point
+   * in it. Appended here because this is the function that knows how far
+   * into the window we are; `renderTrust` draws that chart from the model
+   * card alone and has no idea what day it is.
+   */
+  if (!got.whole) {
+    els.calibCaption.textContent += ` ${t('calibPartialSlope', { n: String(got.elapsed) })}`
+  }
 
   els.proofLegend.hidden = !base
   if (base) {
