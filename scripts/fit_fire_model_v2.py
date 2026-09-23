@@ -23,7 +23,7 @@ checkpoint, and takes the count that curve actually likes.
 ── Five of the thirty features were making it worse ───────────────────────
 
 Shuffling a feature and watching average precision *rise* means the model
-is leaning on noise. Seven columns do that. But the published ranking was
+is leaning on noise. Five columns do that. But the published ranking was
 measured on the test years, so picking features by it and then reporting
 the test score would be marking one's own homework — the selection is
 redone here on 2014-2017 and the test years are not looked at until the

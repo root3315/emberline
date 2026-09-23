@@ -26,6 +26,7 @@
  * so nobody has to estimate from the length.
  */
 
+import { formatNumber } from '../i18n'
 import { fitCanvas, MONO, rgba, varColor, type Rgb } from './paint'
 
 export interface Weight {
@@ -83,7 +84,8 @@ export function drawImportance(canvas: HTMLCanvasElement, weights: Weight[]): vo
 
     ctx.textAlign = 'left'
     ctx.fillStyle = rgba(ink)
-    ctx.fillText(w.drop.toFixed(3), plotX + plotW + 10, mid)
+    // Same width either way, and the reader's own decimal mark.
+    ctx.fillText(formatNumber(w.drop, 3), plotX + plotW + 10, mid)
   })
 }
 

@@ -92,7 +92,14 @@ export interface SeasonShape {
   peak: number
   /** Day of year at which 90% has accumulated. */
   end: number
-  /** end - start, in days. */
+  /**
+   * How many days the season covers, counting both ends.
+   *
+   * A count, not a difference: a season from 6 May to 12 November is
+   * 191 days, and the tile that prints this beside those two dates said
+   * 190. The two shift statistics subtract one of these from another,
+   * where the extra day cancels.
+   */
   length: number
   total: number
   peakValue: number
@@ -113,9 +120,13 @@ export interface SeasonShape {
  * A tenth of the peak, for thirty days. The floor matters as much as the
  * depth: a fortnight of rain in the middle of one season is weather, and
  * calling it a second season would be worse than the fault this fixes.
- * Measured on the areas this repository ships, the longest such spell is
- * 155 days in Punjab, 12 in Central Yakutia and none at all in the Sierra
- * Nevada or the Cerrado.
+ * Measured on the areas this repository ships, through this very
+ * function: the longest such spell runs 154 days in Punjab, 125 in
+ * Central Yakutia, 105 in the Sierra Nevada and 49 in the Cerrado. Length
+ * alone does not separate them, then, and the vote below is what does —
+ * 25 years of 27 carry a break in Punjab, against 11 of 26, 12 of 27 and
+ * 2 of 27 elsewhere. A place that burns twice does it every year; a place
+ * that had one wet August does not.
  */
 const QUIET_SHARE = 0.1
 const QUIET_DAYS = 30
@@ -169,7 +180,28 @@ export function seasonShape(row: Float64Array, span = 365): SeasonShape | null {
     }
   }
 
-  return { start, peak, end, length: end - start, total, peakValue: row[peak], gap }
+  return { start, peak, end, length: end - start + 1, total, peakValue: row[peak], gap }
+}
+
+/**
+ * How many days of a season actually burn.
+ *
+ * The whole span for a place with one season. For a place with two, the
+ * two windows added up — and counted from `start`, `gap.from`, `gap.to`
+ * and `end`, which are the four dates the page prints, rather than by
+ * subtracting `gap.days` from `length`.
+ *
+ * Those two are the same arithmetic on one year and different arithmetic
+ * on the typical season, because the typical season is not a season: each
+ * of its fields is a median taken separately across the years, and three
+ * independent medians need not agree. Punjab's median gap runs 23 May to
+ * 6 October, a span of 137 days, while the median of the per-year gap
+ * lengths is 135. The subtraction gave 56 under a sentence naming two
+ * windows of 17 and 37 days.
+ */
+export function burningDays(shape: SeasonShape): number {
+  if (!shape.gap) return shape.length
+  return Math.max(0, shape.gap.from - shape.start) + Math.max(0, shape.end - shape.gap.to)
 }
 
 function smoothCircular(row: Float64Array, span: number, half: number): Float64Array {
@@ -324,19 +356,17 @@ export interface Trend {
 }
 
 /**
- * Theil-Sen slope over annual totals. The median of pairwise slopes shrugs off
- * the one catastrophic year that would drag an ordinary least-squares line
- * across the whole record.
- */
-/**
  * The first year the MODIS pair was complete.
  *
  * Terra came up in November 2000 and Aqua in July 2002, and two
  * satellites see roughly twice the overpasses of one. Measured on this
- * repository's own archives, Punjab's MODIS cell-days average 77.6k
- * before Aqua and 148.7k over the nine years after it — a 1.9x step with
- * no fire behind it, which is the same defect this project exists to
+ * repository's own archives, Punjab averages 11.0k MODIS cell-days over
+ * 2001 and 2002 and 21.0k over the nine years after Aqua — a 1.9x step
+ * with no fire behind it, which is the same defect this project exists to
  * remove, one satellite generation earlier than the one it is named for.
+ * (Those are the instrument's own counts. Carried through the sensitivity
+ * coefficient, the way the comparable series carries them, they read
+ * 77.6k and 148.7k, and the ratio is the same either way.)
  *
  * It only matters where a statistic integrates across the seam. A
  * calendar row is one year and implies no comparison; a climatology pools
@@ -345,6 +375,11 @@ export interface Trend {
  */
 export const MODIS_PAIR_FROM = 2003
 
+/**
+ * Theil-Sen slope over annual totals. The median of pairwise slopes shrugs off
+ * the one catastrophic year that would drag an ordinary least-squares line
+ * across the whole record.
+ */
 export function annualTrend(grid: YearGrid, whole?: { from: string; to: string }): Trend | null {
   /*
    * Part years are left out, because a part year is a low year for a
@@ -353,11 +388,11 @@ export function annualTrend(grid: YearGrid, whole?: { from: string; to: string }
    * The archive opens in November 2000, when Terra came up, and closes on
    * whatever day it was last built. Both of those years hold a fraction
    * of a season and both pull on the slope. Yakutia, whose record starts
-   * in May 2001, is the clearest case: every year gives -0.98%, this rule
-   * gives +0.68%, and the sign is the part that matters rather than the
-   * size. None of the three clears the one per cent the page needs before
-   * it prints a trend at all, so what this fixes is the number behind the
-   * words, not the words.
+   * in May 2001, is the clearest case: every year gives -0.98%, and this
+   * rule — with the 2003 floor below — gives +4.34%. Not only the
+   * sign but whether anything is said at all: the page wants a full per
+   * cent before it calls something a trend, so at -0.98% it printed
+   * nothing, and at +4.34% it prints a rise that is really in the record.
    *
    * The range is optional so the statistic can still be taken over a bare
    * grid, which is what the tests do.

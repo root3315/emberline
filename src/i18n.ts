@@ -262,7 +262,7 @@ const en: Dict = {
   aboutHowTitle: 'How it learns',
   aboutWeighsTitle: 'What it weighs',
   aboutWeighsNote:
-    'What the model actually leans on. Take one thing away from it — make that column meaningless and score it again — and the drop is how much it needed it. The shape is the honest summary of this project: the fire archive carries the model almost entirely, the weather sharpens it, and what is standing there to burn barely registers at a hundred and sixty kilometres. Among the weather, rain decides.',
+    'What the model actually leans on. Take one thing away from it — make that column meaningless and score it again — and the drop is how much it needed it. The shape is the honest summary of this project: the fire archive carries the model almost entirely, the weather sharpens it, and what is standing there to burn comes next — sixth and seventh of seventeen, above every weather column but rain and heat. Among the weather, rain decides.',
   aboutLegendArchive: 'From the fire archive',
   aboutLegendWeather: 'From the weather forecast',
   aboutLegendGround: 'What is standing there',
@@ -343,7 +343,7 @@ const en: Dict = {
 
   futureRiskTitle: 'Twenty places to watch',
   futureRiskNote:
-    'The likeliest cells, kept apart so the list names twenty places rather than one place twenty times. All twenty are above 97%, which is why the bar shows something else: how many cells within two degrees are also more likely than not to burn. One hot cell and a front three hundred kilometres wide are not the same warning. Names come from OpenStreetMap at build time.',
+    'The likeliest cells, kept apart so the list names twenty places rather than one place twenty times. They run from {lo} to {hi} — close enough together that ordering them by chance would say nothing, which is why the bar shows something else: how many cells within two degrees are also more likely than not to burn. One hot cell and a front three hundred kilometres wide are not the same warning. Names come from OpenStreetMap at build time.',
 
   futureTrustTitle: 'How much to believe it',
   futureTrustNote:
@@ -685,7 +685,7 @@ const ru: Dict = {
   aboutHowTitle: 'Как она учится',
   aboutWeighsTitle: 'На что она опирается',
   aboutWeighsNote:
-    'На что модель опирается на самом деле. Отнимите у неё одну вещь — испортьте этот признак и посчитайте заново, — и насколько просядет точность, настолько он ей был нужен. Форма графика и есть честная сводка всего проекта: архив пожаров тянет модель почти целиком, погода её затачивает, а то, чему там гореть, на ста шестидесяти километрах почти не слышно. Из погоды решает дождь.',
+    'На что модель опирается на самом деле. Отнимите у неё одну вещь — испортьте этот признак и посчитайте заново, — и насколько просядет точность, настолько он ей был нужен. Форма графика и есть честная сводка всего проекта: архив пожаров тянет модель почти целиком, погода её затачивает, а следом идёт то, чему там гореть — шестое и седьмое место из семнадцати, выше любого погодного признака кроме дождя и жары. Из погоды решает дождь.',
   aboutLegendArchive: 'Из архива пожаров',
   aboutLegendWeather: 'Из прогноза погоды',
   aboutLegendGround: 'Что там растёт',
@@ -766,7 +766,7 @@ const ru: Dict = {
 
   futureRiskTitle: 'Двадцать мест, за которыми стоит следить',
   futureRiskNote:
-    'Самые вероятные ячейки, разнесённые друг от друга — чтобы в списке было двадцать разных мест, а не одно место двадцать раз. Все двадцать выше 97%, поэтому полоска показывает другое: сколько ячеек в радиусе двух градусов тоже скорее загорятся, чем нет. Одна горячая точка и фронт в триста километров — разные новости. Названия — из OpenStreetMap, подставлены при сборке.',
+    'Самые вероятные ячейки, разнесённые друг от друга — чтобы в списке было двадцать разных мест, а не одно место двадцать раз. Они идут от {lo} до {hi} — достаточно тесно, чтобы раскладывать их по вероятности было бессмысленно, поэтому полоска показывает другое: сколько ячеек в радиусе двух градусов тоже скорее загорятся, чем нет. Одна горячая точка и фронт в триста километров — разные новости. Названия — из OpenStreetMap, подставлены при сборке.',
 
   futureTrustTitle: 'Насколько ей можно верить',
   futureTrustNote:
@@ -972,18 +972,52 @@ export function formatPercent(pct: number, digits = 1, sign = false): string {
   return `${text}%`
 }
 
-/** "142 days" / "142 дня" */
+/**
+ * A big number shortened: "3.5M" / "3,5 млн".
+ *
+ * The hero stat read "3.5M" in Russian — an English abbreviation and an
+ * English decimal point, two words from a number `Intl` had already
+ * grouped the Russian way. The thresholds are the ones this site has
+ * always used, so the same values keep the same precision; only the
+ * suffix and the separator follow the reader.
+ */
+export function formatCompact(value: number): string {
+  if (value < 10_000) return formatNumber(value)
+  const digits = value >= 1_000_000 ? (value >= 10_000_000 ? 0 : 1) : value >= 100_000 ? 0 : 1
+  return new Intl.NumberFormat(current === 'ru' ? 'ru-RU' : 'en-US', {
+    notation: 'compact',
+    compactDisplay: 'short',
+    minimumFractionDigits: digits,
+    maximumFractionDigits: digits,
+  }).format(value)
+}
+
+/**
+ * "142 days" / "142 дня", and grouped once it gets long.
+ *
+ * The busiest cell in Punjab has burned on 1,672 days, and the fact tile
+ * printed "1672 дня" beside a cell count that `Intl` had already
+ * written as "5 932". The plural form is chosen from the number; the
+ * reader is shown the grouped one.
+ */
 export function formatDays(n: number): string {
   return current === 'en'
-    ? `${n} ${plural(n, 'day', 'days', 'days')}`
-    : `${n} ${plural(n, 'день', 'дня', 'дней')}`
+    ? `${formatNumber(n)} ${plural(n, 'day', 'days', 'days')}`
+    : `${formatNumber(n)} ${plural(n, 'день', 'дня', 'дней')}`
+}
+
+/** "cells" / "ячейка, ячейки, ячеек" — the noun alone, for a value printed beside it. */
+export function cellsUnit(n: number): string {
+  return current === 'en'
+    ? plural(n, 'cell', 'cells', 'cells')
+    : plural(n, 'ячейка', 'ячейки', 'ячеек')
 }
 
 /** "3 years" / "3 года" */
 export function formatYears(n: number): string {
   return current === 'en'
-    ? `${n} ${plural(n, 'year', 'years', 'years')}`
-    : `${n} ${plural(n, 'год', 'года', 'лет')}`
+    ? `${formatNumber(n)} ${plural(n, 'year', 'years', 'years')}`
+    : `${formatNumber(n)} ${plural(n, 'год', 'года', 'лет')}`
 }
 
 export function months(): string[] {
@@ -1044,7 +1078,7 @@ const aboutLists: Record<Lang, Record<string, readonly AboutRow[]>> = {
     ['A day at a time', 'Seven models, not one: the target is “will this cell burn within N days”, so Tuesday needs a model that was asked about Tuesday. Each picks its own features and its own number of trees, and the shorter windows are held below the longer ones so the week can only ever warm as it runs.'],
     ['The reconciliation', 'The sensitivity ratio between the two instruments, measured separately for every area and season rather than assumed, and applied so the years before 2012 read on the same scale as the years after.'],
     ['A pyramid of resolutions', 'The whole planet at one degree by month, down to a hundredth of a degree by year \u2014 four levels, drawn from the level the zoom can actually use, so the globe loads as fast as a city.'],
-    ['A day at a time', 'Every day of 24 years at a quarter degree, which is what makes a calendar of 9,000 days possible for any point on Earth.'],
+    ['Day after day', 'Every day of 24 years at a quarter degree, which is what makes a calendar of 9,000 days possible for any point on Earth.'],
     ['This week, and next', 'The last seven days as a snapshot, and a gradient-boosted model\u2019s estimate of the seven to come.'],
     ['What it does', 'Fire radiative power turned into carbon dioxide by the published method, calibrated against GFED, with the caveats printed beside the number rather than in a footnote.'],
     ],

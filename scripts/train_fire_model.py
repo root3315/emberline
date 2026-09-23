@@ -40,7 +40,7 @@ model could run to 2026, but then the two would be scored on two
 different questions; `ERAS` below is the single source of these years.
 
 Sampling differs by purpose. Training takes every positive and a few negatives
-each, because under a one-per-cent base rate a model fed raw data learns to
+each, because under a five-per-cent base rate a model fed raw data learns to
 say "no" and stop. The test set is drawn at the natural rate, untouched, so
 precision and recall mean what they normally mean.
 

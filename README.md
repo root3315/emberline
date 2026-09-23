@@ -118,9 +118,9 @@ of 27, with drops of 0.0090 and 0.0077.
 
 ### What a clone gives you, and what it does not
 
-Ten files under `public/data` are committed: the four regional cubes, the
-forecast metadata, the model card, the verification record and three
-reference files. Two directories are **not**, because between them they
+Eleven files under `public/data` are committed: the four regional cubes,
+the forecast metadata, the model card, the two verification records and
+three reference files. Two directories are **not**, because between them they
 are about a gigabyte of generated binaries:
 
 | | what is in it | without it |
@@ -199,7 +199,7 @@ never holds more than a tile of it at once.
 ```bash
 npm install
 npm run dev        # http://localhost:5178
-npm test           # 56 unit tests over the harmonization and statistics core
+npm test           # 65 unit tests over the harmonization and statistics core
 npm run build      # static output in dist/
 ```
 
@@ -278,7 +278,7 @@ src/sources/   FIRMS CSV parsing, archive loading, live queries
 src/ui/        ribbon, annual cycle, globe, satellite frame, Leaflet map, charts
 scripts/*.py   weather, model, forecast, horizons, reasons, verification
 scripts/*.mjs  archive builder, asset vendoring, screenshot + contrast audit
-tests/         56 tests over core
+tests/         65 tests over core
 models/        fitted model, weather archive, feature rows  (gitignored)
 public/data/   everything the page reads: archives, world pyramid, forecast
 ```

@@ -13,7 +13,7 @@
  * that seam is visible and the reader can discount it.
  */
 
-import { formatNumber, months, t } from '../i18n'
+import { formatCompact, formatNumber, months, t } from '../i18n'
 import { fitCanvas, LABEL, MONO, rgba, roundRect, varColor } from './paint'
 
 export interface WorldSeason {
@@ -33,11 +33,21 @@ const SEASON_H = 190
 const YEARS_H = 190
 const PAD = { top: 16, right: 12, bottom: 26, left: 56 }
 
-/** Compact axis labels: the planet deals in millions. */
-function shortCount(n: number): string {
-  if (n >= 1e6) return (n / 1e6).toFixed(n >= 1e7 ? 0 : 1) + 'M'
-  if (n >= 1e3) return Math.round(n / 1e3) + 'k'
-  return String(n)
+/**
+ * The three labels up the left edge, and the room they need.
+ *
+ * They used to come from a private formatter that wrote "3.5M" whatever
+ * language the page was in. `formatCompact` writes "3,5 млн" in Russian,
+ * which is right and also wider than the gutter was drawn for, so the
+ * gutter is measured rather than assumed: the labels are built first, the
+ * widest one decides, and it never shrinks below what it was.
+ */
+function axisLabels(ctx: CanvasRenderingContext2D, peak: number): { at: number[]; text: string[]; left: number } {
+  const at = [0, 0.5, 1]
+  const text = at.map((frac) => formatCompact(Math.round(peak * (1 - frac))))
+  ctx.font = MONO
+  const widest = Math.max(...text.map((t) => ctx.measureText(t).width))
+  return { at, text, left: Math.max(PAD.left, Math.ceil(widest) + 16) }
 }
 
 /**
@@ -53,34 +63,35 @@ export function drawWorldSeason(canvas: HTMLCanvasElement, seasons: WorldSeason[
   if (!surface || seasons.length === 0) return
   const { ctx, width } = surface
 
-  const plotW = width - PAD.left - PAD.right
-  const plotH = SEASON_H - PAD.top - PAD.bottom
-
   const series = seasons.map((s) => s.modis.map((m, i) => m + s.viirs[i]))
   const peak = Math.max(1, ...series.flat())
+
+  const axis = axisLabels(ctx, peak)
+  const plotW = width - axis.left - PAD.right
+  const plotH = SEASON_H - PAD.top - PAD.bottom
 
   const inkTertiary = varColor('--ink-tertiary')
   const edgeSoft = varColor('--edge-soft')
   const ember = varColor('--ember')
 
-  const x = (m: number) => PAD.left + (plotW * (m + 0.5)) / 12
+  const x = (m: number) => axis.left + (plotW * (m + 0.5)) / 12
   const y = (v: number) => PAD.top + plotH - (v / peak) * plotH
 
   // Baseline and two gridlines — enough to read a height, not a grid to study.
   ctx.strokeStyle = rgba(edgeSoft, 0.7)
   ctx.lineWidth = 1
-  for (const frac of [0, 0.5, 1]) {
+  axis.at.forEach((frac, i) => {
     const gy = Math.round(PAD.top + plotH * frac) + 0.5
     ctx.beginPath()
-    ctx.moveTo(PAD.left, gy)
-    ctx.lineTo(PAD.left + plotW, gy)
+    ctx.moveTo(axis.left, gy)
+    ctx.lineTo(axis.left + plotW, gy)
     ctx.stroke()
     ctx.fillStyle = rgba(inkTertiary, 0.8)
     ctx.font = MONO
     ctx.textAlign = 'right'
     ctx.textBaseline = 'middle'
-    ctx.fillText(shortCount(peak * (1 - frac)), PAD.left - 8, gy)
-  }
+    ctx.fillText(axis.text[i], axis.left - 8, gy)
+  })
 
   // Every other year, quietly.
   ctx.lineWidth = 1
@@ -143,9 +154,10 @@ export function drawWorldYears(
    */
   const hasTemp = Boolean(temps && temps.size >= 2)
   const padRight = hasTemp ? 44 : PAD.right
-  const plotW = width - PAD.left - padRight
-  const plotH = YEARS_H - PAD.top - PAD.bottom
   const peak = Math.max(1, ...totals.map((d) => Math.max(d.modis, d.viirs)))
+  const axis = axisLabels(ctx, peak)
+  const plotW = width - axis.left - padRight
+  const plotH = YEARS_H - PAD.top - PAD.bottom
 
   const step = plotW / totals.length
   const barW = Math.max(2, Math.min(11, step / 2 - 1.5))
@@ -157,21 +169,21 @@ export function drawWorldYears(
 
   ctx.strokeStyle = rgba(edgeSoft, 0.7)
   ctx.lineWidth = 1
-  for (const frac of [0, 0.5, 1]) {
+  axis.at.forEach((frac, i) => {
     const gy = Math.round(PAD.top + plotH * frac) + 0.5
     ctx.beginPath()
-    ctx.moveTo(PAD.left, gy)
-    ctx.lineTo(PAD.left + plotW, gy)
+    ctx.moveTo(axis.left, gy)
+    ctx.lineTo(axis.left + plotW, gy)
     ctx.stroke()
     ctx.fillStyle = rgba(inkTertiary, 0.8)
     ctx.font = MONO
     ctx.textAlign = 'right'
     ctx.textBaseline = 'middle'
-    ctx.fillText(shortCount(peak * (1 - frac)), PAD.left - 8, gy)
-  }
+    ctx.fillText(axis.text[i], axis.left - 8, gy)
+  })
 
   totals.forEach((d, i) => {
-    const cx = PAD.left + step * (i + 0.5)
+    const cx = axis.left + step * (i + 0.5)
     const on = d.year === year
     const pairs: Array<[number, ReturnType<typeof varColor>, number]> = [
       [d.modis, cModis, cx - barW - 1],
@@ -225,7 +237,7 @@ export function drawWorldYears(
   totals.forEach((d, i) => {
     const v = temps.get(d.year)
     if (v === undefined) return
-    const cx = PAD.left + step * (i + 0.5)
+    const cx = axis.left + step * (i + 0.5)
     if (started) ctx.lineTo(cx, ty(v))
     else {
       ctx.moveTo(cx, ty(v))
@@ -238,8 +250,8 @@ export function drawWorldYears(
   ctx.font = MONO
   ctx.textAlign = 'left'
   ctx.textBaseline = 'middle'
-  ctx.fillText(`+${hi.toFixed(1)}°`, PAD.left + plotW + 8, ty(hi))
-  ctx.fillText(`+${lo.toFixed(1)}°`, PAD.left + plotW + 8, ty(lo))
+  ctx.fillText(`+${formatNumber(hi, 1)}°`, axis.left + plotW + 8, ty(hi))
+  ctx.fillText(`+${formatNumber(lo, 1)}°`, axis.left + plotW + 8, ty(lo))
 }
 
 /** The one-line summary above the charts. */

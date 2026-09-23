@@ -4,6 +4,7 @@ import {
   DOY_MAX,
   analyzeYear,
   annualTrend,
+  burningDays,
   climatology,
   concentrationDays,
   criticalPeriods,
@@ -91,6 +92,36 @@ describe('season shape', () => {
     expect(shape.start).toBeLessThan(shape.peak)
     expect(shape.end).toBeGreaterThan(shape.peak)
     expect(shape.length).toBeGreaterThan(30)
+  })
+
+  it('counts the days of the season, not the distance between its ends', () => {
+    const shape = seasonShape(row(seasonal(220, 100)))!
+    // The tile prints this number under the two dates it belongs to, so a
+    // reader can subtract them: 6 May to 12 November is 191 days, not 190.
+    expect(shape.length).toBe(shape.end - shape.start + 1)
+  })
+
+  it('counts only the days that burn when the season has a break in it', () => {
+    // Two windows and a quiet summer between them: the number under the
+    // dates is the two windows, counted inclusively and added.
+    const twice = row((d) => (d >= 100 && d <= 120 ? 80 : d >= 280 && d <= 310 ? 90 : 0))
+    const shape = seasonShape(twice)!
+    expect(shape.gap).not.toBeNull()
+    expect(burningDays(shape)).toBe(shape.gap!.from - shape.start + (shape.end - shape.gap!.to))
+    expect(burningDays(shape)).toBeLessThan(shape.length)
+  })
+
+  it('counts them from the dates even when the medians disagree', () => {
+    /*
+     * The typical season is not a season. Every field of it is a median
+     * taken separately across the years, so its gap's length need not
+     * match its gap's own two ends -- Punjab's differ by two days. The
+     * count has to come from the four dates the page prints beside it,
+     * because those are the ones a reader can add up.
+     */
+    const typical = { start: 126, peak: 306, end: 316, length: 191, total: 0, peakValue: 0, gap: { from: 143, to: 279, days: 135 } }
+    expect(burningDays(typical)).toBe(54)
+    expect(typical.length - typical.gap.days).toBe(56)
   })
 
   it('ignores a stray detection months before the season', () => {

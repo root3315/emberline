@@ -65,6 +65,7 @@ import {
   climatology,
   concentrationDays,
   monthlyShare,
+  burningDays,
   summarizeYears,
   toYearGrid,
   type Climatology,
@@ -73,6 +74,8 @@ import {
 import { MODIS_MASK, SENSOR_META, SENSORS, VIIRS_MASK, type Bounds, type SensorId } from './core/types'
 import {
   applyStaticStrings,
+  cellsUnit,
+  formatCompact,
   formatDate,
   formatDoy,
   formatDoyLong,
@@ -168,6 +171,7 @@ const els = {
   futureAside: $('future-aside'),
   futureStats: $('future-stats'),
   futureMapNote: $('future-map-note'),
+  futureRiskNote: $('future-risk-note'),
   futureMapSlot: $('future-map-slot'),
   futureRisk: $('future-risk'),
   futureRiskList: $('future-risk-list'),
@@ -535,9 +539,9 @@ function renderMapForecast(box: Bounds | null, name: string | null, fitKey: stri
   setMapCaveat(
     t('forecastSkill', {
       tested: meta.tested,
-      model: meta.skill.model.toFixed(2),
-      clim: meta.skill.climatology.toFixed(2),
-      persist: meta.skill.persistence.toFixed(2),
+      model: formatNumber(meta.skill.model, 2),
+      clim: formatNumber(meta.skill.climatology, 2),
+      persist: formatNumber(meta.skill.persistence, 2),
       base: pct(meta.skill.baseRate),
     }),
   )
@@ -1014,10 +1018,10 @@ async function renderAbout(): Promise<void> {
       test: meta.tested.replace('-', '–'),
     })
     els.aboutModelStats.innerHTML = ''
-    aboutStat(t('skillModel'), meta.skill.model.toFixed(3))
-    aboutStat(t('skillClimatology'), meta.skill.climatology.toFixed(3))
-    aboutStat(t('skillPersistence'), meta.skill.persistence.toFixed(3))
-    aboutStat('ROC AUC', meta.skill.rocAuc.toFixed(3))
+    aboutStat(t('skillModel'), formatNumber(meta.skill.model, 3))
+    aboutStat(t('skillClimatology'), formatNumber(meta.skill.climatology, 3))
+    aboutStat(t('skillPersistence'), formatNumber(meta.skill.persistence, 3))
+    aboutStat('ROC AUC', formatNumber(meta.skill.rocAuc, 3))
   }
   writeUrl()
   status('')
@@ -1105,10 +1109,10 @@ async function drawModelCharts(): Promise<void> {
     // The bars show the margin; the raw scores belong under them, because
     // the first question anyone asks of a percentage is "of what".
     els.aboutWeatherRaw.textContent = t('aboutWeatherRaw', {
-      withAp: model.scores.model.toFixed(3),
-      withoutAp: model.without?.model.toFixed(3) ?? '—',
-      withRoc: model.scores.rocAuc.toFixed(3),
-      withoutRoc: model.without?.rocAuc.toFixed(3) ?? '—',
+      withAp: formatNumber(model.scores.model, 3),
+      withoutAp: model.without ? formatNumber(model.without.model, 3) : '—',
+      withRoc: formatNumber(model.scores.rocAuc, 3),
+      withoutRoc: model.without ? formatNumber(model.without.rocAuc, 3) : '—',
     })
   }
   if (model.reliability.length) {
@@ -1280,7 +1284,7 @@ async function renderFuture(): Promise<void> {
     statInto(
       els.futureStats,
       t('futureStatSkill'),
-      `${meta.skill.model.toFixed(2)} / ${meta.skill.climatology.toFixed(2)}`,
+      `${formatNumber(meta.skill.model, 2)} / ${formatNumber(meta.skill.climatology, 2)}`,
       '',
     )
 
@@ -1898,8 +1902,8 @@ async function renderProof(): Promise<void> {
     formatPercent(recall * 100),
     t('proofRecallNote', { flagged: formatNumber(got.flagged) }),
   )
-  statInto(els.proofStats, t('proofCaught'), formatNumber(got.caught), t('unitCells'))
-  statInto(els.proofStats, t('proofMissed'), formatNumber(got.missed), t('unitCells'))
+  statInto(els.proofStats, t('proofCaught'), formatNumber(got.caught), cellsUnit(got.caught))
+  statInto(els.proofStats, t('proofMissed'), formatNumber(got.missed), cellsUnit(got.missed))
 
   els.proofNote.textContent = got.whole
     ? t('proofWhole')
@@ -1996,6 +2000,20 @@ function renderRisk(): void {
    */
   els.futureRisk.hidden = all.length === 0
   if (!all.length) return
+
+  /*
+   * How bunched they are, read off the list rather than asserted.
+   *
+   * This note said "all twenty are above 97%" and sat directly above a
+   * list running from 91 to 98, where three of the twenty clear it. The
+   * sentence only needs them close together for its argument, and how
+   * close is in the file it is describing.
+   */
+  const chances = all.map((h) => h.p * 100)
+  els.futureRiskNote.textContent = t('futureRiskNote', {
+    lo: formatPercent(Math.min(...chances), 0),
+    hi: formatPercent(Math.max(...chances), 0),
+  })
   const spots = riskAll ? all : all.slice(0, RISK_SHOWN)
   els.futureRiskList.innerHTML = ''
   const lang = getLang()
@@ -2065,7 +2083,7 @@ function renderTrust(): void {
     const dt = document.createElement('dt')
     dt.textContent = label
     const dd = document.createElement('dd')
-    dd.textContent = value.toFixed(2)
+    dd.textContent = formatNumber(value, 2)
     const bar = document.createElement('span')
     bar.className = 'skill__bar'
     const fill = document.createElement('i')
@@ -2255,8 +2273,8 @@ function renderHero(ds: Dataset): void {
      * The 10-to-90 rule takes a single window, so a place that burns in
      * spring and again in autumn was being described as burning right
      * through the summer it spends quiet. Punjab is the case: wheat
-     * stubble in April, rice stubble in October, and about a hundred and
-     * twenty days of nothing in between.
+     * stubble in April, rice stubble in October, and a hundred and
+     * thirty-five days of nothing in between.
      */
     const sentence = typical.gap
       ? t('heroSeasonTwice', {
@@ -2325,7 +2343,7 @@ function renderHero(ds: Dataset): void {
       t('statTypical'),
       `${formatDoy(typical.start)} – ${formatDoy(typical.end)}`,
       typical.gap
-        ? t('statTypicalTwo', { n: formatDays(typical.length - typical.gap.days) })
+        ? t('statTypicalTwo', { n: formatDays(burningDays(typical)) })
         : formatDays(typical.length),
     )
   }
@@ -2476,12 +2494,14 @@ function metric(label: string, value: string, note: string, tone?: 'up' | 'down'
   els.metrics.append(wrap)
 }
 
-/** 12 400 rather than 12,431 — the extra digits are noise at this size. */
-function compact(value: number): string {
-  if (value >= 1_000_000) return `${(value / 1_000_000).toFixed(value >= 10_000_000 ? 0 : 1)}M`
-  if (value >= 10_000) return `${(value / 1000).toFixed(value >= 100_000 ? 0 : 1)}k`
-  return formatNumber(value)
-}
+/**
+ * 12 400 rather than 12,431 — the extra digits are noise at this size.
+ *
+ * It used to write "3.5M" in Russian too. The thresholds and the wording
+ * now live in `formatCompact`, next to the other formatters that have to
+ * know which language they are in.
+ */
+const compact = formatCompact
 
 type SortKey = 'year' | 'start' | 'peak' | 'length' | 'total' | 'ratio' | 'above'
 
@@ -2803,9 +2823,9 @@ function renderSensors(ds: Dataset): void {
   els.sensitivityNote.textContent =
     s.samples >= 10
       ? t('sensitivity', {
-          k: s.k.toFixed(2),
-          lo: s.lo.toFixed(2),
-          hi: s.hi.toFixed(2),
+          k: formatNumber(s.k, 2),
+          lo: formatNumber(s.lo, 2),
+          hi: formatNumber(s.hi, 2),
           n: formatNumber(s.samples),
         })
       : t('sensitivityUnknown')

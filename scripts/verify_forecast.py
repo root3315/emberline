@@ -304,7 +304,7 @@ def main() -> None:
     if n_quiet > 1000:
         q_probs = probs[quiet]
         q_hit = hit[quiet]
-        ranked_q = np.lexsort((jitter[: n_quiet], -q_probs))
+        ranked_q = np.lexsort((jitter[quiet], -q_probs))
         base = float(q_hit.mean())
         report["quiet"] = {
             "cells": n_quiet,
