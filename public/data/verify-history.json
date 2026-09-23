@@ -8,45 +8,67 @@
    "elapsed": 4,
    "whole": false,
    "flagged": 107494,
-   "detections": 33023,
-   "burnedCells": 8366,
-   "caught": 8134,
-   "missed": 232,
+   "detections": 33615,
+   "burnedCells": 8514,
+   "caught": 8273,
+   "missed": 241,
    "ranking": [
     {
      "top": 1000,
-     "burned": 0.724
+     "burned": 0.726
     },
     {
      "top": 5000,
-     "burned": 0.5598
+     "burned": 0.5642
     },
     {
      "top": 20000,
-     "burned": 0.29405
+     "burned": 0.29775
     },
     {
      "top": 107494,
-     "burned": 0.0756693396840754
+     "burned": 0.07696243511265745
     }
    ],
    "baselines": {
     "persistence": [
      {
       "top": 1000,
-      "burned": 0.713
+      "burned": 0.716
      },
      {
       "top": 5000,
-      "burned": 0.5376
+      "burned": 0.5422
      },
      {
       "top": 20000,
-      "burned": 0.2618
+      "burned": 0.26545
      },
      {
       "top": 107494,
-      "burned": 0.0756693396840754
+      "burned": 0.07696243511265745
+     }
+    ]
+   },
+   "quiet": {
+    "cells": 93214,
+    "burned": 0.0339004870513013,
+    "ranking": [
+     {
+      "top": 1000,
+      "burned": 0.269
+     },
+     {
+      "top": 5000,
+      "burned": 0.1782
+     },
+     {
+      "top": 20000,
+      "burned": 0.0994
+     },
+     {
+      "top": 93214,
+      "burned": 0.0339004870513013
      }
     ]
    }

@@ -77,6 +77,7 @@ import {
   formatDoy,
   formatDoyLong,
   formatNumber,
+  formatPercent,
   formatDays,
   formatYears,
   getLang,
@@ -225,6 +226,8 @@ const els = {
   proofWhen: $('proof-when'),
   proofRungs: $('proof-rungs'),
   proofLegend: $('proof-legend'),
+  proofQuietTitle: $('proof-quiet-title'),
+  proofQuiet: $('proof-quiet'),
   proofRecordTitle: $('proof-record-title'),
   proofRecordNote: $('proof-record-note'),
   proofRecord: $('proof-record'),
@@ -1723,7 +1726,7 @@ function renderRecord(weeks: readonly VerifyWeek[]): void {
   els.proofRecordNote.textContent =
     mean === null
       ? t('proofRecordPartial', { n: String(weeks.length) })
-      : t('proofRecordMean', { n: String(whole.length), pct: `${(mean * 100).toFixed(1)}%` })
+      : t('proofRecordMean', { n: String(whole.length), pct: formatPercent(mean * 100) })
 
   for (const week of weeks) {
     const li = document.createElement('li')
@@ -1742,12 +1745,12 @@ function renderRecord(weeks: readonly VerifyWeek[]): void {
     const got = document.createElement('span')
     got.className = 'record__got'
     const top = week.ranking[0]
-    got.textContent = top ? `${(top.burned * 100).toFixed(1)}%` : '—'
+    got.textContent = top ? formatPercent(top.burned * 100) : '—'
 
     const base = week.baselines?.persistence?.[0]
     const against = document.createElement('span')
     against.className = 'record__against'
-    against.textContent = base ? t('proofRecordAgainst', { pct: `${(base.burned * 100).toFixed(1)}%` }) : ''
+    against.textContent = base ? t('proofRecordAgainst', { pct: formatPercent(base.burned * 100) }) : ''
 
     li.append(when, how, got, against)
     els.proofRecord.append(li)
@@ -1801,7 +1804,7 @@ async function renderProof(): Promise<void> {
 
     const pct = document.createElement('span')
     pct.className = 'proof__pct'
-    pct.textContent = `${(rung.burned * 100).toFixed(1)}%`
+    pct.textContent = formatPercent(rung.burned * 100)
 
     const bar = document.createElement('span')
     bar.className = 'proof__bar'
@@ -1825,7 +1828,7 @@ async function renderProof(): Promise<void> {
       const mark = document.createElement('u')
       mark.className = 'proof__base'
       mark.style.left = `${Math.min(100, Math.max(0, (other.burned / top) * 100))}%`
-      mark.title = t('proofBaseline', { pct: `${(other.burned * 100).toFixed(1)}%` })
+      mark.title = t('proofBaseline', { pct: formatPercent(other.burned * 100) })
       bar.append(mark)
     }
 
@@ -1857,11 +1860,33 @@ async function renderProof(): Promise<void> {
     })}`
   }
 
+  /*
+   * And the part of the map the free method cannot see.
+   *
+   * Hidden when the measurement is absent rather than filled with
+   * dashes: it is the strongest claim in this band, and a half-drawn
+   * version of it would be worse than none.
+   */
+  const quiet = got.quiet
+  const quietTop = quiet?.ranking[0]
+  els.proofQuietTitle.hidden = !quietTop
+  els.proofQuiet.hidden = !quietTop
+  if (quiet && quietTop) {
+    els.proofQuiet.textContent = t('proofQuietBody', {
+      all: formatNumber(got.flagged),
+      cells: formatNumber(quiet.cells),
+      share: `${Math.round((quiet.cells / got.flagged) * 100)}%`,
+      burned: formatPercent(quiet.burned * 100),
+      top: formatPercent(quietTop.burned * 100),
+      lift: formatNumber(quietTop.burned / quiet.burned, 1),
+    })
+  }
+
   els.proofLegend.hidden = !base
   if (base) {
     els.proofLegend.textContent = t('proofBaselineLegend', {
-      model: `${(got.ranking[0].burned * 100).toFixed(1)}%`,
-      base: `${(base[0].burned * 100).toFixed(1)}%`,
+      model: formatPercent(got.ranking[0].burned * 100),
+      base: formatPercent(base[0].burned * 100),
     })
   }
 
@@ -1870,7 +1895,7 @@ async function renderProof(): Promise<void> {
   statInto(
     els.proofStats,
     t('proofRecall'),
-    `${(recall * 100).toFixed(1)}%`,
+    formatPercent(recall * 100),
     t('proofRecallNote', { flagged: formatNumber(got.flagged) }),
   )
   statInto(els.proofStats, t('proofCaught'), formatNumber(got.caught), t('unitCells'))
@@ -2238,7 +2263,7 @@ function renderHero(ds: Dataset): void {
     els.heroAside.textContent = t('partialYear', { year: state.year, date: formatDate(ds.range.to) })
   } else if (a?.shape && baselineYears >= MIN_BASELINE_YEARS) {
     const ratio = a.totalRatio
-    const ratioText = `${ratio.toFixed(ratio < 10 ? 1 : 0)}×`
+    const ratioText = `${formatNumber(ratio, ratio < 10 ? 1 : 0)}×`
     const key = ratio > 1.15 ? 'heroYearBusy' : ratio < 0.85 ? 'heroYearQuiet' : 'heroYearPlain'
     const line = document.createElement('span')
     line.textContent = t(key, { year: state.year, ratio: ratioText })
@@ -2378,7 +2403,7 @@ function renderMetrics(ds: Dataset, totals: Map<number, number>): void {
     const pct = trend.slopePct * 100
     metric(
       t('metricTrend'),
-      `${pct > 0 ? '+' : ''}${pct.toFixed(1)}%`,
+      formatPercent(pct, 1, true),
       t('trendOnModis'),
       pct > 0 ? 'up' : 'down',
     )
@@ -2467,7 +2492,7 @@ function renderYearTable(): void {
       { text: r.shape ? formatDoy(r.shape.peak, r.year) : '—' },
       { text: r.shape ? String(r.shape.length) : '—', cls: 'num' },
       { text: compact(Math.round(total)), cls: 'num bar-cell', bar: (total / maxTotal) * 100 },
-      { text: trustworthy && r.ratio > 0 ? `${r.ratio.toFixed(1)}×` : '—', cls: 'num' },
+      { text: trustworthy && r.ratio > 0 ? `${formatNumber(r.ratio, 1)}×` : '—', cls: 'num' },
       {
         text: trustworthy ? String(r.daysAboveP90) : '—',
         cls: 'num above-cell',
@@ -2762,7 +2787,7 @@ function renderReading(): void {
   }
 
   const ratio = a.totalRatio
-  const ratioText = `${ratio.toFixed(ratio < 10 ? 1 : 0)}×`
+  const ratioText = `${formatNumber(ratio, ratio < 10 ? 1 : 0)}×`
   const quiet = ratio < 0.8 && a.critical.length === 0
 
   const sentence = quiet
@@ -2850,7 +2875,7 @@ function renderReading(): void {
 
     const meta = document.createElement('span')
     meta.className = 'period__meta'
-    const ratioLabel = Number.isFinite(p.ratio) ? t('periodRatio', { n: p.ratio.toFixed(1) }) : ''
+    const ratioLabel = Number.isFinite(p.ratio) ? t('periodRatio', { n: formatNumber(p.ratio, 1) }) : ''
     meta.textContent = `${formatDays(p.days)} · ${ratioLabel}`
 
     li.append(span, meta)
@@ -4142,7 +4167,7 @@ function renderImpact(): void {
         share: `${Math.round((gt / est.comparison.annualGtCo2) * 100)}%`,
       }).split('{co2}')
       const strong = document.createElement('b')
-      strong.textContent = `${gt.toFixed(1)} ${t('unitGt')}`
+      strong.textContent = `${formatNumber(gt, 1)} ${t('unitGt')}`
       lead.append(document.createTextNode(head ?? ''), strong, document.createTextNode(tail ?? ''))
       // A year still running has months to come, and its figure would
       // otherwise read as a collapse in burning rather than as a calendar.

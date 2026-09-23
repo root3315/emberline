@@ -388,6 +388,9 @@ const en: Dict = {
   proofBaseline: 'it burned last week: {pct}',
   proofBaselineLegend:
     'The notch on each bar is what “it burned in the last seven days” would have given you — no model, no features, free. On the top thousand it reaches {base} against the model’s {model}. The model leads on every rung, and not by much: over a seven-day window in peak season, fire mostly continues where it already is. The gap it earns is over the whole ranking, and in the places that have not just burned.',
+  proofQuietTitle: 'Where the free method is blind',
+  proofQuietBody:
+    'Of the {all} cells on the map, {cells} \u2014 {share} of it \u2014 had not burned in the seven days before this forecast was made. \u201cIt burned last week\u201d scores zero on every one of them, so across that part of the map it has no opinion at all: its order there is the tie-break. {burned} of those cells have burned inside the window. The thousand of them the model ranked highest: {top}, which is {lift} times the rate of the set they came from. That is the part a forecast is for.',
   proofRecordTitle: 'Every week we have checked',
   proofRecordMean:
     'Across {n} finished weeks, an average of {pct} of the thousand cells ranked highest burned inside the window. Partly run weeks are marked and can only rise.',
@@ -804,6 +807,9 @@ const ru: Dict = {
   proofBaseline: 'горело на прошлой неделе: {pct}',
   proofBaselineLegend:
     'Засечка на каждой полоске — то, что дало бы «горело за последние семь дней»: без модели, без признаков, бесплатно. На верхней тысяче она берёт {base} против {model} у модели. Модель впереди на каждой ступени, и ненамного: на семидневном окне в разгар сезона огонь в основном продолжается там, где уже идёт. Свой отрыв она зарабатывает на всём ранжировании и там, где только что не горело.',
+  proofQuietTitle: 'Там, где бесплатный способ слеп',
+  proofQuietBody:
+    'Из {all} ячеек на карте {cells} — {share} — за семь дней до расчёта прогноза не горели. У «горело на прошлой неделе» на каждой из них ноль, то есть об этой части карты он не знает ничего: порядок там — случайный разрыв ничьей. Внутри окна из этих ячеек сгорело {burned}. А из тысячи, которую модель поставила выше всех на том же множестве, — {top}, то есть в {lift} раза больше, чем в среднем по нему. Это и есть та часть, ради которой прогноз существует.',
   proofRecordTitle: 'Все недели, которые мы проверили',
   proofRecordMean:
     'По {n} завершённым неделям в среднем {pct} из тысячи верхних ячеек сгорело внутри окна. Неполные недели помечены, и их доля может только вырасти.',
@@ -942,6 +948,24 @@ export function plural(n: number, one: string, few: string, many: string): strin
   if (mod10 === 1 && mod100 !== 11) return one
   if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) return few
   return many
+}
+
+/**
+ * A percentage in the reader's own convention: 26.9% or 26,9%.
+ *
+ * `toFixed` always writes a dot, which put "26.9%" on the same page as a
+ * hand-written "2,5%" and next to thousands that `Intl` had already
+ * grouped the Russian way. Takes a value already in percent units.
+ *
+ * Not for CSS. A `width: 26,9%` is not a length.
+ */
+export function formatPercent(pct: number, digits = 1, sign = false): string {
+  const text = new Intl.NumberFormat(current === 'ru' ? 'ru-RU' : 'en-GB', {
+    minimumFractionDigits: digits,
+    maximumFractionDigits: digits,
+    signDisplay: sign ? 'exceptZero' : 'auto',
+  }).format(pct)
+  return `${text}%`
 }
 
 /** "142 days" / "142 дня" */

@@ -163,6 +163,8 @@ def remember(report: dict) -> int:
     row["ranking"] = report.get("ranking", [])
     if report.get("baselines"):
         row["baselines"] = report["baselines"]
+    if report.get("quiet"):
+        row["quiet"] = report["quiet"]
 
     log = [w for w in log if w["from"] != row["from"]] + [row]
     log.sort(key=lambda w: w["from"])
@@ -284,6 +286,42 @@ def main() -> None:
             report["baselines"]["climatology"] = ladder(
                 saved["rows"][:, names.index("clim")].astype(np.float64)
             )
+
+
+    # ── and where the free method has no opinion at all ───────────────────
+    #
+    # Persistence scores zero on every cell that did not burn last week, so
+    # across that part of the map its ranking is the tie-break and nothing
+    # else. It is also most of the map. A forecast that is only as good as
+    # "it burned last week" on the cells that burned last week has told
+    # nobody anything; this is the part where it either earns its keep or
+    # does not, and it was not being measured.
+    #
+    # The subset's own base rate is what the ladder is read against, because
+    # there is no rival ranking to draw beside it.
+    quiet = recent[cells] == 0
+    n_quiet = int(quiet.sum())
+    if n_quiet > 1000:
+        q_probs = probs[quiet]
+        q_hit = hit[quiet]
+        ranked_q = np.lexsort((jitter[: n_quiet], -q_probs))
+        base = float(q_hit.mean())
+        report["quiet"] = {
+            "cells": n_quiet,
+            "burned": base,
+            "ranking": [
+                {"top": int(t), "burned": float(q_hit[ranked_q[:t]].mean())}
+                for t in (1000, 5000, 20000, n_quiet)
+                if t <= n_quiet
+            ],
+        }
+        print()
+        print(f"  of the {n_quiet:,} cells that did NOT burn in the week before,")
+        print(f"  where persistence has no opinion (base rate {base * 100:.1f}%):")
+        for rung in report["quiet"]["ranking"]:
+            label = "all of them" if rung["top"] == n_quiet else f"top {rung['top']:,}"
+            lift = rung["burned"] / base if base else 0
+            print(f"    {label:<22} {rung['burned'] * 100:6.1f}%   x{lift:.1f}")
 
     print()
     head = "  of the cells ranked highest by...   "

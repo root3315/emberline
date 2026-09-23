@@ -60,6 +60,14 @@ export interface Verify {
    * from and is absent whenever that has moved on.
    */
   baselines?: { persistence?: VerifyRung[]; climatology?: VerifyRung[] }
+  /**
+   * The same ladder over the cells persistence cannot speak about.
+   *
+   * `burned` is that subset's own base rate, which is what its ladder is
+   * read against: there is no rival ranking to draw beside it, because
+   * the rival scores zero on every cell in it.
+   */
+  quiet?: { cells: number; burned: number; ranking: VerifyRung[] }
   bands: VerifyBand[]
 }
 
@@ -84,6 +92,7 @@ export interface VerifyWeek {
   caught: number
   ranking: VerifyRung[]
   baselines?: { persistence?: VerifyRung[]; climatology?: VerifyRung[] }
+  quiet?: { cells: number; burned: number; ranking: VerifyRung[] }
 }
 
 let wanted: Promise<Verify | null> | null = null
