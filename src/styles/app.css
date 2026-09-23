@@ -3117,6 +3117,73 @@ canvas {
  * stops being true the notch will sit past the end of the fill, which is
  * exactly the right way for it to look.
  */
+/*
+ * The record: one line per checked week.
+ *
+ * A table would be four columns of two rows and would look like a
+ * spreadsheet that ran out of data; a list grows gracefully from one row
+ * to twenty. The share is the only thing set in the display face,
+ * because it is the only thing a reader is scanning for.
+ */
+.record {
+  display: grid;
+  gap: var(--s-3);
+  margin: var(--s-4) 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.record__row {
+  display: grid;
+  grid-template-columns: minmax(0, auto) minmax(0, 1fr) auto auto;
+  gap: var(--s-2) var(--s-4);
+  align-items: baseline;
+  padding-bottom: var(--s-3);
+  border-bottom: 1px solid var(--edge-soft);
+}
+
+.record__row:last-child {
+  border-bottom: 0;
+}
+
+.record__when {
+  font-family: var(--font-mono);
+  font-size: var(--t-small);
+  color: var(--ink-primary);
+}
+
+.record__how,
+.record__against {
+  font-size: var(--t-caption);
+  color: var(--ink-tertiary);
+}
+
+.record__got {
+  font-family: var(--font-display);
+  font-size: var(--t-h4);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--ember);
+}
+
+/* Four columns will not sit on a phone; the dates and the share keep the
+   top line, and what qualifies them drops below. */
+@media (max-width: 560px) {
+  .record__row {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .record__how {
+    grid-row: 2;
+    grid-column: 1 / -1;
+  }
+
+  .record__against {
+    grid-row: 3;
+    grid-column: 1 / -1;
+  }
+}
+
 .proof__base {
   position: absolute;
   top: 0;

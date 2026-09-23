@@ -303,6 +303,9 @@ const en: Dict = {
 
   aboutLimitsTitle: 'What it cannot see',
   aboutLimitsNote: 'Every limit below is one a reader could otherwise find the hard way, by trusting a number further than it deserves.',
+  aboutTriedTitle: 'What did not earn its place',
+  aboutTriedNote:
+    'Three things were built, measured and thrown away. They are here because a page that only shows what worked is not showing its work \u2014 and because each of these is a thing a reader might reasonably assume we forgot to try.',
   aboutCheckTitle: 'Check us',
   aboutCheckNote:
     'Every claim on this site is either visible in the interface or reproducible from the code. Nothing rests on trusting the authors.',
@@ -342,7 +345,7 @@ const en: Dict = {
   skillPersistence: 'It burned last week',
   skillRandom: 'Picking at random',
   futureSkillNote:
-    'Average precision on {tested}. The season alone is a hard baseline; the weather very nearly doubles the model’s margin over it, from 2.5% to 4.7%. One qualifier, because it matters: the model learned from the weather that actually happened, and the live map is driven by a forecast of it. So this is what is reachable if the weather forecast is right \u2014 an upper bound, not a promise.',
+    'Average precision on {tested}. The season alone is a hard baseline; the weather very nearly doubles the model’s margin over it, from 2.5% to 4.7%. One qualifier, because it matters: the model learned from the weather that actually happened, and the live map is driven by a forecast of it. So this is what is reachable if the weather forecast is right \u2014 an upper bound, not a promise. Persistence looks weak here and nearly matches the model on the live week below, and both are right: this column is average precision over every cell on the planet, where \u201cit burned last week\u201d has nothing to say about the millions that did not. The live ladder asks a narrower question \u2014 of the thousand cells ranked highest, how many burned \u2014 and at the very top of a peak-season list, fire mostly continues where it already is.',
   futureBack: 'Back to the record',
   globeCall: 'Press a fire to see the detail',
   pickForecast: 'Expected next week',
@@ -367,7 +370,7 @@ const en: Dict = {
   proofTitle: 'Checked against what happened',
   proofLadderTitle: 'Of the cells it ranked highest, this share has burned',
   proofWhen: 'The week on this page was computed on {computed}, before it began. Checked on {checked}, {elapsed} of its 7 days had passed and NASA had reported {detections} MODIS detections inside the window.',
-  proofPartial: '{days} is not a week: the shares below can only grow from here, and a rate that looks low on day two may be exactly right by Saturday. What the ladder already shows is the ordering — the cells it liked most are the ones burning first.',
+  proofPartial: '{days} is not a week: the shares below can only grow from here, and a rate that looks low this early may be exactly right once the window closes on {to}. What the ladder already shows is the ordering — the cells it liked most are the ones burning first.',
   proofWhole: 'The window has closed, so these are final.',
   proofTop: 'top {n}',
   proofAll: 'everything it flagged',
@@ -376,6 +379,14 @@ const en: Dict = {
   proofBaseline: 'it burned last week: {pct}',
   proofBaselineLegend:
     'The notch on each bar is what “it burned in the last seven days” would have given you — no model, no features, free. On the top thousand it reaches {base} against the model’s {model}. The model leads on every rung, and not by much: over a seven-day window in peak season, fire mostly continues where it already is. The gap it earns is over the whole ranking, and in the places that have not just burned.',
+  proofRecordTitle: 'Every week we have checked',
+  proofRecordMean:
+    'Across {n} finished weeks, an average of {pct} of the thousand cells ranked highest burned inside the window. Partly run weeks are marked and can only rise.',
+  proofRecordPartial:
+    'One week is on record so far, and it is still running. The row grows by one every time a finished window is checked, and nothing is ever removed from it \u2014 a forecast that scored badly would stay here too.',
+  proofRecordWhole: 'computed {computed}, full week',
+  proofRecordSoFar: 'computed {computed}, {days} in',
+  proofRecordAgainst: 'free method {pct}',
   proofRecallNote: 'with {flagged} cells flagged',
   trendOnModis: 'on MODIS alone — the ratio cancels',
   proofCaught: 'Burned and flagged',
@@ -701,6 +712,9 @@ const ru: Dict = {
 
   aboutLimitsTitle: 'Чего модель не знает',
   aboutLimitsNote: 'Каждое ограничение ниже — из тех, что иначе находят на своей шкуре, поверив числу дальше, чем оно того стоит.',
+  aboutTriedTitle: 'Что не прошло порог',
+  aboutTriedNote:
+    'Три вещи были сделаны, измерены и выброшены. Они здесь потому, что страница, показывающая только удачи, не показывает работу \u2014 и потому, что каждую из них читатель вправе счесть тем, о чём мы забыли.',
   aboutCheckTitle: 'Проверьте нас',
   aboutCheckNote:
     'Каждое утверждение на этом сайте либо видно в интерфейсе, либо воспроизводится из кода. Верить авторам не требуется нигде.',
@@ -740,7 +754,7 @@ const ru: Dict = {
   skillPersistence: 'Горело на прошлой неделе',
   skillRandom: 'Случайный выбор',
   futureSkillNote:
-    'Средняя точность на {tested}. Один только сезон — очень сильная база; с погодой перевес над ней почти удваивается — с 2,5% до 4,7%. Одна оговорка, и она важная: модель училась на погоде, которая была на самом деле, а живая карта идёт по прогнозу погоды. То есть это то, что достижимо, если прогноз погоды верен, — верхняя граница, а не обещание.',
+    'Средняя точность на {tested}. Один только сезон — очень сильная база; с погодой перевес над ней почти удваивается — с 2,5% до 4,7%. Одна оговорка, и она важная: модель училась на погоде, которая была на самом деле, а живая карта идёт по прогнозу погоды. То есть это то, что достижимо, если прогноз погоды верен, — верхняя граница, а не обещание. Здесь персистенция выглядит слабо, а на живой неделе ниже почти догоняет модель \u2014 и верно и то, и другое: в этой колонке средняя точность по всем ячейкам планеты, где \u00abгорело на прошлой неделе\u00bb нечего сказать о миллионах, где не горело. Живая лестница спрашивает уже\u0301 \u2014 из тысячи верхних ячеек сколько сгорело, \u2014 а на самом верху списка в разгар сезона огонь в основном продолжается там, где уже идёт.',
   futureBack: 'Назад к архиву',
   globeCall: 'Нажмите огонь, чтобы увидеть подробности',
   pickForecast: 'Ждём на неделе',
@@ -765,13 +779,21 @@ const ru: Dict = {
   proofTitle: 'Сверено с тем, что случилось',
   proofLadderTitle: 'Из ячеек, которые модель поставила выше всех, уже сгорело',
   proofWhen: 'Неделя на этой странице посчитана {computed} — до того, как она началась. На {checked} из её 7 дней прошло {elapsed}, и NASA сообщила о {detections} засечках MODIS внутри окна.',
-  proofPartial: '{days} — это ещё не неделя: доли ниже могут только расти, и то, что на второй день выглядит скромно, к субботе может оказаться ровно верным. Что лестница показывает уже сейчас — это порядок: ячейки, которые модель поставила выше, горят первыми.',
+  proofPartial: '{days} — это ещё не неделя: доли ниже могут только расти, и то, что выглядит скромно сейчас, к закрытию окна {to} может оказаться ровно верным. Что лестница показывает уже сейчас — это порядок: ячейки, которые модель поставила выше, горят первыми.',
   proofWhole: 'Окно закрылось, так что это окончательные числа.',
   proofTop: 'первые {n}',
   proofAll: 'всё, что отмечено',
   proofBaseline: 'горело на прошлой неделе: {pct}',
   proofBaselineLegend:
     'Засечка на каждой полоске — то, что дало бы «горело за последние семь дней»: без модели, без признаков, бесплатно. На верхней тысяче она берёт {base} против {model} у модели. Модель впереди на каждой ступени, и ненамного: на семидневном окне в разгар сезона огонь в основном продолжается там, где уже идёт. Свой отрыв она зарабатывает на всём ранжировании и там, где только что не горело.',
+  proofRecordTitle: 'Все недели, которые мы проверили',
+  proofRecordMean:
+    'По {n} завершённым неделям в среднем {pct} из тысячи верхних ячеек сгорело внутри окна. Неполные недели помечены, и их доля может только вырасти.',
+  proofRecordPartial:
+    'Пока на счету одна неделя, и она ещё идёт. Строка прибавляется каждый раз, когда проверяется закрывшееся окно, и из неё ничего не убирается — прогноз, который отработал плохо, остался бы здесь тоже.',
+  proofRecordWhole: 'посчитан {computed}, неделя целиком',
+  proofRecordSoFar: 'посчитан {computed}, прошло {days}',
+  proofRecordAgainst: 'бесплатный способ {pct}',
   proofRecallNote: 'при {flagged} отмеченных ячейках',
   trendOnModis: 'по MODIS — коэффициент сокращается',
   proofCaught: 'Сгорело и отмечено',
@@ -993,6 +1015,11 @@ const aboutLists: Record<Lang, Record<string, readonly AboutRow[]>> = {
     ['It learned on weather that happened', 'The live map runs on a forecast of the weather instead. The skill figures are what is reachable if that forecast is right \u2014 an upper bound, not a promise.'],
     ['A detection is not a fire', 'It is one satellite pass finding one pixel hot enough. A fire under cloud, or one that starts and dies between passes, is not in the record and so is not in the model.'],
     ],
+    aboutTriedList: [
+      ['A fitted calibration curve', 'The model is slightly under-confident: on the test years it says 84% where 90% burns. Isotonic regression and Platt scaling were both fitted on the tuning years and measured once on the test years. Isotonic matched the shipped Brier score of 0.0315 exactly and cost 0.0060 of average precision, because its staircase puts cells the model had ranked apart onto one tread. Platt kept the ranking and came out slightly worse on Brier, 0.0315 against 0.0315. Neither passed, so neither shipped, and the chart below is the uncalibrated model.'],
+      ['Where the people are', 'Every feature this model has is about fire, and most fire on this planet is lit by somebody \u2014 so the European Commission\u2019s global settlement layer went in as population per cell and population of the eight neighbours. Test average precision moved from 0.5579 to 0.5581. The two features came 12th and 13th of 27 by how much the score drops when each is scrambled: 0.0031 and 0.0030, against climatology\u2019s 0.387. The fire archive already knows where people are, because they have been lighting fires in it for twenty-four years.'],
+      ['More trees', 'Training loss was still falling at a thousand trees, which reads like a model cut off early. It was not. Validation average precision peaks at 200 trees, 0.7147, and then goes backwards: 0.7132 at 300, 0.7125 at a thousand. Five times the compute for slightly less skill.'],
+    ],
     aboutCheckList: [
     ['Nothing was chosen on the test years', 'How many trees, which features to keep, how deep to grow — every one of those was decided on 2014–2017 and the test years were opened once, at the end. Picking any of them by the test score is how a model flatters itself, and the scripts are written so that it cannot.'],
     ['The forecast is scored against reality', 'The week on the map was computed before it happened. verify_forecast.py asks NASA what has burned since and scores it \u2014 ranking from day one, calibration once the week closes. The answer did not exist when the question was asked.'],
@@ -1022,6 +1049,11 @@ const aboutLists: Record<Lang, Record<string, readonly AboutRow[]>> = {
     ['Оценена на 2018–2021, работает в 2026-м', 'Публичное зеркало ERA5 кончается 2021 годом, поэтому модель с погодой дальше не на чем оценивать. Пять лет сноса здесь не измерены — именно поэтому прогноз ещё и сверяется со свежими засечками каждую неделю.'],
     ['Училась на погоде, которая случилась', 'А живая карта идёт по прогнозу погоды. Цифры точности — это то, что достижимо, если прогноз верен: верхняя граница, а не обещание.'],
     ['Засечка — это не пожар', 'Это один пролёт спутника, нашедший один пиксель достаточно горячим. Пожар под облаком или тот, что начался и погас между пролётами, в архив не попал — значит, его нет и в модели.'],
+    ],
+    aboutTriedList: [
+      ['Подогнанная калибровочная кривая', 'Модель слегка перестраховывается: на тестовых годах она говорит 84% там, где горит 90%. Изотоническую регрессию и шкалирование Платта обе подогнали на настроечных годах и измерили один раз на тестовых. Изотоника в точности повторила шипнутый Brier 0.0315 и стоила 0.0060 средней точности: её ступенька сводит на одну ступень ячейки, которые модель развела. Платт ранжирование сохранил, но по Brier вышел чуть хуже. Ни одна не прошла порог — значит ни одна не поехала, и график ниже показывает некалиброванную модель.'],
+      ['Где живут люди', 'Все признаки этой модели — про огонь, а большинство пожаров на планете зажигает человек. Поэтому в неё добавили слой расселения Европейской комиссии: население ячейки и население восьми соседей. Средняя точность на тесте сдвинулась с 0.5579 до 0.5581. Два признака заняли 12-е и 13-е места из 27 по тому, насколько падает оценка, если каждый перемешать: 0.0031 и 0.0030 против 0.387 у климатологии. Архив пожаров уже знает, где люди, — они двадцать четыре года в нём и жгут.'],
+      ['Больше деревьев', 'На тысяче деревьев ошибка на обучении всё ещё падала — так выглядит модель, которую оборвали рано. Это оказалось не так. Средняя точность на валидации достигает максимума на 200 деревьях, 0.7147, и дальше идёт назад: 0.7132 на 300 и 0.7125 на тысяче. Впятеро больше счёта за чуть меньшее умение.'],
     ],
     aboutCheckList: [
     ['Ничто не выбиралось по тестовым годам', 'Сколько деревьев, какие признаки оставить, насколько глубоко растить — всё это решалось на 2014–2017, а тестовые годы открыли один раз, в самом конце. Подобрать что-нибудь по тесту — это и есть способ модели польстить себе, и скрипты написаны так, чтобы она не смогла.'],

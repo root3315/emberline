@@ -20,7 +20,7 @@ years the model has not seen". This does that: it grows one model on
 2003-2013 with `warm_start`, scores the held-out 2014-2017 at every
 checkpoint, and takes the count that curve actually likes.
 
-── Seven of the thirty features were making it worse ──────────────────────
+── Five of the thirty features were making it worse ───────────────────────
 
 Shuffling a feature and watching average precision *rise* means the model
 is leaning on noise. Seven columns do that. But the published ranking was

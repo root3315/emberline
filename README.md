@@ -98,15 +98,39 @@ resolution.
   writes it, persistence included, and refuses to show calibration until
   the week is complete.
 
-Negative results are on the page too, not in a drawer: recalibration
-(isotonic and Platt both failed to earn their place), population density
-(+0.0001 average precision), and vegetation cover at 160 km (barely
-distinguishable).
+Negative results are on the page, under *What did not earn its place* —
+not in a drawer and not only in these script headers:
+
+- **A fitted calibration curve.** Isotonic matched the shipped Brier of
+  0.0315 exactly and cost 0.0060 average precision to ties; Platt kept
+  the ranking and came out slightly worse on Brier. Neither shipped.
+- **Population.** The GHSL settlement layer moved test average precision
+  from 0.5579 to 0.5581, and its two features ranked 12th and 13th of 27
+  by permutation drop, against climatology's 0.387.
+- **More trees.** Training loss was still falling at a thousand;
+  validation average precision peaks at 200 and goes backwards after it.
+
+Vegetation cover is *not* on that list, an earlier draft of this file
+said it was, and it was wrong: `veg_low` and `veg_high` rank 6th and 7th
+of 27, with drops of 0.0090 and 0.0077.
 
 ## Rebuilding the model and the forecast
 
-The site is static and every data file it reads is committed, so none of
-this is needed to run the page. It is here so the work can be checked.
+### What a clone gives you, and what it does not
+
+Ten files under `public/data` are committed: the four regional cubes, the
+forecast metadata, the model card, the verification record and three
+reference files. Two directories are **not**, because between them they
+are about a gigabyte of generated binaries:
+
+| | what is in it | without it |
+|---|---|---|
+| `public/data/world/` | daily tiles, the 4-level global pyramid, the forecast rasters | the regional calendar works; the planet falls back to its coarsest level and the forecast page has no map |
+| `models/` | the fitted model, the 2.5 GB weather archive, feature matrices | nothing to rebuild a forecast from |
+
+So a clone runs the site and shows the archive, and the Python block
+below needs the world data built first. That is the step that used to be
+missing from this file.
 
 ```bash
 pip install -r requirements.txt
@@ -115,6 +139,25 @@ pip install -r requirements.txt
 Keys go in `.env`, which is gitignored: `FIRMS_MAP_KEY` for anything that
 talks to FIRMS, `CDS_KEY` only if you fetch ERA5 through Copernicus
 instead of the public mirror.
+
+The world data comes first, because `train_fire_model.py` reads the daily
+tiles it writes. It is TypeScript rather than Python, and it needs
+`FIRMS_MAP_KEY` — the raw archive is 593 million detections, so expect
+hours and tens of gigabytes of traffic the first time, and keep `/data/`
+(also gitignored) so a second run is cheap.
+
+```bash
+npx tsx scripts/build-archive.ts       # the four regional cubes
+npx tsx scripts/build-world-days.ts    # daily tiles on the 0.25 deg grid
+npx tsx scripts/build-world-l0.ts      # the global pyramid, coarsest first
+npx tsx scripts/build-world-l1.ts
+npx tsx scripts/build-world-l2.ts
+npx tsx scripts/build-world-l3.ts
+npx tsx scripts/build-world-now.ts     # the last-week snapshot
+npx tsx scripts/build-world-ramp.ts    # the shared colour ceiling
+```
+
+Then the Python half.
 
 ```bash
 # once: the inputs
@@ -126,7 +169,7 @@ python scripts/build_land.py        # coastlines for the globe
 # the model
 python scripts/train_fire_model.py  # build the feature matrix, fit, score
 python scripts/tune_fire_model.py   # hyperparameter sweep on the tuning era
-python scripts/fit_fire_model_v2.py # refit, and keep only if test AP improves
+python scripts/fit_fire_model_v2.py # prune, re-tune, refit; gate on test AP
 python scripts/build_model_card.py  # the model's paperwork, for the page
 
 # the week ahead

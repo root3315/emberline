@@ -638,6 +638,19 @@
           <p class="note band__head-note" data-i18n="aboutCheckNote"></p>
         </header>
         <ul class="about__list" id="about-check-list"></ul>
+
+        <!--
+          The things that did not work, with the numbers that sank them.
+
+          They lived in the headers of the Python scripts, where only
+          somebody already reading the source would find them — and the
+          README claimed they were on the page, which they were not. A
+          project whose argument is "every number here is checkable" has
+          to show the checks it failed, or the claim is decoration.
+        -->
+        <h3 class="subhead" data-i18n="aboutTriedTitle">What did not earn its place</h3>
+        <p class="note" data-i18n="aboutTriedNote"></p>
+        <ul class="about__list" id="about-tried-list"></ul>
       </section>
 
       <!--
@@ -837,6 +850,20 @@
               than left as an empty line making a claim by omission.
             -->
             <p class="note note--tight" id="proof-legend" hidden></p>
+
+            <!--
+              Every week that has been checked, not only this one.
+
+              A single prospective check is a claim about one week in one
+              season. The row grows by one every time the script runs
+              against a finished window, and that is the difference
+              between "we scored well once" and a record.
+            -->
+            <h3 class="subhead" id="proof-record-title" hidden data-i18n="proofRecordTitle">
+              Every week we have checked
+            </h3>
+            <p class="note note--tight" id="proof-record-note" hidden></p>
+            <ol class="record" id="proof-record" hidden></ol>
           </div>
           <div class="proof__side">
             <dl class="metrics metrics--about" id="proof-stats"></dl>

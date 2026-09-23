@@ -63,7 +63,31 @@ export interface Verify {
   bands: VerifyBand[]
 }
 
+/**
+ * Every week that has ever been checked, oldest first.
+ *
+ * One prospective check is a claim; a row of them is a record. It is kept
+ * in its own file because `verify.json` describes the week now on the
+ * site and is overwritten whenever a new forecast is built — which is
+ * precisely how the only unriggable measurement here used to be thrown
+ * away once a week.
+ */
+export interface VerifyWeek {
+  from: string
+  to: string
+  computed: string
+  checked: string
+  elapsed: number
+  whole: boolean
+  flagged: number
+  burnedCells: number
+  caught: number
+  ranking: VerifyRung[]
+  baselines?: { persistence?: VerifyRung[]; climatology?: VerifyRung[] }
+}
+
 let wanted: Promise<Verify | null> | null = null
+let record: Promise<VerifyWeek[]> | null = null
 
 export async function loadVerify(base = '/data'): Promise<Verify | null> {
   wanted ??= (async () => {
@@ -72,4 +96,14 @@ export async function loadVerify(base = '/data'): Promise<Verify | null> {
     return (await res.json()) as Verify
   })().catch(() => null)
   return wanted
+}
+
+export async function loadVerifyRecord(base = '/data'): Promise<VerifyWeek[]> {
+  record ??= (async () => {
+    const res = await fetch(`${base}/verify-history.json`)
+    if (!res.ok) return []
+    const held = (await res.json()) as { weeks?: VerifyWeek[] }
+    return Array.isArray(held.weeks) ? held.weeks : []
+  })().catch(() => [])
+  return record
 }

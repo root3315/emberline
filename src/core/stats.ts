@@ -274,9 +274,26 @@ export interface Trend {
  * the one catastrophic year that would drag an ordinary least-squares line
  * across the whole record.
  */
-export function annualTrend(grid: YearGrid): Trend | null {
+export function annualTrend(grid: YearGrid, whole?: { from: string; to: string }): Trend | null {
+  /*
+   * Part years are left out, because a part year is a low year for a
+   * reason that has nothing to do with fire.
+   *
+   * The archive opens in November 2000, when Terra came up, and closes on
+   * whatever day it was last built. Both of those years hold a fraction
+   * of a season and both pulled on the slope: dropping them moves Yakutia
+   * from -0.98% to -0.15%, which is the difference between a trend the
+   * page would print and one it would not.
+   *
+   * The range is optional so the statistic can still be taken over a bare
+   * grid, which is what the tests do.
+   */
+  const first = whole ? Number(whole.from.slice(0, 4)) + (whole.from.endsWith('-01-01') ? 0 : 1) : -Infinity
+  const last = whole ? Number(whole.to.slice(0, 4)) - (whole.to.endsWith('-12-31') ? 0 : 1) : Infinity
+
   const totals: Array<[number, number]> = []
   for (const [year, row] of [...grid.entries()].sort((a, b) => a[0] - b[0])) {
+    if (year < first || year > last) continue
     let sum = 0
     for (let d = 1; d <= daysInYear(year); d++) sum += row[d]
     totals.push([year, sum])

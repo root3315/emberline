@@ -48,7 +48,7 @@ import { loadLand } from './core/land'
 import { mountGlobe, type GlobeFire, type GlobeHandle, type GlobePick } from './ui/globe'
 import { drawShot } from './ui/satellite'
 import { loadHorizon } from './core/forecast'
-import { loadVerify } from './core/verify'
+import { loadVerify, loadVerifyRecord, type VerifyWeek } from './core/verify'
 import { loadReasons, reasonsAt } from './core/reasons'
 import { daysInYear, dayOfYear, yearOf } from './core/grid'
 import {
@@ -194,6 +194,7 @@ const els = {
   aboutModelBody: $('about-model-body'),
   aboutModelStats: $('about-model-stats'),
   aboutCheckList: $('about-check-list'),
+  aboutTriedList: $('about-tried-list'),
   aboutLimitsList: $('about-limits-list'),
   aboutYear: $<HTMLCanvasElement>('about-year'),
   aboutYearRead: $('about-year-read'),
@@ -224,6 +225,9 @@ const els = {
   proofWhen: $('proof-when'),
   proofRungs: $('proof-rungs'),
   proofLegend: $('proof-legend'),
+  proofRecordTitle: $('proof-record-title'),
+  proofRecordNote: $('proof-record-note'),
+  proofRecord: $('proof-record'),
   proofStats: $('proof-stats'),
   proofNote: $('proof-note'),
   footAbout: $('foot-about'),
@@ -971,6 +975,7 @@ async function renderAbout(): Promise<void> {
 
   fillAboutList(els.aboutBuiltList, 'aboutBuiltList')
   fillAboutList(els.aboutCheckList, 'aboutCheckList')
+  fillAboutList(els.aboutTriedList, 'aboutTriedList')
   fillAboutList(els.aboutLimitsList, 'aboutLimitsList')
   fillSteps(formatNumber(card?.trees ?? 500), features)
   drawSeam()
@@ -1645,6 +1650,65 @@ function stopWeek(): void {
 }
 
 /**
+ * The weeks that have been scored, oldest first.
+ *
+ * Each row is one forecast that was published before its week began and
+ * then checked against what NASA reported. The share is of the thousand
+ * cells the model ranked highest, with the free baseline beside it, so a
+ * reader can see both whether the model holds up and whether it is
+ * earning its keep — week after week rather than once.
+ *
+ * A part week is marked as one. Its share can only rise as the remaining
+ * days arrive, so an unmarked low number would read as a miss when it is
+ * simply early.
+ */
+function renderRecord(weeks: readonly VerifyWeek[]): void {
+  const show = weeks.length > 0
+  els.proofRecordTitle.hidden = !show
+  els.proofRecordNote.hidden = !show
+  els.proofRecord.hidden = !show
+  els.proofRecord.innerHTML = ''
+  if (!show) return
+
+  const whole = weeks.filter((w) => w.whole)
+  const mean = whole.length
+    ? whole.reduce((sum, w) => sum + (w.ranking[0]?.burned ?? 0), 0) / whole.length
+    : null
+  els.proofRecordNote.textContent =
+    mean === null
+      ? t('proofRecordPartial', { n: String(weeks.length) })
+      : t('proofRecordMean', { n: String(whole.length), pct: `${(mean * 100).toFixed(1)}%` })
+
+  for (const week of weeks) {
+    const li = document.createElement('li')
+    li.className = 'record__row'
+
+    const when = document.createElement('span')
+    when.className = 'record__when'
+    when.textContent = `${formatDate(week.from)} – ${formatDate(week.to)}`
+
+    const how = document.createElement('span')
+    how.className = 'record__how'
+    how.textContent = week.whole
+      ? t('proofRecordWhole', { computed: formatDate(week.computed) })
+      : t('proofRecordSoFar', { computed: formatDate(week.computed), days: formatDays(week.elapsed) })
+
+    const got = document.createElement('span')
+    got.className = 'record__got'
+    const top = week.ranking[0]
+    got.textContent = top ? `${(top.burned * 100).toFixed(1)}%` : '—'
+
+    const base = week.baselines?.persistence?.[0]
+    const against = document.createElement('span')
+    against.className = 'record__against'
+    against.textContent = base ? t('proofRecordAgainst', { pct: `${(base.burned * 100).toFixed(1)}%` }) : ''
+
+    li.append(when, how, got, against)
+    els.proofRecord.append(li)
+  }
+}
+
+/**
  * What became of the forecast that is on this page.
  *
  * The band stays hidden until the verification has been run, and it is
@@ -1744,7 +1808,9 @@ async function renderProof(): Promise<void> {
 
   els.proofNote.textContent = got.whole
     ? t('proofWhole')
-    : t('proofPartial', { days: formatDays(got.elapsed) })
+    : t('proofPartial', { days: formatDays(got.elapsed), to: formatDate(got.to) })
+
+  renderRecord(await loadVerifyRecord())
 }
 
 /** Fetch the day's grid if it is not here yet, then redraw. */
@@ -2227,7 +2293,7 @@ function renderMetrics(ds: Dataset, totals: Map<number, number>): void {
   const mergedPct = ds.totals.rawDetections > 0 ? (merged / ds.totals.rawDetections) * 100 : 0
   const peakDay = ds.days.reduce((best, d) => (d.frp > best.frp ? d : best), ds.days[0])
   const biggest = [...totals.entries()].sort((a, b) => b[1] - a[1])[0]
-  const trend = annualTrend(state.grid)
+  const trend = annualTrend(state.grid, ds.range)
 
   metric(t('metricYears'), String(state.years.length), `${ds.range.from.slice(0, 4)}–${ds.range.to.slice(0, 4)}`)
   metric(t('metricActive'), compact(activeCellDays), '')

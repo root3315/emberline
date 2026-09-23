@@ -69,6 +69,8 @@ def fetch(day: date, span: int, token: str) -> str:
 
 # The page reads this; the terminal output above is for whoever ran it.
 OUT_JSON = Path("public/data/verify.json")
+# And this, which is the same thing for every week that was ever checked.
+OUT_LOG = Path("public/data/verify-history.json")
 NEWLINE = chr(10)
 
 
@@ -128,6 +130,47 @@ def burned_before(asof: date, span: int, cols: int, rows: int) -> np.ndarray:
                 c = tx * TILE_CELLS + local % TILE_CELLS
                 np.add.at(hits, r * cols + c, 1)
     return hits
+
+
+def remember(report: dict) -> int:
+    """
+    Add this week to the record, and return how many weeks are in it.
+
+    Keyed by the forecast window, so running the check again on a later
+    day of the same week replaces that week's row instead of adding one.
+    Only the parts worth keeping: the ladder, the free baseline, and the
+    dates that make it a forecast rather than a hindcast.
+    """
+    log: list[dict] = []
+    if OUT_LOG.exists():
+        try:
+            held = json.loads(OUT_LOG.read_text(encoding="utf-8"))
+            if isinstance(held, dict):
+                held = held.get("weeks", [])
+            log = [w for w in held if isinstance(w, dict) and w.get("from")]
+        except (ValueError, OSError) as err:
+            # A corrupt log must not take the run with it, but silently
+            # starting a fresh one would quietly lose the record.
+            print(f"  ({OUT_LOG.name} could not be read: {err}; leaving it alone)")
+            return 0
+
+    row = {
+        k: report[k]
+        for k in ("from", "to", "computed", "checked", "elapsed", "whole",
+                  "flagged", "detections", "burnedCells", "caught", "missed")
+        if k in report
+    }
+    row["ranking"] = report.get("ranking", [])
+    if report.get("baselines"):
+        row["baselines"] = report["baselines"]
+
+    log = [w for w in log if w["from"] != row["from"]] + [row]
+    log.sort(key=lambda w: w["from"])
+    OUT_LOG.write_text(
+        json.dumps({"weeks": log}, ensure_ascii=False, indent=1) + NEWLINE,
+        encoding="utf-8",
+    )
+    return len(log)
 
 
 def main() -> None:
@@ -331,7 +374,10 @@ def main() -> None:
     OUT_JSON.write_text(
         json.dumps(report, indent=2, ensure_ascii=False) + "\n", encoding="utf-8"
     )
+    weeks = remember(report)
     print(f"{NEWLINE}wrote {OUT_JSON}")
+    if weeks:
+        print(f"wrote {OUT_LOG}  ({weeks} week{'' if weeks == 1 else 's'} on record)")
 
 
 if __name__ == "__main__":

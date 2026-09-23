@@ -240,11 +240,6 @@ export interface AdjustedDay {
 }
 
 /**
- * Apply the measured ratio to the MODIS-only era. Overlap-era days pass through
- * untouched — they need no adjustment, and bending real observations to fit a
- * model would be the opposite of the point.
- */
-/**
  * Step 5, applied. One instrument carries the whole series.
  *
  * ── Why not "scale the old part up and leave the rest" ────────────────
