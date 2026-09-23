@@ -29,7 +29,13 @@ import {
   type WorldNowMeta,
   type WorldYear,
 } from './core/world'
-import { drawWorldSeason, drawWorldYears, worldHeadline, type WorldTotal } from './ui/world-panel'
+import {
+  drawWorldSeason,
+  drawWorldYears,
+  worldHeadline,
+  type WorldSeason,
+  type WorldTotal,
+} from './ui/world-panel'
 import { loadClimate, loadEmissions, type EmissionsFile } from './core/emissions'
 import { loadForecast, type ForecastCell, type ForecastMeta } from './core/forecast'
 import { drawCalibration } from './ui/calibration'
@@ -496,9 +502,9 @@ function renderMapForecast(box: Bounds | null, name: string | null, fitKey: stri
   els.mapNote.textContent =
     (name ? `${name}. ` : '') +
     t('forecastNote', {
-      from: picked?.from ?? meta.from,
-      to: picked?.to ?? meta.to,
-      asOf: meta.asOf,
+      from: formatDate(picked?.from ?? meta.from),
+      to: formatDate(picked?.to ?? meta.to),
+      asOf: formatDate(meta.asOf),
       cell: t('cellQuarter'),
     })
   // How well it scores belongs under the map, not in front of it.
@@ -743,7 +749,16 @@ let futureScope = false
  *
  * Sending the reader to a fixed route would drop whatever they had open —
  * a region, a year, a searched place — and make the forecast a one-way
- * door. Remembered on the way in, used on the way out.
+ * door.
+ *
+ * Written by `writeUrl` when it writes a record address, and nowhere else.
+ * The two layout switches used to take it themselves, on the way in, by
+ * reading `location.hash` — and by then the hash is already the page being
+ * opened, because a press changes the address first and the router reacts
+ * after. So it was never updated on the usual path and kept whatever it
+ * had, which on a direct link to #/future was the address of the link
+ * itself. "Back to the record" then pointed at the forecast, and pressing
+ * it went nowhere.
  */
 let lastRecord = ''
 
@@ -879,9 +894,6 @@ function statInto(list: HTMLElement, label: string, value: string, note: string)
  * nothing has to be put back.
  */
 function showAboutLayout(on: boolean): void {
-  if (on && !aboutScope && location.hash && location.hash !== '#/about') {
-    lastRecord = location.hash
-  }
   aboutScope = on
   pickerField.hidden = on
   els.mode.hidden = on
@@ -1129,9 +1141,6 @@ function showFutureLayout(on: boolean): void {
   if (!on) els.pick.hidden = true
   // An interval left running against a hidden map is a leak with a view.
   if (!on && weekTimer) stopWeek()
-  if (on && !futureScope && location.hash && location.hash !== '#/future') {
-    lastRecord = location.hash
-  }
   futureScope = on
   els.barBack.hidden = !on
   els.barBack.href = lastRecord || '#/'
@@ -1158,32 +1167,48 @@ function showFutureLayout(on: boolean): void {
 async function renderFuture(): Promise<void> {
   const token = ++loadToken
   status(t('worldLoading'), 'busy')
+
+  /*
+   * The layout goes over before the file arrives, not after it.
+   *
+   * It used to wait for the forecast, and the forecast is the largest
+   * thing the site downloads — so for a second and a half warm, and
+   * longer on a first visit, the address said `#/future` while the
+   * record's own page was still on screen underneath it. Including the
+   * band at its foot that invites the reader to the forecast: a door to
+   * the room they were standing in, on a page that was already that room.
+   *
+   * Switching first costs an empty forecast page for that same moment,
+   * which at least says what it is, and the status line says it is
+   * loading. If the file never comes, the record goes back.
+   */
+  worldScope = true
+  worldPlace = null
+  worldNow = false
+  worldForecast = true
+  showFutureLayout(true)
+
   try {
     forecast ??= await loadForecast()
     if (token !== loadToken) return
     const got = forecast
     if (!got) {
       status(t('forecastMissing'), 'error')
+      showFutureLayout(false)
       return
     }
     const { meta } = got
 
-    worldScope = true
-    worldPlace = null
-    worldNow = false
-    worldForecast = true
-    showFutureLayout(true)
-
     els.futureWhere.textContent = t('futureWhere', {
-      from: meta.from,
-      to: meta.to,
-      asOf: meta.asOf,
+      from: formatDate(meta.from),
+      to: formatDate(meta.to),
+      asOf: formatDate(meta.asOf),
     })
     els.futureAnswer.replaceChildren(
       markup(t('futureAnswer', { cells: formatNumber(meta.cells) })),
     )
     els.futureAside.replaceChildren(
-      markup(t('futureAside', { since: String(FUTURE_SINCE), to: meta.to })),
+      markup(t('futureAside', { since: String(FUTURE_SINCE), to: formatDate(meta.to) })),
     )
 
     els.futureStats.innerHTML = ''
@@ -1268,7 +1293,7 @@ async function openPick(pick: GlobePick | null): Promise<void> {
   els.pickNote.textContent =
     seen === 0
       ? t('pickNoneSeen')
-      : t('pickNote', { from: meta.from, to: meta.to })
+      : t('pickNote', { from: formatDate(meta.from), to: formatDate(meta.to) })
 
   reasonTable ??= await loadReasons().catch(() => null)
   sayWhy(els.pickWhy, pick.lat, pick.lon)
@@ -1546,8 +1571,15 @@ function fillWeek(): void {
 
   const now = all.find((h) => h.days === (weekDay || forecast!.meta.horizonDays))
   const read = document.createElement('span')
+  /*
+   * Spelled out, because it sits directly under chips that say "СБ 26".
+   *
+   * The horizons carry ISO dates and this line printed them raw, so the
+   * reader's eye went from a weekday and a number to 2026-09-26 in the
+   * same breath. The rest of the site writes dates in words.
+   */
   read.textContent = t(weekDay ? 'weekBy' : 'weekAll', {
-    to: now?.to ?? forecast!.meta.to,
+    to: formatDate(now?.to ?? forecast!.meta.to),
   })
   els.weekRead.innerHTML = ''
   els.weekRead.append(read)
@@ -1625,8 +1657,8 @@ async function renderProof(): Promise<void> {
   if (!got) return
 
   els.proofWhen.textContent = t('proofWhen', {
-    computed: got.computed,
-    checked: got.checked,
+    computed: formatDate(got.computed),
+    checked: formatDate(got.checked),
     elapsed: String(got.elapsed),
     detections: formatNumber(got.detections),
   })
@@ -1717,9 +1749,9 @@ async function showDoor(): Promise<void> {
   if (!meta) return
 
   els.ctaWhen.textContent = t('futureWhere', {
-    from: meta.from,
-    to: meta.to,
-    asOf: meta.asOf,
+    from: formatDate(meta.from),
+    to: formatDate(meta.to),
+    asOf: formatDate(meta.asOf),
   })
   els.ctaLine.replaceChildren(
     markup(t('ctaLine', { cells: formatNumber(meta.cells) })),
@@ -1991,14 +2023,22 @@ function isPartialYear(ds: Dataset): boolean {
   return state.year === last && !ds.range.to.endsWith('-12-31')
 }
 
+/** A frame, written the way this page writes one. Both heroes use it. */
+function boundsLabel(b: Bounds): string {
+  return (
+    `${Math.abs(b.south).toFixed(1)}°${b.south < 0 ? 'S' : 'N'}–${Math.abs(b.north).toFixed(1)}°${b.north < 0 ? 'S' : 'N'}, ` +
+    `${Math.abs(b.west).toFixed(1)}°${b.west < 0 ? 'W' : 'E'}–${Math.abs(b.east).toFixed(1)}°${b.east < 0 ? 'W' : 'E'}`
+  )
+}
+
 function renderHero(ds: Dataset): void {
+  // The planet and a searched place write their own; this one is a region's.
+  if (worldScope) return
   const a = state.analysis
   const aoi = aoiById(ds.id)
   const b = ds.bounds
 
-  const coords =
-    `${Math.abs(b.south).toFixed(1)}°${b.south < 0 ? 'S' : 'N'}–${Math.abs(b.north).toFixed(1)}°${b.north < 0 ? 'S' : 'N'}, ` +
-    `${Math.abs(b.west).toFixed(1)}°${b.west < 0 ? 'W' : 'E'}–${Math.abs(b.east).toFixed(1)}°${b.east < 0 ? 'W' : 'E'}`
+  const coords = boundsLabel(b)
   els.heroWhere.textContent = aoi ? `${aoi.name[getLang()]} · ${coords}` : coords
 
   // The typical season comes from every other year, not from the one on screen.
@@ -2577,7 +2617,7 @@ function renderReading(): void {
   fact(
     t('factPeak'),
     formatDoy(a.shape.peak, state.year),
-    `${formatNumber(Math.round(a.shape.peakValue))} ${t('unitDetections')}`,
+    `${formatNumber(Math.round(a.shape.peakValue))} ${t('unitCellsLit')}`,
   )
   fact(t('factSeason'), `${formatDoy(a.shape.start, state.year)}`, `→ ${formatDoy(a.shape.end, state.year)}`)
   fact(
@@ -3259,8 +3299,8 @@ function renderMapNow(box: Bounds | null, name: string | null, fitKey: string): 
   const cell = t('cellQuarter')
   els.mapNote.textContent =
     box && name
-      ? t('placeNowNote', { place: name, fires: formatNumber(fires), from: snap.meta.from, to: snap.meta.to, cell })
-      : t('worldNowNote', { fires: formatNumber(fires), from: snap.meta.from, to: snap.meta.to, cell })
+      ? t('placeNowNote', { place: name, fires: formatNumber(fires), from: formatDate(snap.meta.from), to: formatDate(snap.meta.to), cell })
+      : t('worldNowNote', { fires: formatNumber(fires), from: formatDate(snap.meta.from), to: formatDate(snap.meta.to), cell })
 }
 
 /** The framed week at a twentieth of a degree, cut to the chosen days. */
@@ -3646,6 +3686,96 @@ function placeTotals(days: PlaceDays): WorldTotal[] {
   return out
 }
 
+/**
+ * Which month the planet peaks in, counted rather than eyeballed.
+ *
+ * Tallied per year and then across years, which is what keeps the arrival
+ * of VIIRS in 2012 out of the answer: a year's own peak month does not
+ * move because every month of that year was watched by more instruments.
+ * Adding the whole record up month by month would instead have let the
+ * post-2012 years outvote the rest on volume alone.
+ */
+function peakMonth(seasons: readonly WorldSeason[]): { month: number; years: number } | null {
+  const tally = new Array<number>(12).fill(0)
+  for (const season of seasons) {
+    let best = 0
+    let at = -1
+    for (let m = 0; m < 12; m++) {
+      const v = (season.modis[m] ?? 0) + (season.viirs[m] ?? 0)
+      if (v > best) {
+        best = v
+        at = m
+      }
+    }
+    if (at >= 0) tally[at] += 1
+  }
+  let month = -1
+  let years = 0
+  for (let m = 0; m < 12; m++) {
+    if (tally[m] > years) {
+      years = tally[m]
+      month = m
+    }
+  }
+  return month < 0 ? null : { month, years }
+}
+
+/**
+ * The opening line for the planet, and for a place found by search.
+ *
+ * The record's hero states a season — the dates this area burns between —
+ * and neither of these two can. A place has the days but not the years of
+ * baseline; the planet has neither, at one degree and one month. So each
+ * says the truest thing its own data supports: the planet names the month
+ * it peaks in most often and how often that was, a place names itself,
+ * and both carry the figures for the year on screen.
+ */
+function renderWorldHero(totals: readonly WorldTotal[]): void {
+  const idx = worldIndex
+  if (!idx) return
+  const place = worldPlace
+
+  els.heroWhere.textContent = place
+    ? `${place.name} \u00b7 ${boundsLabel(place.bounds)}`
+    : t('worldHeroWhere')
+
+  els.heroAnswer.innerHTML = ''
+  els.heroAside.innerHTML = ''
+
+  if (place) {
+    els.heroAnswer.textContent = place.name
+  } else {
+    const peak = peakMonth(idx.seasons)
+    if (!peak) {
+      els.heroAnswer.textContent = t('worldHeroPlain')
+    } else {
+      const month = monthOn(peak.month)
+      const sentence = t('worldHeroPeak', {
+        month,
+        n: String(peak.years),
+        all: String(idx.seasons.length),
+      })
+      // The month takes the accent, the way the dates do on a region.
+      const at = sentence.indexOf(month)
+      if (at < 0) {
+        els.heroAnswer.textContent = sentence
+      } else {
+        const em = document.createElement('em')
+        em.textContent = month
+        els.heroAnswer.append(sentence.slice(0, at), em, sentence.slice(at + month.length))
+      }
+    }
+    els.heroAside.textContent = t('worldHeroAside')
+  }
+
+  els.heroStats.innerHTML = ''
+  const pick = totals.find((d) => d.year === state.year)
+  if (pick) heroStat(t('metricDetections'), compact(pick.modis + pick.viirs), String(state.year))
+  if (totals.length) {
+    heroStat(t('statWatching'), String(totals[0].year), formatYears(totals.length))
+  }
+}
+
 function renderWorldPanels(): void {
   const idx = worldIndex
   if (!idx) return
@@ -3680,6 +3810,7 @@ function renderWorldPanels(): void {
           to: String(totals[totals.length - 1]?.year ?? ''),
         })
       : worldHeadline(idx.totals, state.year)
+  renderWorldHero(totals)
   /**
    * The temperature only against the planet's own bars.
    *
@@ -3861,7 +3992,16 @@ function renderImpact(): void {
 
 /** The planet replaces the region's panels rather than sitting beside them. */
 function showWorldLayout(on: boolean): void {
-  heroSection.hidden = on
+  /*
+   * The hero belongs to whatever is open, not only to a region.
+   *
+   * It used to be hidden here, because its sentence is about a region's
+   * season and the planet has no season at one degree and one month. That
+   * left the world route — and any searched place — opening on a section
+   * heading: no line for the eye to land on, and no `h1` at all for a
+   * reader who is listening to the page rather than looking at it. It is
+   * filled by `renderWorldHero` instead of being taken away.
+   */
   showCalendar(on)
   if (on) {
     // Coming from a failed region load these are still hidden, and the planet
@@ -4366,8 +4506,6 @@ interface UrlState {
   year?: number
   /** `#/punjab/now/raw` — the period sits where the year would be. */
   now?: boolean
-  /** `#/punjab/forecast/raw` — the model's week, in the same slot. */
-  forecast?: boolean
   /** `#/future` — the forecast's own page, which has no area and no year. */
   future?: boolean
   /** `#/about` — what this is and how to check it. */
@@ -4399,6 +4537,19 @@ function readUrl(): UrlState {
   /* `#/about` — the project talking about itself. No area, no year. */
   if (parts[0] === 'about') return { about: true }
 
+  /*
+   * `#/punjab/forecast/raw` — an address from when next week was a period
+   * of the record's map. It is where a reader asked for the forecast, so
+   * it lands on the forecast, and `writeUrl` tidies the address after.
+   *
+   * The slot differs by route and the test has to follow it: on a searched
+   * place the period is fourth, and the second holds the place's own name,
+   * which comes from OpenStreetMap and could be any word at all.
+   */
+  if (parts[0] === 'place' ? parts[3] === 'forecast' : parts[1] === 'forecast') {
+    return { future: true }
+  }
+
   if (parts[0] === 'place' && parts.length >= 3) {
     const nums = parts[2].split(',').map(Number)
     if (nums.length === 4 && nums.every(Number.isFinite)) {
@@ -4409,7 +4560,6 @@ function readUrl(): UrlState {
         },
         year: parts[3] && /^\d{4}$/.test(parts[3]) ? Number(parts[3]) : undefined,
         now: parts[3] === 'now',
-        forecast: parts[3] === 'forecast',
         mode: parts[4] === 'raw' || parts[4] === 'harmonized' ? parts[4] : undefined,
       }
     }
@@ -4423,7 +4573,6 @@ function readUrl(): UrlState {
     aoi: aoi === 'world-now' ? 'world' : aoi === 'world' || (aoi && aoiById(aoi)) ? aoi : undefined,
     year: year && /^\d{4}$/.test(year) ? Number(year) : undefined,
     now: year === 'now' || aoi === 'world-now',
-    forecast: year === 'forecast',
     mode: mode === 'raw' || mode === 'harmonized' ? mode : undefined,
   }
 }
@@ -4431,7 +4580,27 @@ function readUrl(): UrlState {
 /** The link's own pieces, packed the way the search packs a chosen place. */
 function placeValueOf(place: { name: string; bounds: Bounds }): string {
   const b = place.bounds
-  return `place:${b.west.toFixed(3)},${b.south.toFixed(3)},${b.east.toFixed(3)},${b.north.toFixed(3)}:${place.name}`
+  // Two decimals, which is what the address already rounds to. At three
+  // this string could never equal the one rebuilt from a link to the same
+  // place, and the comparison below is now load-bearing.
+  return `place:${b.west.toFixed(2)},${b.south.toFixed(2)},${b.east.toFixed(2)},${b.north.toFixed(2)}:${place.name}`
+}
+
+/**
+ * What is on screen, spelled the way `goTo` takes it.
+ *
+ * The test for "the address already matches the view" used to read the
+ * picker's `<select>`, and a searched place is not one of its five options
+ * — so after visiting one the select still said `punjab`, and a link back
+ * to Punjab was taken for a link to where we already were. Nothing loaded:
+ * the address became `#/punjab/2024/harmonized` while the hero, the map and
+ * the figures all still belonged to the city. The page has to be asked what
+ * it is showing, not a control that cannot say.
+ */
+function currentArea(): string | undefined {
+  if (worldPlace) return placeValueOf(worldPlace)
+  if (worldScope) return 'world'
+  return state.dataset?.id
 }
 
 /** Replace rather than push: the back button should leave the page, not undo a click. */
@@ -4453,17 +4622,33 @@ function writeUrl(): void {
       ? 'world'
       : state.dataset?.id
   if (!id) return
-  const period = worldForecast ? 'forecast' : worldNow ? 'now' : String(state.year)
+  const period = worldNow ? 'now' : String(state.year)
   const next = `#/${id}/${period}/${state.mode}`
+  // The one place that knows what the record is showing, so the one place
+  // that records where "back" returns to.
+  lastRecord = next
   if (location.hash !== next) history.replaceState(null, '', next)
 }
 
-let applyingUrl = false
-
+/*
+ * There is no "already navigating" guard here, and there was one.
+ *
+ * It dropped any hash change that arrived while a load was still running,
+ * and nothing ever came back for it: the address changed, the page did
+ * not, and it stayed that way until a reload. A searched place made it
+ * easy to hit — its daily cube is a few hundred kilobytes, and every link
+ * pressed while that was on its way went nowhere.
+ *
+ * The guard was never protecting anything. This runs on `hashchange`
+ * alone, and every address the app writes itself goes through
+ * `history.replaceState`, which does not raise that event. Nothing could
+ * re-enter it except a reader actually asking for somewhere else, which
+ * is the one case it must not refuse. Overlapping loads are already
+ * handled a layer down: every `select*` takes a `loadToken` and abandons
+ * itself the moment a newer one exists.
+ */
 function applyUrl(): void {
   const wanted = readUrl()
-  if (applyingUrl) return
-  applyingUrl = true
 
   /*
    * The door is filled on every route, not once at start-up.
@@ -4512,6 +4697,22 @@ function applyUrl(): void {
   els.footAbout.hidden = there === 'about'
   els.footFuture.hidden = there === 'future'
 
+  /*
+   * Raw or reconciled, decided before anything can return without it.
+   *
+   * This used to sit below, past three branches that return early, and one
+   * of them is the way back from the project's page. So `#/punjab/2026/
+   * harmonized` pressed from #/about kept whatever the reader had open
+   * before — the address said harmonized, the toggle said raw, and then
+   * `writeUrl` rewrote the address to agree with the toggle. A link that
+   * names a mode is a link about that mode.
+   */
+  if (wanted.mode && wanted.mode !== state.mode) {
+    state.mode = wanted.mode
+    const input = els.mode.querySelector<HTMLInputElement>(`input[value="${wanted.mode}"]`)
+    if (input) input.checked = true
+  }
+
   if (wanted.about) {
     /*
      * Leaving the forecast page has to be said out loud, even on the way
@@ -4527,16 +4728,14 @@ function applyUrl(): void {
      * flag itself.
      */
     if (futureScope) showFutureLayout(false)
-    if (!aboutScope) void renderAbout().finally(() => (applyingUrl = false))
-    else applyingUrl = false
+    if (!aboutScope) void renderAbout()
     return
   }
   const leavingAbout = aboutScope
   if (aboutScope) showAboutLayout(false)
 
   if (wanted.future) {
-    if (!futureScope) void renderFuture().finally(() => (applyingUrl = false))
-    else applyingUrl = false
+    if (!futureScope) void renderFuture()
     return
   }
 
@@ -4567,46 +4766,34 @@ function applyUrl(): void {
      * And the period goes back with it.
      *
      * The forecast page sets the map to "next week" so its own map draws
-     * the right thing. Leaving without undoing that returned the reader to
-     * #/punjab/forecast — the record's page showing the forecast — when
-     * the link they pressed said "back to the record". The link the reader
-     * came in on wins if it asks for a period; otherwise it is the year.
+     * the right thing. Leaving without undoing that drew the probability
+     * grid on the record, under whatever the period control happened to
+     * say. So the period is set from the address being opened rather than
+     * only when that address is silent — "back to the record" could point
+     * at `#/punjab/now/raw`, and that one asks for a period, so the old
+     * test skipped the reset and left the forecast on screen labelled
+     * "right now". `setRange` is a no-op when it is already there.
      */
-    if (!wanted.now && !wanted.forecast) setRange('year')
+    setRange(wanted.now ? 'now' : 'year')
     const area = wanted.place ? placeValueOf(wanted.place) : (wanted.aoi ?? els.aoi.value)
     picker.setValue(area, wanted.place?.name)
-    void goTo(area, wanted.year).finally(() => {
-      applyingUrl = false
-    })
+    void goTo(area, wanted.year)
     return
   }
 
-  if (wanted.mode && wanted.mode !== state.mode) {
-    state.mode = wanted.mode
-    const input = els.mode.querySelector<HTMLInputElement>(`input[value="${wanted.mode}"]`)
-    if (input) input.checked = true
-  }
-
-  const wantMode = wanted.forecast ? 'forecast' : wanted.now ? 'now' : 'year'
-  if ((wantMode === 'now') !== worldNow || (wantMode === 'forecast') !== worldForecast) {
+  const wantMode = wanted.now ? 'now' : 'year'
+  if ((wantMode === 'now') !== worldNow || worldForecast) {
     worldNow = wantMode === 'now'
-    worldForecast = wantMode === 'forecast'
+    // Set by the forecast page, and nothing else on the record clears it.
+    worldForecast = false
     const input = els.mapRange.querySelector<HTMLInputElement>(`input[value="${wantMode}"]`)
     if (input) input.checked = true
-    if (worldForecast && !forecast) {
-      void loadForecast().then((got) => {
-        forecast = got
-        drawMap()
-      })
-    }
   }
 
   const target = wanted.place ? placeValueOf(wanted.place) : wanted.aoi
-  if (target && target !== els.aoi.value) {
+  if (target && target !== currentArea()) {
     picker.setValue(target, wanted.place?.name)
-    void goTo(target, wanted.year).finally(() => {
-      applyingUrl = false
-    })
+    void goTo(target, wanted.year)
     return
   }
 
@@ -4620,11 +4807,10 @@ function applyUrl(): void {
    */
   const years = mapYears()
   if (wanted.year && years.includes(wanted.year)) state.year = wanted.year
-  if (wanted.year || wanted.mode || wanted.now !== undefined || wanted.forecast !== undefined) {
+  if (wanted.year || wanted.mode || wanted.now !== undefined) {
     if (!worldScope) rebuild()
     rerender()
   }
-  applyingUrl = false
 }
 
 async function boot(): Promise<void> {
@@ -4703,18 +4889,10 @@ async function boot(): Promise<void> {
     const input = els.mode.querySelector<HTMLInputElement>('input[value="' + wanted.mode + '"]')
     if (input) input.checked = true
   }
-  if (wanted.now || wanted.forecast) {
-    worldNow = Boolean(wanted.now)
-    worldForecast = Boolean(wanted.forecast)
-    const mode = worldForecast ? 'forecast' : 'now'
-    const input = els.mapRange.querySelector<HTMLInputElement>(`input[value="${mode}"]`)
+  if (wanted.now) {
+    worldNow = true
+    const input = els.mapRange.querySelector<HTMLInputElement>('input[value="now"]')
     if (input) input.checked = true
-    if (worldForecast) {
-      void loadForecast().then((got) => {
-        forecast = got
-        drawMap()
-      })
-    }
   }
   /*
    * A link straight to the forecast page skips the record entirely.

@@ -68,7 +68,7 @@ const en: Dict = {
   colSeason: 'Season ran',
   colPeak: 'Peak',
   colLength: 'Days',
-  colTotal: 'Fires',
+  colTotal: 'Cells × days',
   colRatio: 'vs usual',
   colAbove: 'Busy days',
 
@@ -85,11 +85,14 @@ const en: Dict = {
   factConcentration: 'Half the year in',
   factTotal: 'vs a usual year',
   daysUnit: 'days',
+  pageTitle: 'Emberline — when and where it burns',
   unitCells: 'cells',
   unitCellSize: '25 km each',
-  unitDetections: 'detections',
-  statFires: 'Square-days with fire',
-  metricActive: 'Square-days with fire',
+  /* Cells alight on a single day — not detections, and not cell-days:
+     one number that three different words had been tried on. */
+  unitCellsLit: 'cells alight',
+  statFires: 'Cells × days with fire',
+  metricActive: 'Cells × days with fire',
   ofNormal: 'of a usual year',
 
   shiftEarlier: 'It started {n} days earlier than usual',
@@ -100,7 +103,6 @@ const en: Dict = {
   peakOnTime: 'and peaked on time',
   shortBaseline: 'Only {n} of record here, so there is no reliable "usual" to compare against yet.',
   noPeriods: 'Nothing this year stayed unusually busy for three days or more.',
-  periodDays: '{n} days',
   periodRatio: '{n}x the usual',
 
   sensorFrom: 'since {date}',
@@ -121,10 +123,10 @@ const en: Dict = {
   sensitivityUnknown:
     'The two sensor families do not overlap enough in this record to measure a correction, so nothing has been scaled.',
 
-  mapNoteArchive: '{cells} squares of {km} km burned in {years}',
-  mapCovered: 'Squares ever burned',
+  mapNoteArchive: '{cells} cells of {km} km burned in {years}',
+  mapCovered: 'Cells ever burned',
   mapThisYear: 'Burned this year',
-  mapHottest: 'Most persistent square',
+  mapHottest: 'Most persistent cell',
   mapArea: 'Area watched',
   pickerSearch: 'Search a place…',
   cellDegree: '110 km',
@@ -146,8 +148,6 @@ const en: Dict = {
   impactLoop: 'And round again',
   impactLoopBody: 'Warmer, drier weather makes fire more likely; fire makes the air warmer. That loop is why this record is worth keeping at all.',
   impactSources: 'Emission method: Wooster 2005, GFAS. Reference total: van der Werf 2017 (GFED4.1s). Fossil comparison: Global Carbon Budget 2024.',
-  tempTitle: 'Temperature',
-  tempLegend: 'Global anomaly, °C',
   tempNote: 'The grey line is the global temperature anomaly, for context only. This record cannot attribute fires to warming: it is twenty-six years long, the instruments changed in the middle of it, and much of what burns follows a sowing calendar rather than the weather.',
   worldPointsNote: '{fires} detections between {from} and {to}, drawn one by one. Equal dots: a pixel\'s true footprint is not in the record. A snapshot from the last build, not a live feed.',
   placePointsNote: '{place}: {fires} detections between {from} and {to}, drawn one by one. Equal dots: a pixel\'s true footprint is not in the record.',
@@ -171,7 +171,6 @@ const en: Dict = {
   rangeLegend: 'Period',
   rangeYear: '{year}',
   rangeNow: 'Right now',
-  rangeForecast: 'Next week',
   forecastNote: 'Chance of a fire large enough for the 1 km sensor to see, {from} to {to}, per {cell} cell. Computed from the archive as it stood on {asOf} — a build-time estimate, not a live forecast.',
   forecastSkill: 'Scored on {tested}, years the model never saw: {model} average precision against {clim} for "how often it burns here at this time of year" and {persist} for "it burned last week". Picking at random scores {base}. The margin over the seasonal baseline is small, and it is printed here rather than hidden: without daily weather — rain, wind, humidity — most of what is predictable about the next week is the season.',
   forecastProbe: '{p} chance in the next {n} days',
@@ -180,8 +179,6 @@ const en: Dict = {
   nowDay1: 'Last day',
   nowDay3: '3 days',
   nowDay7: '7 days',
-  worldNowLabel: 'The whole world · right now',
-  worldNowHint: 'The last week, as of the latest update',
   worldHint: 'Every year since 2000, monthly',
   regionHint: 'Daily, 27 years, 1 km',
   worldModis: 'MODIS · 1 km',
@@ -190,6 +187,11 @@ const en: Dict = {
   worldSeasonNote: 'Every year is a faint line; the chosen one is drawn over them. A month here is the whole surface of the Earth added together.',
   worldYearsTitle: 'Year by year',
   worldYearsNote: 'The two instruments stand side by side, not stacked. VIIRS arrives in 2012 and sees several times as many fires over the same ground — stacked, that would read as the planet catching fire.',
+  worldHeroWhere: 'The whole planet · MODIS and VIIRS, monthly',
+  worldHeroPeak: 'The peak falls in {month} more often than in any other month — in {n} of {all} years.',
+  worldHeroPlain: 'The monthly record, for the whole surface at once.',
+  worldHeroAside:
+    'The two instruments are counted apart. VIIRS arrives in 2012 and sees several times as much over the same ground, so totals either side of that year are not the same measurement.',
   worldHeadline: '{fires} detections in {year}. {all} across {from}–{to}, one-degree cells, monthly.',
   placeHeadline: '{place}: {fires} detections in {year}, {all} across {from}–{to}.',
   scopeWorld: 'World',
@@ -201,7 +203,6 @@ const en: Dict = {
   basemapDark: 'Map',
   basemapSatellite: 'Satellite',
   basemapRelief: 'Relief',
-  mapHint: 'Drag to pan, double-click or use the buttons to zoom.',
   probeBurned: 'burned {n} of {total} days',
   probeDetections: '{n} detections here in {year}',
   probeQuiet: 'never burned here',
@@ -229,8 +230,8 @@ const en: Dict = {
   statusLoading: 'Loading…',
   statusFetching: 'Asking NASA…',
   statusParsing: 'Reconciling…',
-  statusLiveDone: '{n} detections over {days} days became {cells} fires.',
-  statusFileDone: '{n} detections from {files} files became {cells} fires.',
+  statusLiveDone: '{n} detections over {days} days — that is {cells} cells alight, counted a day at a time.',
+  statusFileDone: '{n} detections from {files} files — that is {cells} cells alight, counted a day at a time.',
   statusNeedKey: 'Paste a FIRMS key first.',
   statusNoRows: 'Nothing usable came back.',
   statusFailed: 'Could not load: {err}',
@@ -262,7 +263,6 @@ const en: Dict = {
     'How far past the seasonal baseline each model gets — the baseline being "how often does this cell burn at this time of year", which already knows where fires usually are. Same rows, same splits, same seed; the weather columns are the only difference. The raw scores are in the table above: they sit close together, and the margin is what moves.',
   aboutWeatherWith: 'With the weather',
   aboutWeatherWithout: 'Archive only',
-  aboutWeatherBase: 'The season alone',
   aboutWeatherRaw: 'In full: {withAp} against {withoutAp} on the scale above. The second figure in the table, ROC AUC, is the same question asked another way and moves the same direction: {withRoc} against {withoutRoc}.',
   aboutCalibTitle: 'Does 85% mean 85%',
   aboutCalibNote:
@@ -280,7 +280,6 @@ const en: Dict = {
   aboutProblemTitle: 'The problem',
   aboutProblemBody:
     'A fire detection is not a fire. It is one satellite pass finding one pixel hot enough to flag, and how many it flags depends on the pixel\u2019s size. The 375-metre sensor resolves small fires the 1-kilometre one averages away; over the same ground on the same day it reports several times as many. The ratio is not a constant \u2014 it is about 4 in dense cropland and over 13 in sparse bush \u2014 so a single global correction is the wrong answer too. It has to be measured per place.',
-  aboutProblemAside: 'Why it matters',
   aboutProblemNote:
     'Anyone asking "is it burning more than it used to" is asking a question the raw record cannot answer. Every trend through 2012 is contaminated by the instrument. Switch between "as recorded" and "reconciled" anywhere on this site and watch what happens to the years before 2012 \u2014 that difference is the whole problem, made visible.',
 
@@ -292,10 +291,10 @@ const en: Dict = {
   aboutModelNote:
     'A gradient-boosted classifier, trained on the archive and on the weather of the week it is asked about.',
   aboutModelBody:
-    'It reads {features} things about every 25 km square of the planet: how often it burns at this time of year, how recently it burned, what its neighbours are doing, how far the year is from its own normal, where El Ni\u00f1o stands \u2014 and the forecast weather of the week ahead, which is the half the fire archive cannot supply. It learns on {train}, is tuned on {validate}, and is marked on {test} \u2014 years it had never seen. The weather very nearly doubles how far it gets past a simple seasonal guess.',
+    'It reads {features} things about every 25 km cell of the planet: how often it burns at this time of year, how recently it burned, what its neighbours are doing, how far the year is from its own normal, where El Ni\u00f1o stands \u2014 and the forecast weather of the week ahead, which is the half the fire archive cannot supply. It learns on {train}, is tuned on {validate}, and is marked on {test} \u2014 years it had never seen. The weather very nearly doubles how far it gets past a simple seasonal guess.',
   aboutModelNumbers: 'Measured',
   aboutScoreGloss:
-    'One number, from 0 to 1, for how well a method sorts squares by risk: put every square in its order, walk down the list, and see how much of it is fire before the guesses run out. Picking at random scores 0.05, because one square in twenty burns. Nothing reaches 1, because the same weather over the same ground sometimes burns and sometimes does not.',
+    'One number, from 0 to 1, for how well a method sorts cells by risk: put every cell in its order, walk down the list, and see how much of it is fire before the guesses run out. Picking at random scores 0.05, because one cell in twenty burns. Nothing reaches 1, because the same weather over the same ground sometimes burns and sometimes does not.',
   aboutModelCaveat:
     'One thing to hold on to: the model learned from weather that had already happened, and the live map runs on a forecast of it. These figures are what is reachable if the weather forecast turns out right.',
 
@@ -310,10 +309,10 @@ const en: Dict = {
   ctaNote:
     'Everything above already happened. One thing has not: a model trained on the whole record puts a number on the week ahead, and says plainly how often that number has been right.',
   ctaButton: 'What happens next week',
-  ctaLine: 'Somewhere in <b>{cells}</b> squares, the next seven days carry a real chance of fire.',
+  ctaLine: 'Somewhere in <b>{cells}</b> cells, the next seven days carry a real chance of fire.',
 
   futureWhere: '{from} to {to} \u00b7 built {asOf}',
-  futureAnswer: 'Somewhere in <em>{cells}</em> squares, the next seven days carry a real chance of fire.',
+  futureAnswer: 'Somewhere in <em>{cells}</em> cells, the next seven days carry a real chance of fire.',
   futureAside:
     'A gradient-boosted model reads this archive <b>back to {since}</b> \u2014 where it has burned, how recently, what the season usually does \u2014 together with <b>the weather of the week ahead</b>: how hot, how windy, how much rain, and what is standing there to burn. Every 25 km cell gets the chance that the 1 km sensor sees a fire there before {to}.',
   futureStatCells: 'Cells at risk',
@@ -342,26 +341,25 @@ const en: Dict = {
   futureSkillNote:
     'Average precision on {tested}. The season alone is a hard baseline; the weather very nearly doubles the model’s margin over it, from 2.5% to 4.7%. One qualifier, because it matters: the model learned from the weather that actually happened, and the live map is driven by a forecast of it. So this is what is reachable if the weather forecast is right \u2014 an upper bound, not a promise.',
   futureBack: 'Back to the record',
-  globeHint: 'Drag to turn',
   globeCall: 'Press a fire to see the detail',
   pickForecast: 'Expected next week',
-  pickSeen: 'Seen last week',
+  pickSeen: 'Detections the week before',
   pickNote: 'The model\u2019s chance for this 25 km cell between {from} and {to}, beside what MODIS and VIIRS actually recorded on the same ground in the seven days before. One is a forecast; the other is a measurement.',
   pickNoneSeen: 'Nothing was recorded here last week, which is not the same as nothing burning: a satellite sees a fire only if it passes while the fire is alight and the sky is clear.',
   aboutLookTitle: 'See for yourself',
   aboutLookNote:
-    'Everything above is an argument. This is the thing itself: turn the planet, press any fire, and the model\u2019s number for that square arrives beside a photograph of the ground it is about.',
+    'Everything above is an argument. This is the thing itself: turn the planet, press any fire, and the model\u2019s number for that cell arrives beside a photograph of the ground it is about.',
   aboutLookCall: 'Drag to turn \u00b7 press a fire',
   lookScale: '{km} km across',
   lookBy: 'Imagery: Esri, Maxar, Earthstar. Points: this model, one per quarter-degree cell.',
-  lookFail: 'The imagery for this square did not come down. The figures beside it are unaffected.',
+  lookFail: 'The imagery for this cell did not come down. The figures beside it are unaffected.',
   lookNote:
-    'Every point of light is a place the model expects to burn in the coming week, the brighter the likelier. The white outline is the square that was pressed \u2014 about 25 km on a side, which is one cell of the grid the whole forecast is made on.',
+    'Every point of light is a place the model expects to burn in the coming week, the brighter the likelier. The white outline is the cell that was pressed \u2014 about 25 km on a side, and the grid it belongs to is the one the whole forecast is made on.',
   weekPlay: 'Play the week',
   weekStop: 'Stop',
   weekLoading: 'Loading the days\u2026',
   weekAll: 'The whole week, to {to}',
-  weekBy: 'By the end of {to}',
+  weekBy: 'By the end of {to}, counting every day up to it',
   weekCells: 'cells at risk',
   proofTitle: 'Checked against what happened',
   proofLadderTitle: 'Of the cells it ranked highest, this share has burned',
@@ -375,12 +373,12 @@ const en: Dict = {
   proofRecall: 'Caught',
   whyLead: 'Why here',
   whyClim: 'it usually burns here at this time of year',
-  whyCellRate: 'this square burns often',
+  whyCellRate: 'this cell burns often',
   whyRecent: 'something burned here in the last few days',
   whyLately: 'it has been burning here for weeks',
   whyRing: 'the ground next to it is burning',
   whyRingAnom: 'the neighbourhood is burning more than it should',
-  whyAnom: 'this square is burning more than it should',
+  whyAnom: 'this cell is burning more than it should',
   whyRegion: 'the whole region is running hot',
   whyYear: 'the year is running above its own normal',
   whyDry: 'the week ahead is dry',
@@ -394,7 +392,7 @@ const en: Dict = {
   whyLastYear: 'it burned in this same fortnight a year ago',
   whySince: 'how long it has been since it last burned',
   riskHeadPlace: 'Place, and its own chance',
-  riskHeadNear: 'Squares within 200 km more likely than not',
+  riskHeadNear: 'Cells within 200 km more likely than not',
   riskMore: 'Show {n} more',
   riskLess: 'Show fewer',
 
@@ -460,7 +458,7 @@ const ru: Dict = {
   colSeason: 'Сезон шёл',
   colPeak: 'Пик',
   colLength: 'Дней',
-  colTotal: 'Очагов',
+  colTotal: 'Ячеек × дней',
   colRatio: 'к обычному',
   colAbove: 'Горячих дней',
 
@@ -477,11 +475,12 @@ const ru: Dict = {
   factConcentration: 'Половина года за',
   factTotal: 'к обычному году',
   daysUnit: 'дней',
+  pageTitle: 'Emberline — когда и где горит',
   unitCells: 'ячеек',
   unitCellSize: 'по 25 км',
-  unitDetections: 'засечек',
-  statFires: 'Квадрато-дней с огнём',
-  metricActive: 'Квадрато-дней с огнём',
+  unitCellsLit: 'ячеек с огнём',
+  statFires: 'Ячеек × дней с огнём',
+  metricActive: 'Ячеек × дней с огнём',
   ofNormal: 'от обычного года',
 
   shiftEarlier: 'Он начался на {n} раньше обычного',
@@ -492,7 +491,6 @@ const ru: Dict = {
   peakOnTime: 'и вышел на пик вовремя',
   shortBaseline: 'Здесь всего {n} наблюдений — надёжной «нормы» для сравнения пока нет.',
   noPeriods: 'В этом году ничего не держалось горячее обычного три дня подряд и дольше.',
-  periodDays: '{n}',
   periodRatio: '{n}× от обычного',
 
   sensorFrom: 'с {date}',
@@ -513,10 +511,10 @@ const ru: Dict = {
   sensitivityUnknown:
     'Два семейства сенсоров пересекаются в этих данных слишком мало, чтобы измерить поправку, поэтому пересчёт не применялся.',
 
-  mapNoteArchive: '{cells} квадратов по {km} км горели в {years}',
-  mapCovered: 'Квадратов горело хоть раз',
+  mapNoteArchive: '{cells} ячеек по {km} км горели в {years}',
+  mapCovered: 'Ячеек горело хоть раз',
   mapThisYear: 'Горели в этом году',
-  mapHottest: 'Самый упорный квадрат',
+  mapHottest: 'Самая упорная ячейка',
   mapArea: 'Площадь наблюдения',
   pickerSearch: 'Найти место…',
   cellDegree: '110 км',
@@ -538,8 +536,6 @@ const ru: Dict = {
   impactLoop: 'И снова по кругу',
   impactLoopBody: 'Суше и жарче — больше пожаров; больше пожаров — теплее. Ради этой петли такой архив и имеет смысл вести.',
   impactSources: 'Метод оценки: Wooster 2005, GFAS. Опорный итог: van der Werf 2017 (GFED4.1s). Сравнение с топливом: Global Carbon Budget 2024.',
-  tempTitle: 'Температура',
-  tempLegend: 'Аномалия, °C',
   tempNote: 'Серая линия — глобальная аномалия температуры, только как контекст. Связать пожары с потеплением по этому ряду нельзя: в нём двадцать шесть лет, приборы менялись посередине, а большая часть горения идёт по аграрному календарю, а не по погоде.',
   worldPointsNote: '{fires} засечек с {from} по {to}, каждая отдельно. Точки одинаковые: настоящий след пикселя в данных не записан. Снимок последней сборки, не живой поток.',
   placePointsNote: '{place}: {fires} засечек с {from} по {to}, каждая отдельно. Точки одинаковые: настоящий след пикселя в данных не записан.',
@@ -563,7 +559,6 @@ const ru: Dict = {
   rangeLegend: 'Период',
   rangeYear: '{year}',
   rangeNow: 'Прямо сейчас',
-  rangeForecast: 'На неделю вперёд',
   forecastNote: 'Вероятность пожара, достаточно крупного для километрового сенсора, с {from} по {to}, на ячейку {cell}. Считано по архиву на {asOf} — оценка на момент сборки, не живой прогноз.',
   forecastSkill: 'Проверено на {tested} — годах, которых модель не видела: средняя точность {model} против {clim} у «как часто здесь горит в это время года» и {persist} у «горело на прошлой неделе». Случайный выбор даёт {base}. Перевес над сезонной базой небольшой, и он здесь написан, а не спрятан: без суточной погоды — дождя, ветра, влажности — предсказуемо в ближайшей неделе почти только сезон.',
   forecastProbe: '{p} вероятность в ближайшие {n} дней',
@@ -572,8 +567,6 @@ const ru: Dict = {
   nowDay1: 'Последний день',
   nowDay3: '3 дня',
   nowDay7: '7 дней',
-  worldNowLabel: 'Весь мир · прямо сейчас',
-  worldNowHint: 'Последняя неделя, на момент обновления',
   worldHint: 'Каждый год с 2000-го, помесячно',
   regionHint: 'Посуточно, 27 лет, 1 км',
   worldModis: 'MODIS · 1 км',
@@ -582,6 +575,11 @@ const ru: Dict = {
   worldSeasonNote: 'Каждый год — бледная линия, выбранный нарисован поверх. Месяц здесь — это вся поверхность Земли, сложенная вместе.',
   worldYearsTitle: 'Год за годом',
   worldYearsNote: 'Два прибора стоят рядом, а не друг на друге. VIIRS появляется в 2012-м и видит на той же земле в несколько раз больше очагов — сложенные, они читались бы как вспышка пожаров.',
+  worldHeroWhere: 'Весь мир · MODIS и VIIRS, помесячно',
+  worldHeroPeak: 'Чаще всего пик приходится на {month}: так было в {n} из {all} лет.',
+  worldHeroPlain: 'Помесячный ряд — вся поверхность разом.',
+  worldHeroAside:
+    'Приборы считаются порознь. VIIRS появился в 2012-м и видит на той же земле в несколько раз больше, поэтому суммы по разные стороны от этого года — не одно и то же измерение.',
   worldHeadline: '{fires} засечек за {year} год. Всего {all} за {from}–{to}, ячейка в градус, помесячно.',
   placeHeadline: '{place}: {fires} засечек за {year} год, всего {all} за {from}–{to}.',
   scopeWorld: 'Весь мир',
@@ -593,7 +591,6 @@ const ru: Dict = {
   basemapDark: 'Карта',
   basemapSatellite: 'Спутник',
   basemapRelief: 'Рельеф',
-  mapHint: 'Тяните, чтобы двигать; двойной щелчок или кнопки — масштаб.',
   probeBurned: 'горел {n} из {total} дней',
   probeDetections: '{n} засечек здесь за {year} год',
   probeQuiet: 'здесь не горело',
@@ -621,8 +618,8 @@ const ru: Dict = {
   statusLoading: 'Загружаю…',
   statusFetching: 'Спрашиваю NASA…',
   statusParsing: 'Свожу данные…',
-  statusLiveDone: '{n} засечек за {days} дней превратились в {cells} очагов.',
-  statusFileDone: '{n} засечек из {files} файлов превратились в {cells} очагов.',
+  statusLiveDone: '{n} засечек за {days} дней — это {cells} ячеек с огнём, если считать каждый день отдельно.',
+  statusFileDone: '{n} засечек из {files} файлов — это {cells} ячеек с огнём, если считать каждый день отдельно.',
   statusNeedKey: 'Сначала вставьте ключ FIRMS.',
   statusNoRows: 'Ничего пригодного не пришло.',
   statusFailed: 'Не удалось загрузить: {err}',
@@ -654,7 +651,6 @@ const ru: Dict = {
     'Насколько каждая модель уходит вперёд от сезонной базы — то есть от «как часто здесь горит в это время года», которая уже знает, где обычно горит. Те же строки, то же разбиение, тот же сид; отличие только в погодных колонках. Сама точность — в таблице выше: цифры близки, а двигается именно перевес.',
   aboutWeatherWith: 'С погодой',
   aboutWeatherWithout: 'Только архив',
-  aboutWeatherBase: 'Один сезон',
   aboutWeatherRaw: 'В цифрах: {withAp} против {withoutAp} по шкале выше. Вторая цифра в таблице, ROC AUC, — тот же вопрос с другой стороны, и двигается туда же: {withRoc} против {withoutRoc}.',
   aboutCalibTitle: 'Значит ли 85% именно 85%',
   aboutCalibNote:
@@ -672,7 +668,6 @@ const ru: Dict = {
   aboutProblemTitle: 'Задача',
   aboutProblemBody:
     'Засечка — это не пожар. Это один пролёт спутника, нашедший один пиксель достаточно горячим, и сколько таких пикселей найдётся, зависит от размера пикселя. Сенсор 375 м различает мелкие очаги, которые километровый усредняет до нуля. И отношение не постоянное — около 4 на густой пашне и больше 13 в редком кустарнике, — так что один общий коэффициент тоже неверен. Его надо мерить для каждого места отдельно.',
-  aboutProblemAside: 'Почему это важно',
   aboutProblemNote:
     'Любой, кто спрашивает «горит ли больше, чем раньше», задаёт вопрос, на который сырой ряд ответить не может. Любой тренд через 2012 год испорчен прибором. Переключите «как снято» и «сведено» где угодно на сайте и посмотрите на годы до 2012-го — эта разница и есть вся задача, показанная глазам.',
 
@@ -684,10 +679,10 @@ const ru: Dict = {
   aboutModelNote:
     'Градиентный бустинг, обученный на архиве и на погоде той недели, о которой его спрашивают.',
   aboutModelBody:
-    'Она смотрит на {features} вещей про каждый квадрат 25 на 25 километров: как часто здесь горит в это время года, как давно горело, что делается у соседей, насколько год отошёл от своей нормы, где сейчас Эль-Ниньо — и прогноз погоды на ближайшую неделю, то есть ту половину, которую архив пожаров дать не может. Учится на {train}, настраивается на {validate}, а оценивается на {test} — годах, которых ни разу не видела. Погода почти удваивает её отрыв от простой сезонной догадки.',
+    'Она смотрит на {features} вещей про каждую ячейку 25 на 25 километров: как часто здесь горит в это время года, как давно горело, что делается у соседей, насколько год отошёл от своей нормы, где сейчас Эль-Ниньо — и прогноз погоды на ближайшую неделю, то есть ту половину, которую архив пожаров дать не может. Учится на {train}, настраивается на {validate}, а оценивается на {test} — годах, которых ни разу не видела. Погода почти удваивает её отрыв от простой сезонной догадки.',
   aboutModelNumbers: 'Измерено',
   aboutScoreGloss:
-    'Одно число от 0 до 1 — насколько хорошо способ расставляет квадраты по риску: выстройте все квадраты в порядке, идите по списку сверху и считайте, сколько из него действительно загорелось. Случайный выбор даёт 0.05, потому что горит один квадрат из двадцати. Единицы не достигает никто: одна и та же погода на одной и той же земле иногда даёт пожар, а иногда нет.',
+    'Одно число от 0 до 1 — насколько хорошо способ расставляет ячейки по риску: выстройте все ячейки в порядке, идите по списку сверху и считайте, сколько из него действительно загорелось. Случайный выбор даёт 0.05, потому что горит одна ячейка из двадцати. Единицы не достигает никто: одна и та же погода на одной и той же земле иногда даёт пожар, а иногда нет.',
   aboutModelCaveat:
     'Одно важное: модель училась на погоде, которая уже случилась, а живая карта идёт по прогнозу погоды. Эти цифры — то, что достижимо, если прогноз погоды окажется верным.',
 
@@ -702,10 +697,10 @@ const ru: Dict = {
   ctaNote:
     'Всё выше уже случилось. Одно — нет: модель, обученная на всём архиве, ставит число на ближайшую неделю и честно говорит, как часто это число сбывалось.',
   ctaButton: 'Что будет на следующей неделе',
-  ctaLine: 'В <b>{cells}</b> квадратах ближайшие семь дней несут реальный шанс пожара.',
+  ctaLine: 'В <b>{cells}</b> ячейках ближайшие семь дней несут реальный шанс пожара.',
 
   futureWhere: 'с {from} по {to} · считано {asOf}',
-  futureAnswer: 'В <em>{cells}</em> квадратах ближайшие семь дней несут реальный шанс пожара.',
+  futureAnswer: 'В <em>{cells}</em> ячейках ближайшие семь дней несут реальный шанс пожара.',
   futureAside:
     'Модель градиентного бустинга читает архив <b>с {since} года</b> — где горело, как давно, что обычно делает сезон — и вместе с этим <b>погоду ближайшей недели</b>: жару, ветер, дождь и то, чему там гореть. Каждая ячейка 25 км получает вероятность того, что километровый сенсор увидит там огонь до {to}.',
   futureStatCells: 'Ячеек в зоне риска',
@@ -734,26 +729,25 @@ const ru: Dict = {
   futureSkillNote:
     'Средняя точность на {tested}. Один только сезон — очень сильная база; с погодой перевес над ней почти удваивается — с 2,5% до 4,7%. Одна оговорка, и она важная: модель училась на погоде, которая была на самом деле, а живая карта идёт по прогнозу погоды. То есть это то, что достижимо, если прогноз погоды верен, — верхняя граница, а не обещание.',
   futureBack: 'Назад к архиву',
-  globeHint: 'Потяните, чтобы повернуть',
   globeCall: 'Нажмите огонь, чтобы увидеть подробности',
   pickForecast: 'Ждём на неделе',
-  pickSeen: 'Видел спутник',
+  pickSeen: 'Засечек за неделю до',
   pickNote: 'Шанс, который модель даёт этой ячейке 25 км с {from} по {to}, рядом с тем, что MODIS и VIIRS реально засекли на той же земле за семь дней до этого. Одно — прогноз, второе — измерение.',
   pickNoneSeen: 'За прошлую неделю здесь ничего не засекли — это не то же, что ничего не горело: спутник видит огонь, только если пролетает, пока тот горит, и небо чистое.',
   aboutLookTitle: 'Посмотрите сами',
   aboutLookNote:
-    'Всё выше — это доводы. А это сама вещь: поверните планету, нажмите на любой огонь — и число модели по этому квадрату появится рядом с фотографией той земли, о которой оно.',
+    'Всё выше — это доводы. А это сама вещь: поверните планету, нажмите на любой огонь — и число модели по этой ячейке появится рядом с фотографией той земли, о которой оно.',
   aboutLookCall: 'Тяните, чтобы повернуть · нажмите на огонь',
   lookScale: '{km} км поперёк',
   lookBy: 'Снимок: Esri, Maxar, Earthstar. Точки: эта модель, по одной на ячейку в четверть градуса.',
-  lookFail: 'Снимок этого квадрата не загрузился. На числа рядом это не влияет.',
+  lookFail: 'Снимок этой ячейки не загрузился. На числа рядом это не влияет.',
   lookNote:
-    'Каждая светящаяся точка — место, где модель ждёт огонь на ближайшей неделе: чем ярче, тем вероятнее. Белым обведён тот самый квадрат — около 25 км в поперечнике, одна ячейка сетки, на которой считается весь прогноз.',
+    'Каждая светящаяся точка — место, где модель ждёт огонь на ближайшей неделе: чем ярче, тем вероятнее. Белым обведена та самая ячейка — около 25 км в поперечнике, — та самая сетка, на которой считается весь прогноз.',
   weekPlay: 'Прокрутить неделю',
   weekStop: 'Стоп',
   weekLoading: 'Загружаем дни…',
   weekAll: 'Вся неделя, по {to}',
-  weekBy: 'К концу {to}',
+  weekBy: 'К концу {to} — считая все дни до него',
   weekCells: 'ячеек в зоне риска',
   proofTitle: 'Сверено с тем, что случилось',
   proofLadderTitle: 'Из ячеек, которые модель поставила выше всех, уже сгорело',
@@ -767,12 +761,12 @@ const ru: Dict = {
   proofRecall: 'Поймано',
   whyLead: 'Почему здесь',
   whyClim: 'здесь обычно горит в это время года',
-  whyCellRate: 'этот квадрат горит часто',
+  whyCellRate: 'эта ячейка горит часто',
   whyRecent: 'горело здесь на днях',
   whyLately: 'горит здесь уже которую неделю',
   whyRing: 'горит земля по соседству',
   whyRingAnom: 'у соседей горит больше обычного',
-  whyAnom: 'в этом квадрате горит больше обычного',
+  whyAnom: 'в этой ячейке горит больше обычного',
   whyRegion: 'весь регион идёт выше нормы',
   whyYear: 'год идёт выше своей нормы',
   whyDry: 'впереди сухая неделя',
@@ -856,6 +850,14 @@ let current: Lang = 'en'
 export function setLang(lang: Lang): void {
   current = lang
   document.documentElement.lang = lang
+  /*
+   * The tab, the bookmark and anything the link is pasted into.
+   *
+   * `lang` was being set here from the first version and the title never
+   * was, so a reader on the Russian site had an English name in the tab
+   * strip, in their history, and in every link they shared.
+   */
+  document.title = t('pageTitle')
 }
 
 export function getLang(): Lang {
@@ -953,7 +955,7 @@ export type AboutRow = readonly [string, string]
 const aboutLists: Record<Lang, Record<string, readonly AboutRow[]>> = {
   en: {
     aboutBuiltList: [
-    ['A day at a time', 'Seven models, not one: the target is “will this square burn within N days”, so Tuesday needs a model that was asked about Tuesday. Each picks its own features and its own number of trees, and the shorter windows are held below the longer ones so the week can only ever warm as it runs.'],
+    ['A day at a time', 'Seven models, not one: the target is “will this cell burn within N days”, so Tuesday needs a model that was asked about Tuesday. Each picks its own features and its own number of trees, and the shorter windows are held below the longer ones so the week can only ever warm as it runs.'],
     ['The reconciliation', 'The sensitivity ratio between the two instruments, measured separately for every area and season rather than assumed, and applied so the years before 2012 read on the same scale as the years after.'],
     ['A pyramid of resolutions', 'The whole planet at one degree by month, down to a hundredth of a degree by year \u2014 four levels, drawn from the level the zoom can actually use, so the globe loads as fast as a city.'],
     ['A day at a time', 'Every day of 24 years at a quarter degree, which is what makes a calendar of 9,000 days possible for any point on Earth.'],
@@ -961,8 +963,8 @@ const aboutLists: Record<Lang, Record<string, readonly AboutRow[]>> = {
     ['What it does', 'Fire radiative power turned into carbon dioxide by the published method, calibrated against GFED, with the caveats printed beside the number rather than in a footnote.'],
     ],
     aboutSteps: [
-      ['Every square that has ever burned, on every fourth day of 24 years, becomes one question: given what was known that morning, did it burn in the week that followed? Three million questions with the answers attached.', ''],
-      ['Fires are rare \u2014 five squares in a hundred \u2014 so most of the quiet ones are set aside. Otherwise the shortest way to be right would be to answer \u201cno fire\u201d every time and score ninety-five per cent, and the model would learn exactly that. What it gives back is corrected afterwards so the numbers still mean what they say.', ''],
+      ['Every cell that has ever burned, on every fourth day of 24 years, becomes one question: given what was known that morning, did it burn in the week that followed? Three million questions with the answers attached.', ''],
+      ['Fires are rare \u2014 five cells in a hundred \u2014 so most of the quiet ones are set aside. Otherwise the shortest way to be right would be to answer \u201cno fire\u201d every time and score ninety-five per cent, and the model would learn exactly that. What it gives back is corrected afterwards so the numbers still mean what they say.', ''],
       ['The years are split by time, never shuffled: it learns on 2003\u20132013, is adjusted on 2014\u20132017, and sees 2018\u20132021 once, at the very end. Shuffling would let it learn from a Tuesday to answer about the Monday beside it, and the score would be a lie.', ''],
       ['{trees} small decision trees, each correcting what the ones before it got wrong. Nothing deep and nothing fashionable: on a table of {features} columns this beats a neural network and, unlike one, can be asked why it said what it said \u2014 which is the chart above.', ''],
     ],
@@ -983,7 +985,7 @@ const aboutLists: Record<Lang, Record<string, readonly AboutRow[]>> = {
   },
   ru: {
     aboutBuiltList: [
-    ['День за днём', 'Семь моделей, а не одна: цель — «загорится ли этот квадрат за N дней», поэтому про вторник надо спрашивать модель, которую спрашивали про вторник. Каждая сама выбрала себе набор признаков и число деревьев, а короткие окна удержаны ниже длинных — чтобы неделя только набирала, а не проседала.'],
+    ['День за днём', 'Семь моделей, а не одна: цель — «загорится ли эта ячейка за N дней», поэтому про вторник надо спрашивать модель, которую спрашивали про вторник. Каждая сама выбрала себе набор признаков и число деревьев, а короткие окна удержаны ниже длинных — чтобы неделя только набирала, а не проседала.'],
     ['Сведение приборов', 'Отношение чувствительности двух сенсоров — измеренное для каждой местности и сезона, а не принятое на веру, — и применённое так, что годы до 2012-го читаются в одной шкале с последующими.'],
     ['Пирамида разрешений', 'Вся планета от градуса помесячно до сотой градуса погодно — четыре уровня, и берётся тот, который зум реально может показать. Поэтому глобус грузится так же быстро, как город.'],
     ['Сутки за сутками', 'Каждый день 24 лет на четверти градуса — именно это делает возможным календарь на 9 000 дней для любой точки Земли.'],
@@ -991,8 +993,8 @@ const aboutLists: Record<Lang, Record<string, readonly AboutRow[]>> = {
     ['Чем это отзывается', 'Мощность излучения, переведённая в CO₂ по опубликованной методике и сверенная с GFED, с оговорками рядом с числом, а не в сноске.'],
     ],
     aboutSteps: [
-      ['Каждый квадрат, где когда-либо горело, на каждый четвёртый день 24 лет становится вопросом: если знать только то, что было известно тем утром, — загорелось ли там в ближайшую неделю? Три миллиона вопросов с уже известными ответами.', ''],
-      ['Пожары редки — пять квадратов из ста, — поэтому большую часть спокойных мы откладываем в сторону. Иначе самый лёгкий способ быть правой — всегда отвечать «не загорится» и попадать в 95% случаев, и модель именно этому бы и научилась. То, что она потом выдаёт, поправляется обратно, чтобы числа значили то, что говорят.', ''],
+      ['Каждая ячейка, где когда-либо горело, на каждый четвёртый день 24 лет становится вопросом: если знать только то, что было известно тем утром, — загорелось ли там в ближайшую неделю? Три миллиона вопросов с уже известными ответами.', ''],
+      ['Пожары редки — пять ячеек из ста, — поэтому большую часть спокойных мы откладываем в сторону. Иначе самый лёгкий способ быть правой — всегда отвечать «не загорится» и попадать в 95% случаев, и модель именно этому бы и научилась. То, что она потом выдаёт, поправляется обратно, чтобы числа значили то, что говорят.', ''],
       ['Годы делятся по времени, а не вперемешку: учёба на 2003–2013, настройка на 2014–2017, а 2018–2021 она видит один раз, в самом конце. Если перемешать, модель сможет подглядеть во вторник, чтобы ответить про соседний понедельник, и оценка будет врать.', ''],
       ['{trees} маленьких решающих деревьев, каждое правит ошибки предыдущих. Ничего глубокого и ничего модного: на таблице из {features} колонок это обходит нейросеть и, в отличие от неё, умеет объяснить, почему сказала именно так — это и есть график выше.', ''],
     ],

@@ -264,10 +264,19 @@
                 <input type="radio" name="map-range" value="now" />
                 <span data-i18n="rangeNow">Right now</span>
               </label>
-              <label>
-                <input type="radio" name="map-range" value="forecast" />
-                <span data-i18n="rangeForecast">Next week</span>
-              </label>
+              <!--
+                Next week is not a period of this map.
+
+                It used to sit here as a third option, and the record's
+                map would quietly turn into a forecast: the same squares,
+                a colour scale that now meant chance rather than count,
+                and none of what makes a forecast readable — the day
+                strip, the scorecard, the reasons. A reader who pressed
+                it got the weakest version of the forecast on the page
+                least able to explain it. The forecast has its own page
+                and this control stays about the record: a year, or the
+                last few days of it.
+              -->
             </fieldset>
             <div class="yearpick" id="map-yearpick">
               <button type="button" class="ghost-btn" id="map-year-prev" aria-label="Previous year">&#8249;</button>

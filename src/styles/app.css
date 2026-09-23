@@ -141,7 +141,15 @@ canvas {
   top: var(--s-3);
   z-index: 40;
   margin: var(--s-3) auto 0;
-  width: min(100% - var(--s-8), 1180px);
+  /*
+   * Exactly the reading column, which is what the paragraph above always
+   * claimed it was. At 1180 against the column's 1240 it was sixty pixels
+   * narrower, and those thirty pixels a side were a window: every line of
+   * text scrolled up past the bar in them, cut off mid-letter, on every
+   * page and in both themes. A floating panel with the page visible
+   * beside it does not read as floating, it reads as broken.
+   */
+  width: min(100% - 2 * var(--s-6), 1240px);
   border: 1px solid var(--edge);
   border-radius: var(--r-panel);
   background: color-mix(in srgb, var(--ash-raised) 72%, transparent);
@@ -820,8 +828,18 @@ canvas {
   border-top: 1px solid var(--edge-soft);
 }
 
+/*
+ * A column, so the value can sit at the bottom of it.
+ *
+ * The labels below are allowed to wrap now, and without this a two-line
+ * label pushed its own number down while its neighbours' numbers stayed
+ * up — a row of figures on two different lines, which reads as a layout
+ * that broke rather than one that adapted.
+ */
 .metrics > div {
+  display: flex;
   flex: 1 1 124px;
+  flex-direction: column;
   min-width: 0;
   padding: 0 var(--s-4);
   border-left: 1px solid var(--edge-soft);
@@ -832,19 +850,31 @@ canvas {
   border-left: 0;
 }
 
+/*
+ * A label that has to be truncated is not a label.
+ *
+ * These were held on one line and cut with an ellipsis, which is right for
+ * a name that arrives from data and can be any length. Every one of these
+ * is ours, written to a known set, and the longest of them — "Квадрато-дней
+ * с огнём" — wanted 152 pixels of a 137-pixel column at every width the
+ * site has. It read "Квадрато-дней с о…", which names nothing. So they
+ * wrap, and the numbers stay aligned by the rule above.
+ */
 .metrics dt {
-  overflow: hidden;
   font-size: var(--t-caption);
   font-weight: 500;
   letter-spacing: 0.05em;
   text-transform: uppercase;
   color: var(--ink-tertiary);
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  text-wrap: balance;
 }
 
 .metrics dd {
   margin: 3px 0 0;
+  /* Pushed to the foot of its column, so a two-line label above does not
+     drop its own number below the rest of the row. */
+  margin-top: auto;
+  padding-top: 3px;
   font-family: var(--font-display);
   font-size: var(--t-h4);
   font-weight: 700;
@@ -1058,7 +1088,16 @@ canvas {
 .years th {
   position: sticky;
   top: 0;
-  z-index: 1;
+  /*
+   * Above the rows, which are positioned too.
+   *
+   * At 1 this tied with `.bar-cell span`, and a tie is broken by document
+   * order — the body comes after the head, so a year's figure slid up and
+   * printed itself on top of the column's own name. Only that one cell
+   * has a stacking order at all, which is why it was the only thing that
+   * showed through.
+   */
+  z-index: 2;
   padding: 0;
   border-bottom: 1px solid var(--edge);
   background: var(--ash-raised);
@@ -1363,12 +1402,11 @@ canvas {
   border-top: 1px solid var(--edge-soft);
 }
 
+/* Ours too, and "Квадратов горело хоть раз" is one narrow column away
+   from the same ellipsis. */
 .mini-facts dt {
-  overflow: hidden;
   font-size: var(--t-caption);
   color: var(--ink-tertiary);
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 .mini-facts dd {

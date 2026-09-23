@@ -17,7 +17,7 @@
  * vector.
  */
 
-import { formatDoy, formatNumber, months, t } from '../i18n'
+import { formatDate, formatDoy, formatNumber, months, t } from '../i18n'
 import { daysInYear } from '../core/grid'
 import { MODIS_MASK, SENSOR_META, SENSORS, VIIRS_MASK, type SensorId } from '../core/types'
 import type { Climatology } from '../core/stats'
@@ -368,8 +368,17 @@ export class Ribbon {
     }
 
     // Footer: the record span, stated once, in the same ink as the axis.
+    // In words, like every other date the reader is shown — this was the
+    // last place on the site still printing a raw ISO string.
     const footY = HEAD + model.years.length * (rowH + ROW_GAP) + 13
-    text(x0, footY, `${model.observedFrom} → ${model.observedTo}`, rgba(inkSecondary, 0.6), 'start', 'rb-mono')
+    text(
+      x0,
+      footY,
+      `${formatDate(model.observedFrom)} → ${formatDate(model.observedTo)}`,
+      rgba(inkSecondary, 0.6),
+      'start',
+      'rb-mono',
+    )
     text(
       width - GUTTER_RIGHT,
       footY,

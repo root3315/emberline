@@ -85,8 +85,13 @@ function emberColour(life: number): string {
  * of what the reader can see, so scrolling up hands it more page and the whole
  * thing lasts longer. Slower than it looks like it should be on paper — much
  * under two seconds a screen and the eye reads it as a wipe.
+ *
+ * Raised from 2600 on the owner's word: at that speed the edge is legible
+ * but there is no time to look at it, and looking at it is the point. Past
+ * about five seconds a screen it stops being a transition and becomes a
+ * wait, so this is near the top of what the toggle can carry.
  */
-const DURATION_MS = 2600
+const DURATION_MS = 4300
 /** Vertical swing of the torn edge, as a fraction of the window's height. */
 const AMPLITUDE = 0.055
 /**
@@ -730,7 +735,8 @@ function paintFire(waves: Wave[], anim: Animation | null): void {
  * job at a thousandth of the price.
  * ------------------------------------------------------------------------- */
 
-const ASH_MS = 2500
+/* The ash front, kept in step with the fire above. */
+const ASH_MS = 4100
 /**
  * How far the front leans. Level, it is a wipe; raked, it is weather.
  *
