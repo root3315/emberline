@@ -511,7 +511,23 @@ function renderMapForecast(box: Bounds | null, name: string | null, fitKey: stri
       to: formatDate(picked?.to ?? meta.to),
       asOf: formatDate(meta.asOf),
       cell: t('cellQuarter'),
-    })
+    }) +
+    /*
+     * And, on a shortened window, why the map is paler than it was.
+     *
+     * The ramp is an absolute chance and it does not move with the strip,
+     * so the first frame of the animation is mostly bottom-of-ramp: over
+     * one day 44,216 cells clear one per cent against 107,494 over seven,
+     * and their mean is a third of the week's. With the basemap dimmed so
+     * that fire reads against it, a thin frame looks like a map that went
+     * out, and the first thing a reader does is call it a bug.
+     */
+    (picked && picked.days < meta.horizonDays
+      ? ` ${t('forecastShortWindow', {
+          cells: formatNumber(picked.cells),
+          all: formatNumber(meta.cells),
+        })}`
+      : '')
   // How well it scores belongs under the map, not in front of it.
   setMapCaveat(
     t('forecastSkill', {
@@ -2218,7 +2234,10 @@ function renderHero(ds: Dataset): void {
     const row = state.grid.get(state.year)
     const half = row ? concentrationDays(row, daysInYear(state.year), 0.5) : 0
     if (half > 0) {
-      els.heroAside.append(document.createTextNode(' '), boldSpan(t('heroConcentration', { n: half })))
+      els.heroAside.append(
+        document.createTextNode(' '),
+        boldSpan(t('heroConcentration', { n: formatDays(half) })),
+      )
     }
   } else if (baselineYears > 0) {
     els.heroAside.textContent = t('shortBaseline', { n: formatYears(baselineYears) })
@@ -2556,7 +2575,9 @@ function renderConcentration(): void {
   const [head, tail] = template.split('{n}')
 
   const strong = document.createElement('b')
-  strong.textContent = String(days)
+  // The word goes inside the emphasis with the figure: "14 дней" is
+  // one quantity, and the noun has to agree with the number anyway.
+  strong.textContent = formatDays(days)
   els.concentration.innerHTML = ''
   els.concentration.append(document.createTextNode(head), strong, document.createTextNode(tail ?? ''))
 }
@@ -3506,9 +3527,29 @@ function drawNowFine(
   const from = addDays(fine.dayZero, firstDay)
   const to = addDays(fine.dayZero, last)
   const cell = t('cellFine')
-  els.mapNote.textContent = name
-    ? t('placeNowNote', { place: name, fires: formatNumber(fires), from, to, cell })
-    : t('worldNowNote', { fires: formatNumber(fires), from, to, cell })
+  const said = { fires: formatNumber(fires), from: formatDate(from), to: formatDate(to), cell }
+  els.mapNote.textContent =
+    (name ? t('placeNowNote', { place: name, ...said }) : t('worldNowNote', said)) +
+    snapshotBehind(to)
+}
+
+
+/**
+ * How far behind today the snapshot runs, when that is worth saying.
+ *
+ * The control is labelled "right now", and the data under it is whatever
+ * the last build fetched. One day behind is what "now" honestly means for
+ * a satellite record that trails its own overpasses; four days behind is
+ * a different claim, and the reader should not have to check the printed
+ * dates against their own calendar to discover it.
+ *
+ * Silent while it is current, so it appears exactly when it matters.
+ */
+function snapshotBehind(to: string): string {
+  const day = 86_400_000
+  const today = Date.parse(new Date().toISOString().slice(0, 10))
+  const behind = Math.round((today - Date.parse(to)) / day)
+  return behind > 1 ? ` ${t('snapshotBehind', { n: formatDays(behind) })}` : ''
 }
 
 /**
@@ -3559,9 +3600,10 @@ function drawNowPoints(
 
   const from = addDays(fine?.dayZero ?? meta.from, firstDay)
   const to = addDays(fine?.dayZero ?? meta.from, last)
-  els.mapNote.textContent = name
-    ? t('placePointsNote', { place: name, fires: formatNumber(shown.length), from, to })
-    : t('worldPointsNote', { fires: formatNumber(shown.length), from, to })
+  const said = { fires: formatNumber(shown.length), from: formatDate(from), to: formatDate(to) }
+  els.mapNote.textContent =
+    (name ? t('placePointsNote', { place: name, ...said }) : t('worldPointsNote', said)) +
+    snapshotBehind(to)
 }
 
 /** Calendar arithmetic, in UTC, so a date never slips by a day. */

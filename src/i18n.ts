@@ -30,7 +30,7 @@ const en: Dict = {
   heroYearBusy: '{year} ran {ratio} a normal year.',
   heroYearQuiet: '{year} was quieter than usual, at {ratio} the normal total.',
   heroYearPlain: '{year} came in close to normal.',
-  heroConcentration: 'Half of it arrived in just {n} days.',
+  heroConcentration: 'Half of it arrived in just {n}.',
   partialYear: '{year} is still running — the record ends {date}, so totals for it are incomplete.',
   partialYearShort: 'Not comparable yet: {year} has not finished.',
 
@@ -166,11 +166,14 @@ const en: Dict = {
   pickerEmpty: 'Nothing matches that.',
   pickerSearching: 'Looking…',
   pickerFailed: 'Place search is unavailable — try again in a moment.',
+  snapshotBehind: 'It is {n} behind today.',
   worldNowNote: '{fires} detections between {from} and {to}, {cell} cells. A snapshot, taken when the site was last built — not a live feed.',
   placeNowNote: '{place}: {fires} detections between {from} and {to}, {cell} cells. A snapshot from the last build, not a live feed.',
   rangeLegend: 'Period',
   rangeYear: '{year}',
   rangeNow: 'Right now',
+  forecastShortWindow:
+    'The scale is the same on every day of the strip, so a shorter window looks paler \u2014 fewer cells clear one per cent at all, and the ones that do have had less time. Over a single day {cells} cells are on the map against {all} for the whole week. The map has not gone quiet; the chance really is smaller.',
   forecastNote: 'Chance of a fire large enough for the 1 km sensor to see, {from} to {to}, per {cell} cell. Computed from the archive as it stood on {asOf} — a build-time estimate, not a live forecast.',
   forecastSkill: 'Scored on {tested}, years the model never saw: {model} average precision against {clim} for "how often it burns here at this time of year" and {persist} for "it burned last week". Picking at random scores {base}. The margin over the seasonal baseline is small, and it is printed here rather than hidden: without daily weather — rain, wind, humidity — most of what is predictable about the next week is the season.',
   forecastProbe: '{p} chance in the next {n} days',
@@ -241,7 +244,7 @@ const en: Dict = {
   emptyArchiveBody:
     'Pick another area, or switch the source to a live NASA query or your own CSV export. Both run exactly the same reconciliation, right here in the browser.',
 
-  concentrationLine: 'Half of {year} burned in {n} days, and {pct}% of the year fell in {month}.',
+  concentrationLine: 'Half of {year} burned in {n}, and {pct}% of the year fell in {month}.',
   colophon:
     'Fire detections from NASA FIRMS (MODIS and VIIRS). These mark burning at the moment a satellite passed overhead, not the area burned. Built for the NASA Space Apps Challenge 2026.',
   provenanceFirms: 'NASA FIRMS — MODIS C6.1 and VIIRS C2 active fire products, retrieved via the FIRMS area API',
@@ -447,7 +450,7 @@ const ru: Dict = {
   heroYearBusy: '{year} год дал {ratio} от обычного.',
   heroYearQuiet: '{year} год был спокойнее обычного — {ratio} от нормы.',
   heroYearPlain: '{year} год прошёл примерно как обычно.',
-  heroConcentration: 'Половина этого пришлась всего на {n} дней.',
+  heroConcentration: 'Половина этого пришлась всего на {n}.',
   partialYear: '{year} год ещё идёт — данные заканчиваются {date}, поэтому итоги за него неполные.',
   partialYearShort: 'Сравнивать пока не с чем: {year} год не закончился.',
 
@@ -490,7 +493,7 @@ const ru: Dict = {
   colAbove: 'Горячих дней',
 
   readingTitle: 'Что бросается в глаза',
-  verdictBusy: 'Засечек за год — {ratio} от обычной нормы, и {days} были горячее неё.',
+  verdictBusy: 'Засечек за год — {ratio} от обычной нормы, и горячее неё оказалось {days}.',
   verdictQuiet: 'Спокойный год: засечек — {ratio} от обычной нормы, без длинных горячих отрезков.',
   verdictNoSeason: 'В {year} году здесь ничего не горело.',
   criticalTitle: 'Периоды под нагрузкой',
@@ -581,11 +584,14 @@ const ru: Dict = {
   pickerEmpty: 'Ничего не нашлось.',
   pickerSearching: 'Ищу…',
   pickerFailed: 'Поиск мест недоступен — попробуйте через минуту.',
+  snapshotBehind: 'Отстаёт от сегодня на {n}.',
   worldNowNote: '{fires} засечек с {from} по {to}, ячейка {cell}. Это снимок на момент последней сборки сайта, а не живой поток.',
   placeNowNote: '{place}: {fires} засечек с {from} по {to}, ячейка {cell}. Снимок последней сборки, не живой поток.',
   rangeLegend: 'Период',
   rangeYear: '{year}',
   rangeNow: 'Прямо сейчас',
+  forecastShortWindow:
+    'Шкала одна и та же на каждом дне полосы, поэтому короткое окно выглядит бледнее: меньше ячеек вообще переходит порог в один процент, а у тех, что перешли, было меньше времени. За один день на карте {cells} ячеек против {all} за всю неделю. Карта не потухла \u2014 шанс и правда меньше.',
   forecastNote: 'Вероятность пожара, достаточно крупного для километрового сенсора, с {from} по {to}, на ячейку {cell}. Считано по архиву на {asOf} — оценка на момент сборки, не живой прогноз.',
   forecastSkill: 'Проверено на {tested} — годах, которых модель не видела: средняя точность {model} против {clim} у «как часто здесь горит в это время года» и {persist} у «горело на прошлой неделе». Случайный выбор даёт {base}. Перевес над сезонной базой небольшой, и он здесь написан, а не спрятан: без суточной погоды — дождя, ветра, влажности — предсказуемо в ближайшей неделе почти только сезон.',
   forecastProbe: '{p} вероятность в ближайшие {n} дней',
@@ -656,7 +662,7 @@ const ru: Dict = {
   emptyArchiveBody:
     'Выберите другой район или переключите источник на живой запрос к NASA либо на свой CSV. Оба пути проходят ровно то же сведение — прямо здесь, в браузере.',
 
-  concentrationLine: 'Половина {year} года сгорела за {n} дней, а {pct}% всего объёма пришлось на {month}.',
+  concentrationLine: 'Половина {year} года сгорела за {n}, а {pct}% всего объёма пришлось на {month}.',
   colophon:
     'Засечки огня из NASA FIRMS (MODIS и VIIRS). Они отмечают горение в момент пролёта спутника, а не выгоревшую площадь. Сделано для NASA Space Apps Challenge 2026.',
   provenanceFirms: 'NASA FIRMS — продукты активных пожаров MODIS C6.1 и VIIRS C2, получены через area API FIRMS',
