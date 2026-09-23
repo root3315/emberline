@@ -7,7 +7,7 @@
  * claim the calendar makes about the 2000s has to survive looking at this.
  */
 
-import { formatNumber, t } from '../i18n'
+import { formatCompact, t } from '../i18n'
 import { fitCanvas, LABEL, MONO, rgba, roundRect, varColor, type Rgb } from './paint'
 
 export interface ContribYear {
@@ -25,11 +25,26 @@ export function drawContrib(canvas: HTMLCanvasElement, data: ContribYear[]): voi
   if (!surface || data.length === 0) return
   const { ctx, width } = surface
 
-  const plotW = width - PAD.left - PAD.right
   const plotH = HEIGHT - PAD.top - PAD.bottom
 
   const peak = Math.max(...data.map((d) => d.modisOnly + d.both + d.viirsOnly), 1)
-  const step = plotW / data.length
+
+  /*
+   * The gutter has to fit the labels, and 52 pixels did not.
+   *
+   * Punjab's tallest year is 220,134, which `formatNumber` writes as
+   * "220 134" — about 46 pixels of mono at this size, drawn right-aligned
+   * ending 8 short of the gutter, so it started 2 pixels from the left edge
+   * of the canvas and ran off it on anything narrower. Compact labels are
+   * shorter and still exact enough for an axis, and the gutter is measured
+   * from the ones about to be drawn rather than guessed.
+   */
+  const marks = [0, 1, 2].map((i) => ({ v: (peak / 2) * i, text: formatCompact(Math.round((peak / 2) * i)) }))
+  ctx.font = MONO
+  const gutter = Math.max(PAD.left, Math.ceil(Math.max(...marks.map((m) => ctx.measureText(m.text).width))) + 16)
+
+  const plotWidth = width - gutter - PAD.right
+  const step = plotWidth / data.length
   const barW = Math.max(3, Math.min(26, step - 4))
 
   const inkMuted = varColor('--ink-muted')
@@ -42,21 +57,20 @@ export function drawContrib(canvas: HTMLCanvasElement, data: ContribYear[]): voi
   ctx.font = MONO
   ctx.textAlign = 'right'
   ctx.textBaseline = 'middle'
-  for (let i = 0; i <= 2; i++) {
-    const v = (peak / 2) * i
-    const yy = Math.round(PAD.top + plotH - (v / peak) * plotH) + 0.5
+  for (const mark of marks) {
+    const yy = Math.round(PAD.top + plotH - (mark.v / peak) * plotH) + 0.5
     ctx.strokeStyle = rgba(edgeSoft, 1)
     ctx.lineWidth = 1
     ctx.beginPath()
-    ctx.moveTo(PAD.left, yy)
+    ctx.moveTo(gutter, yy)
     ctx.lineTo(width - PAD.right, yy)
     ctx.stroke()
     ctx.fillStyle = rgba(inkMuted, 0.9)
-    ctx.fillText(formatNumber(Math.round(v)), PAD.left - 8, yy)
+    ctx.fillText(mark.text, gutter - 8, yy)
   }
 
   data.forEach((d, i) => {
-    const x = PAD.left + i * step + (step - barW) / 2
+    const x = gutter + i * step + (step - barW) / 2
     let cursor = PAD.top + plotH
 
     const segments: Array<[number, Rgb]> = [
@@ -87,8 +101,8 @@ export function drawContrib(canvas: HTMLCanvasElement, data: ContribYear[]): voi
   ctx.font = LABEL
   ctx.textAlign = 'center'
   ctx.textBaseline = 'alphabetic'
-  const every = Math.ceil((data.length * 30) / Math.max(plotW, 1))
-  const at = (i: number) => PAD.left + i * step + step / 2
+  const every = Math.ceil((data.length * 30) / Math.max(plotWidth, 1))
+  const at = (i: number) => gutter + i * step + step / 2
   const last = data.length - 1
   /**
    * The newest year always gets its label; whatever would collide with it does

@@ -53,8 +53,10 @@ import { loadReasons, reasonsAt } from './core/reasons'
 import { daysInYear, dayOfYear, yearOf } from './core/grid'
 import {
   MIN_RATIO_SAMPLES,
+  comparable,
   quantileSorted,
   summarizeSensitivity,
+  type AdjustedDay,
   type DailyRatio,
   type SensitivityRatio,
 } from './core/harmonize'
@@ -74,7 +76,10 @@ import {
 import { MODIS_MASK, SENSOR_META, SENSORS, VIIRS_MASK, type Bounds, type SensorId } from './core/types'
 import {
   applyStaticStrings,
+  cellsAtRiskUnit,
+  cellsLitUnit,
   cellsUnit,
+  daysUnit,
   formatCompact,
   formatDate,
   formatDoy,
@@ -1646,7 +1651,7 @@ function fillWeek(): void {
     const n = document.createElement('b')
     n.textContent = formatNumber(now.cells)
     els.weekRead.append(document.createTextNode(' \u00b7 '), n,
-      document.createTextNode(` ${t('weekCells')}`))
+      document.createTextNode(` ${cellsAtRiskUnit(now.cells)}`))
   }
 }
 
@@ -2464,10 +2469,19 @@ function renderMetrics(ds: Dataset, totals: Map<number, number>): void {
 
   if (trend && Math.abs(trend.slopePct) >= 0.01) {
     const pct = trend.slopePct * 100
+    /*
+     * The note has to say which series the slope was taken over.
+     *
+     * It printed "on MODIS since 2003 — the ratio cancels" in both modes,
+     * but `state.grid` is built from `d.raw` in "as recorded", which is
+     * both families added together. So #/punjab/2026/raw showed +7.5% a
+     * year under a label claiming it was one unchanged instrument, when
+     * most of that rise is NOAA-20 and NOAA-21 arriving.
+     */
     metric(
       t('metricTrend'),
       formatPercent(pct, 1, true),
-      t('trendOnModis'),
+      t(state.mode === 'harmonized' ? 'trendOnModis' : 'trendOnRaw'),
       pct > 0 ? 'up' : 'down',
     )
   } else {
@@ -2475,7 +2489,7 @@ function renderMetrics(ds: Dataset, totals: Map<number, number>): void {
   }
 
   if (biggest) metric(t('metricPeakYear'), String(biggest[0]), compact(Math.round(biggest[1])))
-  if (peakDay && peakDay.frp > 0) metric(t('metricPower'), `${compact(Math.round(peakDay.frp))}`, 'MW')
+  if (peakDay && peakDay.frp > 0) metric(t('metricPower'), compact(Math.round(peakDay.frp)), t('unitMw'))
 }
 
 function metric(label: string, value: string, note: string, tone?: 'up' | 'down'): void {
@@ -2892,16 +2906,32 @@ function renderReading(): void {
   const partial = state.dataset ? isPartialYear(state.dataset) : false
   const trustworthy = baselineYears >= MIN_BASELINE_YEARS && !partial
 
-  fact(
-    t('factPeak'),
-    formatDoy(a.shape.peak, state.year),
-    `${formatNumber(Math.round(a.shape.peakValue))} ${t('unitCellsLit')}`,
-  )
+  /*
+   * The busiest day, rather than the top of the smoothed curve.
+   *
+   * `shape.peak` is where the fifteen-day average is highest, which is
+   * where the season is at its height and not the day most of it burned.
+   * Printed under "Busiest day" with a unit that reads as a count, it
+   * disagreed with the list of the year's five biggest days further down
+   * the same page — Yakutia 2021 said 3 August, 5,548, where the list had
+   * 8 August at 9,438. Where the season sits is still said twice over, by
+   * the tile beside this one and by the sentence at the top.
+   */
+  const inYear = state.dataset
+    ? state.dataset.adjusted.filter((d) => d.day.startsWith(String(state.year)))
+    : []
+  const busiest = inYear.reduce<AdjustedDay | null>((best, d) => (!best || shown(d) > shown(best) ? d : best), null)
+  if (busiest) {
+    const n = Math.round(shown(busiest))
+    fact(t('factPeak'), formatDoy(dayOfYear(busiest.day), state.year), `${formatNumber(n)} ${cellsLitUnit(n)}`)
+  }
   fact(t('factSeason'), `${formatDoy(a.shape.start, state.year)}`, `→ ${formatDoy(a.shape.end, state.year)}`)
   fact(
     t('factLength'),
     `${a.shape.length}`,
-    trustworthy && a.lengthShiftDays !== null ? `${t('daysUnit')} · ${signed(a.lengthShiftDays)}` : t('daysUnit'),
+    trustworthy && a.lengthShiftDays !== null
+      ? `${daysUnit(a.shape.length)} · ${signed(a.lengthShiftDays)}`
+      : daysUnit(a.shape.length),
   )
 
   const row = state.grid.get(state.year)
@@ -2940,8 +2970,10 @@ function renderReading(): void {
 
     const meta = document.createElement('span')
     meta.className = 'period__meta'
+    // A period against a year with no usual level to compare to has no
+    // ratio, and was printing the separator anyway: "4 дня ·".
     const ratioLabel = Number.isFinite(p.ratio) ? t('periodRatio', { n: formatNumber(p.ratio, 1) }) : ''
-    meta.textContent = `${formatDays(p.days)} · ${ratioLabel}`
+    meta.textContent = ratioLabel ? `${formatDays(p.days)} · ${ratioLabel}` : formatDays(p.days)
 
     li.append(span, meta)
     els.periods.append(li)
@@ -3268,21 +3300,22 @@ const POINT_ZOOM = 9.5
 let worldScope = false
 
 /**
- * The ribbon, for the planet.
- *
- * It is the same component the regions use, fed the same shape of model — the
- * daily series is a `Map<year, Float64Array>` exactly like a region's, so the
- * climatology, the ninetieth percentile and the ceiling all come from the
- * code that already computes them. Nothing here is a special case except
- * where the numbers come from.
- */
-/**
  * The daily series for the world scope, in whichever mode is selected.
  *
- * "As recorded" is the two instruments added together, which steps sharply
- * upward in 2012 when VIIRS arrives and sees several times as many fires over
- * the same ground. "Reconciled" scales the MODIS-only era up by the ratio
- * measured where the two overlap, so the record can be read end to end.
+ * "As recorded" is the two instruments added together. It steps in 2012 when
+ * VIIRS arrives, again in 2018 and again in 2024, because each of those is a
+ * satellite and not a fire. "Reconciled" is MODIS alone, scaled once by the
+ * ratio measured where the two families overlap, so the whole record is the
+ * one instrument that has not changed since 2002.
+ *
+ * This used to scale only the years before VIIRS and add the instruments
+ * together afterwards, which is the rule `harmonize.ts` was rewritten to get
+ * rid of: it leaves the modern half of the series counting satellites.
+ * Measured on the committed global level, VIIRS detections per MODIS
+ * detection run 4.09 in 2012, 8.87 in 2019 and 15.59 in 2026 — one step for
+ * each of S-NPP, NOAA-20 and NOAA-21. Against 2012 that made the reconciled
+ * planet read 1.44x in 2018 and 2.73x in 2024 while MODIS said 0.83 and 0.98,
+ * and the page offered it as the honest half of the toggle.
  *
  * The ratio is measured here the same way a region measures its own, and for
  * the same reason it is measured rather than assumed: how much more a 375 m
@@ -3296,20 +3329,17 @@ function worldSeries(byInstrument: Map<number, { modis: Float64Array; viirs: Flo
   ratio: SensitivityRatio
 } {
   const ratios: DailyRatio[] = []
-  let viirsFrom: string | null = null
 
   for (const [year, row] of [...byInstrument].sort((a, b) => a[0] - b[0])) {
     for (let d = 1; d <= 366; d++) {
       const m = row.modis[d]
       const v = row.viirs[d]
-      if (v > 0 && viirsFrom === null) viirsFrom = isoDay(year, d)
       if (m >= 3 && v > 0) ratios.push({ day: isoDay(year, d), ratio: v / m })
     }
   }
 
   const ratio = summarizeSensitivity(ratios)
   const usable = state.mode === 'harmonized' && ratio.samples >= MIN_RATIO_SAMPLES
-  const cut = viirsFrom ?? '2012-01-20'
 
   const grid = new Map<number, Float64Array>()
   const sensorsByYear = new Map<number, number>()
@@ -3321,10 +3351,8 @@ function worldSeries(byInstrument: Map<number, { modis: Float64Array; viirs: Flo
       const v = row.viirs[d]
       if (m > 0) mask |= MODIS_MASK
       if (v > 0) mask |= VIIRS_MASK
-      // Only the era before VIIRS is scaled; days when both were watching are
-      // real observations and bending them to fit the model would be the
-      // opposite of the point.
-      out[d] = usable && isoDay(year, d) < cut ? m * ratio.k : m + v
+      // The shared rule, so this cannot drift away from the regions again.
+      out[d] = comparable(m, v, usable ? ratio.k : null)
     }
     grid.set(year, out)
     sensorsByYear.set(year, mask)
@@ -3343,6 +3371,15 @@ function isoDay(year: number, doy: number): string {
  * The planet and a searched place differ only in where the numbers come from
  * — one file for the whole surface, a few tiles for one box — so the shaping
  * of them into years, climatology and a ceiling is written once.
+ */
+/**
+ * The ribbon, for the planet.
+ *
+ * It is the same component the regions use, fed the same shape of model — the
+ * daily series is a `Map<year, Float64Array>` exactly like a region's, so the
+ * climatology, the ninetieth percentile and the ceiling all come from the
+ * code that already computes them. Nothing here is a special case except
+ * where the numbers come from.
  */
 function ribbonFromGrid(
   byInstrument: Map<number, { modis: Float64Array; viirs: Float64Array }>,
@@ -4117,6 +4154,22 @@ function renderWorldPanels(): void {
    * curves sharing an axis and inviting exactly the reading the caption
    * spends three lines forbidding.
    */
+  /*
+   * The planet's provenance, because the region's was still sitting there.
+   *
+   * `#provenance` is written once per archive load and never cleared on the
+   * way out, so opening #/punjab and then #/world left "7,971 days of
+   * record, 2,971,735 detections" under the heading "Where the numbers come
+   * from", two blocks below a headline saying 593,322,226. Opening #/world
+   * directly left the same line empty and the section with nothing in it.
+   */
+  els.provenance.textContent = t('provenanceWorld', {
+    from: String(totals[0]?.year ?? ''),
+    to: String(totals[totals.length - 1]?.year ?? ''),
+    detections: formatNumber(totals.reduce((sum, d) => sum + d.modis + d.viirs, 0)),
+    place: days && worldPlace ? worldPlace.name : t('scopeWorld'),
+  })
+
   const temps = days ? undefined : (climate ?? undefined)
   drawWorldYears(els.worldYears, totals, state.year, temps)
   els.worldTempNote.hidden = !temps
@@ -4179,15 +4232,29 @@ let climate: Map<number, number> | null = null
  * and so cannot show it, and the calendar shows it a cell at a time. Five
  * rows and a share say it outright.
  */
+/**
+ * The number this page is currently showing for one day.
+ *
+ * `raw` is the two families added together, `value` is the comparable
+ * series. Everything the reader can see at once has to agree on which of
+ * them it is talking about.
+ */
+function shown(d: AdjustedDay): number {
+  return state.mode === 'harmonized' ? d.value : d.raw
+}
+
 function renderWorst(ds: Dataset): void {
   const year = state.year
-  const days = ds.days.filter((d) => d.day.startsWith(String(year)) && d.activeCells > 0)
+  // `ds.days` is the raw record whatever the mode, and this block used it:
+  // the five rows did not change when the toggle did, while the
+  // concentration line beside them did, and the two stopped adding up.
+  const days = ds.adjusted.filter((d) => d.day.startsWith(String(year)) && shown(d) > 0)
   els.worst.hidden = days.length === 0
   if (!days.length) return
 
-  const total = days.reduce((sum, d) => sum + d.activeCells, 0)
-  const top = [...days].sort((a, b) => b.activeCells - a.activeCells).slice(0, 5)
-  const peak = top[0].activeCells
+  const total = days.reduce((sum, d) => sum + shown(d), 0)
+  const top = [...days].sort((a, b) => shown(b) - shown(a)).slice(0, 5)
+  const peak = shown(top[0])
 
   els.worstList.innerHTML = ''
   for (const day of top) {
@@ -4201,18 +4268,18 @@ function renderWorst(ds: Dataset): void {
     const bar = document.createElement('span')
     bar.className = 'worst__bar'
     const fill = document.createElement('i')
-    fill.style.setProperty('--p', String(day.activeCells / peak))
+    fill.style.setProperty('--p', String(shown(day) / peak))
     bar.append(fill)
 
     const n = document.createElement('span')
     n.className = 'worst__n'
-    n.textContent = compact(day.activeCells)
+    n.textContent = compact(Math.round(shown(day)))
 
     row.append(when, bar, n)
     els.worstList.append(row)
   }
 
-  const share = top.reduce((sum, d) => sum + d.activeCells, 0) / Math.max(total, 1)
+  const share = top.reduce((sum, d) => sum + shown(d), 0) / Math.max(total, 1)
   els.worstNote.textContent = t('worstNote', {
     pct: `${Math.round(share * 100)}%`,
     year: String(year),
@@ -4257,7 +4324,7 @@ function renderImpact(): void {
       els.impactLead.textContent = t('impactLeadNone', { year: String(state.year) })
     }
     els.impactCaveat.textContent = t('impactCaveat', {
-      gfed: String(est.calibratedTo.annualGtCo2),
+      gfed: formatNumber(est.calibratedTo.annualGtCo2, 1),
       from: String(est.from),
     })
     els.impactCaveat.hidden = false

@@ -26,7 +26,11 @@ export const SENSOR_META: Record<SensorId, { platform: Platform; pixelM: number;
   modis_aqua: { platform: 'modis', pixelM: 1000, since: '2002-07-04', label: 'MODIS Aqua' },
   viirs_snpp: { platform: 'viirs', pixelM: 375, since: '2012-01-20', label: 'VIIRS S-NPP' },
   viirs_noaa20: { platform: 'viirs', pixelM: 375, since: '2018-01-01', label: 'VIIRS NOAA-20' },
-  viirs_noaa21: { platform: 'viirs', pixelM: 375, since: '2023-01-05', label: 'VIIRS NOAA-21' },
+  // NOAA-21 launched in November 2022, but FIRMS did not serve its product
+  // until 2024-01-17, which is where `build-archive.ts` starts asking for
+  // it. The rail is meant to show the fleet the archive actually holds, so
+  // the date is the one the data begins, not the one the rocket left.
+  viirs_noaa21: { platform: 'viirs', pixelM: 375, since: '2024-01-17', label: 'VIIRS NOAA-21' },
 }
 
 export const SENSOR_BIT: Record<SensorId, number> = {

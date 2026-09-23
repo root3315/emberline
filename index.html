@@ -85,8 +85,8 @@
           </a>
 
           <div class="bar__toggles">
-            <button type="button" class="ghost-btn" id="lang" aria-label="Switch language">RU</button>
-            <button type="button" class="ghost-btn" id="theme" aria-label="Switch theme">
+            <button type="button" class="ghost-btn" id="lang" data-i18n-label="ariaLang">RU</button>
+            <button type="button" class="ghost-btn" id="theme" data-i18n-label="ariaTheme">
               <span data-theme-icon></span>
             </button>
           </div>
@@ -136,9 +136,9 @@
               <p class="note" data-i18n="sectionYearNote"></p>
             </div>
             <div class="yearpick">
-              <button type="button" class="ghost-btn" id="year-prev" aria-label="Previous year">&#8249;</button>
+              <button type="button" class="ghost-btn" id="year-prev" data-i18n-label="ariaYearPrev">&#8249;</button>
               <output class="yearpick__value" id="year-value">—</output>
-              <button type="button" class="ghost-btn" id="year-next" aria-label="Next year">&#8250;</button>
+              <button type="button" class="ghost-btn" id="year-next" data-i18n-label="ariaYearNext">&#8250;</button>
             </div>
           </header>
           <div class="cycle"><canvas id="cycle-canvas"></canvas></div>
@@ -279,9 +279,9 @@
               -->
             </fieldset>
             <div class="yearpick" id="map-yearpick">
-              <button type="button" class="ghost-btn" id="map-year-prev" aria-label="Previous year">&#8249;</button>
+              <button type="button" class="ghost-btn" id="map-year-prev" data-i18n-label="ariaYearPrev">&#8249;</button>
               <output class="yearpick__value" id="map-year-value">—</output>
-              <button type="button" class="ghost-btn" id="map-year-next" aria-label="Next year">&#8250;</button>
+              <button type="button" class="ghost-btn" id="map-year-next" data-i18n-label="ariaYearNext">&#8250;</button>
             </div>
             <fieldset class="segmented map-days" id="map-days" hidden>
               <legend class="sr-only" data-i18n="nowDaysLegend">How far back</legend>
@@ -694,7 +694,7 @@
             <div class="globe__disc">
               <canvas
                 id="look-globe"
-                aria-label="Rotating globe of next week's fire probability"
+                data-i18n-label="ariaGlobe"
               ></canvas>
             </div>
             <figcaption class="look__call" data-i18n="aboutLookCall">
@@ -746,11 +746,11 @@
             height of figure-plus-card and burst out of the column.
           -->
           <div class="globe__disc">
-            <canvas id="globe-canvas" aria-label="Rotating globe of next week's fire probability"></canvas>
+            <canvas id="globe-canvas" data-i18n-label="ariaGlobe"></canvas>
           </div>
           <figcaption class="globe__call" data-i18n="globeCall">Press a fire to see the detail</figcaption>
           <div class="pick" id="pick" hidden>
-            <button type="button" class="pick__close ghost-btn" id="pick-close" aria-label="Close">&times;</button>
+            <button type="button" class="pick__close ghost-btn" id="pick-close" data-i18n-label="ariaClose">&times;</button>
             <p class="pick__where" id="pick-where"></p>
             <dl class="pick__facts" id="pick-facts"></dl>
             <!--

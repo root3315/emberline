@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest'
 import { cellOf, dayOfYear, localSolarDay } from '../src/core/grid'
 import {
   applySensitivity,
+  comparable,
   confidenceFromModis,
   confidenceFromViirs,
   harmonize,
@@ -126,6 +127,50 @@ describe('deduplication across sensors', () => {
     )
     expect(record.rawDetections).toBe(1)
     expect(record.days[0].activeCells).toBe(1)
+  })
+})
+
+describe('the comparable number', () => {
+  /*
+   * The fleet grows, the reconciled series does not.
+   *
+   * Measured on the committed global level, VIIRS detections per MODIS
+   * detection run 4.09 in 2012 with S-NPP alone, 8.87 in 2019 once
+   * NOAA-20 is up and 15.59 in 2026 once NOAA-21 is. Every one of those
+   * steps is a satellite. A series meant to be read end to end has to be
+   * flat across them when the fire is flat, and the observed one is not
+   * expected to be — that is what the two modes are for.
+   */
+  const FLEET = [4.09, 4.43, 8.87, 9.02, 13.22, 15.59]
+  const MODIS_PER_DAY = 1000
+
+  it('does not move when only the number of satellites does', () => {
+    const series = FLEET.map((r) => comparable(MODIS_PER_DAY, MODIS_PER_DAY * r, 7))
+    expect(new Set(series).size).toBe(1)
+  })
+
+  it('leaves the observed series stepping, which is the point of showing it', () => {
+    const series = FLEET.map((r) => comparable(MODIS_PER_DAY, MODIS_PER_DAY * r, null))
+    expect(series[series.length - 1] / series[0]).toBeGreaterThan(3)
+  })
+
+  it('never falls back to adding the two together once a ratio is known', () => {
+    // The bug this replaces: scale the early years, add them after the
+    // overlap begins. There is no argument that produces `modis + viirs`
+    // while a ratio is in hand.
+    expect(comparable(1000, 8870, 7)).toBe(7000)
+    expect(comparable(1000, 8870, 7)).not.toBe(9870)
+  })
+
+  it('agrees with the series builder, which is the same rule on a record', () => {
+    const days = [
+      { day: '2005-06-01', activeCells: 40, modisOnly: 40, viirsOnly: 0, both: 0, frp: 0, raw: 40 },
+      { day: '2019-06-01', activeCells: 900, modisOnly: 30, viirsOnly: 860, both: 10, frp: 0, raw: 900 },
+    ]
+    const ratio = { k: 7, lo: 5, hi: 9, samples: 500, overlapFrom: '2012-01-20' }
+    const out = applySensitivity(days, ratio)
+    expect(out[0].value).toBe(comparable(40, 0, 7))
+    expect(out[1].value).toBe(comparable(40, 860, 7))
   })
 })
 

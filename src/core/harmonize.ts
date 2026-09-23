@@ -307,6 +307,27 @@ export interface AdjustedDay {
  * project publishes, and that means rebuilding the archives from FIRMS.
  * Written down here rather than quietly left as a difference.
  */
+/**
+ * The comparable number for one day, from what each family saw.
+ *
+ * Reconciled is MODIS scaled once; observed is the two added together.
+ * The whole argument of this project is in that first branch, and the
+ * branch that is missing is as important: there is no "after 2012 use
+ * both". Adding them after the overlap begins puts the size of the fleet
+ * back into the modern half of the series, which is the defect the rest
+ * of this file exists to remove.
+ *
+ * It lives here because it used to live in two places. The regional
+ * series was moved onto the rule above; the planet's ribbon had its own
+ * copy in `main.ts` and kept the old one, and no test could see the
+ * difference. Callers differ only in their unit — a region counts active
+ * cells, the global levels count detections — and the arithmetic is the
+ * same either way.
+ */
+export function comparable(modis: number, viirs: number, k: number | null): number {
+  return k === null ? modis + viirs : modis * k
+}
+
 export function applySensitivity(days: readonly DayRecord[], ratio: SensitivityRatio): AdjustedDay[] {
   const usable = ratio.samples >= MIN_RATIO_SAMPLES
   return days.map((d) => {

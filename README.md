@@ -112,7 +112,8 @@ not in a drawer and not only in these script headers:
 
 Vegetation cover is *not* on that list, an earlier draft of this file
 said it was, and it was wrong: `veg_low` and `veg_high` rank 6th and 7th
-of 27, with drops of 0.0090 and 0.0077.
+of the 17 features the shipped card carries, with drops of 0.0104 and
+0.0093.
 
 ## Rebuilding the model and the forecast
 
@@ -199,7 +200,7 @@ never holds more than a tile of it at once.
 ```bash
 npm install
 npm run dev        # http://localhost:5178
-npm test           # 65 unit tests over the harmonization and statistics core
+npm test           # 69 unit tests over the harmonization and statistics core
 npm run build      # static output in dist/
 ```
 
@@ -278,7 +279,7 @@ src/sources/   FIRMS CSV parsing, archive loading, live queries
 src/ui/        ribbon, annual cycle, globe, satellite frame, Leaflet map, charts
 scripts/*.py   weather, model, forecast, horizons, reasons, verification
 scripts/*.mjs  archive builder, asset vendoring, screenshot + contrast audit
-tests/         65 tests over core
+tests/         69 tests over core
 models/        fitted model, weather archive, feature rows  (gitignored)
 public/data/   everything the page reads: archives, world pyramid, forecast
 ```

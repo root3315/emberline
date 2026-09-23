@@ -20,10 +20,10 @@ const en: Dict = {
   modeHarmonized: 'Reconciled',
   modeRaw: 'As recorded',
   modeExplainHarmonized:
-    'Years before 2012 are scaled up to match what the sharper modern sensor would have seen, so the whole record can be compared.',
+    'The whole record from MODIS, which has flown the same sensor since 2002, scaled once by the ratio measured where the two families overlap. No satellite arriving can move it.',
   modeExplainRaw:
-    'Exactly what the satellites counted. The jump in 2012 is a better sensor arriving, not more fire.',
-  modeCompare: 'Compare the two — watch the years before 2012.',
+    'Exactly what the satellites counted, both families added together. It steps in 2012, again in 2018 and again in 2024 — each one a satellite joining, not more fire.',
+  modeCompare: 'Compare the two — watch 2012 onward, where they part company.',
 
   heroSeasonTwice: 'Fire here comes twice: {start} to {end}, and again {start2} to {end2}, the heavier of them peaking around {peak}.',
   heroSeason: 'Fire here runs from {start} to {end}, peaking around {peak}.',
@@ -97,15 +97,15 @@ const en: Dict = {
   metricActive: 'Cells × days with fire',
   ofNormal: 'of a usual year',
 
-  shiftEarlier: 'It started {n} days earlier than usual',
-  shiftLater: 'It started {n} days later than usual',
+  shiftEarlier: 'It started {n} earlier than usual',
+  shiftLater: 'It started {n} later than usual',
   shiftOnTime: 'It started on schedule',
-  peakEarlier: 'and peaked {n} days early',
-  peakLater: 'and peaked {n} days late',
+  peakEarlier: 'and peaked {n} early',
+  peakLater: 'and peaked {n} late',
   peakOnTime: 'and peaked on time',
   shortBaseline: 'Only {n} of record here, so there is no reliable "usual" to compare against yet.',
   noPeriods: 'Nothing this year stayed unusually busy for three days or more.',
-  periodRatio: '{n}x the usual',
+  periodRatio: '{n}× the usual',
 
   sensorFrom: 'since {date}',
   sensorAbsent: 'not in this record',
@@ -121,7 +121,7 @@ const en: Dict = {
   legendBoth: 'both',
 
   sensitivity:
-    'Here the 375 m sensor picks up {k}x as many fires as the 1 km one on the same day (between {lo}x and {hi}x, measured across {n} days when both were watching). The whole series is built from MODIS and scaled by that, so no satellite launch can move it, and the uncertainty is kept.',
+    'Here the VIIRS family picks up {k}× as many fires as the 1 km MODIS one on the same day (between {lo}× and {hi}×, measured across {n} days when both were watching). That figure is a median over the whole overlap and it climbs as satellites join, which is exactly why it is not allowed into the shape of the series: one constant scales the whole record, so it sets the height of the axis and nothing else.',
   sensitivityUnknown:
     'The two sensor families do not overlap enough in this record to measure a correction, so nothing has been scaled.',
 
@@ -158,6 +158,13 @@ const en: Dict = {
   confLow: 'low',
   confNominal: 'nominal',
   confHigh: 'high',
+  unitMw: 'MW',
+  ariaLang: 'Switch language',
+  ariaTheme: 'Switch theme',
+  ariaYearPrev: 'Previous year',
+  ariaYearNext: 'Next year',
+  ariaGlobe: "Rotating globe of next week's fire probability",
+  ariaClose: 'Close',
   unitKm2: 'km²',
   unitGt: 'Gt',
   placeHint: 'Anywhere on Earth, from the global archive',
@@ -272,7 +279,7 @@ const en: Dict = {
   aboutWeatherWith: 'With the weather',
   aboutWeatherWithout: 'Archive only',
   aboutWeatherRaw: 'In full: {withAp} against {withoutAp} on the scale above. The second figure in the table, ROC AUC, is the same question asked another way and moves the same direction: {withRoc} against {withoutRoc}.',
-  aboutCalibTitle: 'Does 85% mean 85%',
+  aboutCalibTitle: 'Does 85% mean 85%?',
   aboutCalibNote:
     'Group the cells the model gave about the same chance, and count how many burned. On the line means the number meant what it said. A model can rank perfectly and still be wrong about how sure it is, and average precision cannot show that.',
   aboutKicker: 'NASA Space Apps 2026 \u00b7 Harmonization of MODIS and VIIRS Hot Spots',
@@ -289,7 +296,7 @@ const en: Dict = {
   aboutProblemBody:
     'A fire detection is not a fire. It is one satellite pass finding one pixel hot enough to flag, and how many it flags depends on the pixel\u2019s size. The 375-metre sensor resolves small fires the 1-kilometre one averages away; over the same ground on the same day it reports several times as many. The ratio is not a constant \u2014 about 7 over Punjab\u2019s cropland, where stubble burns in small scattered patches, and under 2 over Yakutian taiga, where a fire is already large enough for a 1 km pixel to catch \u2014 so a single global correction is the wrong answer too. It has to be measured per place.',
   aboutProblemNote:
-    'Anyone asking "is it burning more than it used to" is asking a question the raw record cannot answer. Every trend through 2012 is contaminated by the instrument. Switch between "as recorded" and "reconciled" anywhere on this site and watch what happens to the years before 2012 \u2014 that difference is the whole problem, made visible.',
+    'Anyone asking “is it burning more than it used to” is asking a question the raw record cannot answer. Every trend through 2012 is contaminated by the instrument. Switch between "as recorded" and "reconciled" anywhere on this site and watch what happens to the years before 2012 \u2014 that difference is the whole problem, made visible.',
 
   aboutBuiltTitle: 'What was built',
   aboutBuiltNote:
@@ -403,6 +410,7 @@ const en: Dict = {
   proofRecordAgainst: 'free method {pct}',
   proofRecallNote: 'with {flagged} cells flagged',
   trendOnModis: 'on MODIS since 2003 — the ratio cancels',
+  trendOnRaw: 'on both families added together — it counts satellites as well as fire',
   proofCaught: 'Burned and flagged',
   proofMissed: 'Burned, not flagged',
   proofRecall: 'Caught',
@@ -431,6 +439,8 @@ const en: Dict = {
   riskMore: 'Show {n} more',
   riskLess: 'Show fewer',
 
+  provenanceWorld:
+    'NASA FIRMS, MODIS and VIIRS, aggregated to one-degree cells by month. {place}: {detections} detections across {from}–{to}. The finer levels below are built from the same rows.',
   provenanceLine:
     '{provenance}. {days} days of record, {detections} detections, {dropped} rows dropped as volcanoes, gas flares or offshore sources.',
 }
@@ -445,10 +455,10 @@ const ru: Dict = {
   modeHarmonized: 'Сведено',
   modeRaw: 'Как снято',
   modeExplainHarmonized:
-    'Годы до 2012-го подняты до того, что увидел бы сегодняшний, более острый сенсор — чтобы весь ряд можно было сравнивать.',
+    'Весь ряд — по MODIS, который летает с тем же сенсором с 2002 года, умноженный один раз на коэффициент, измеренный там, где оба семейства работают вместе. Новый спутник его не двигает.',
   modeExplainRaw:
-    'Ровно то, что насчитали спутники. Скачок в 2012-м — это приход более точного сенсора, а не рост пожаров.',
-  modeCompare: 'Сравните два режима — смотрите на годы до 2012-го.',
+    'Ровно то, что насчитали спутники, оба семейства вместе. Ступенька в 2012-м, снова в 2018-м и снова в 2024-м — каждая это новый спутник, а не рост пожаров.',
+  modeCompare: 'Сравните два режима — смотрите на 2012-й и дальше, где они расходятся.',
 
   heroSeasonTwice: 'Здесь горит дважды: с {start} по {end} и снова с {start2} по {end2}, и сильнее — около {peak}.',
   heroSeason: 'Здесь горит с {start} по {end}, пик приходится на {peak}.',
@@ -544,7 +554,7 @@ const ru: Dict = {
   legendBoth: 'оба',
 
   sensitivity:
-    'Здесь 375-метровый сенсор различает в {k} раза больше очагов, чем километровый, в тот же день (от {lo}× до {hi}×, измерено по {n} дням, когда работали оба). Весь ряд строится из MODIS и умножается на этот коэффициент, поэтому запуск нового спутника его не двигает; погрешность сохранена.',
+    'Здесь семейство VIIRS различает в {k} раза больше очагов, чем километровый MODIS, в тот же день (от {lo}× до {hi}×, измерено по {n} дням, когда работали оба). Это медиана по всему периоду перекрытия, и она растёт с каждым новым спутником — именно поэтому её не пускают в форму ряда: одна константа множит весь ряд целиком, то есть задаёт высоту оси и больше ничего.',
   sensitivityUnknown:
     'Два семейства сенсоров пересекаются в этих данных слишком мало, чтобы измерить поправку, поэтому пересчёт не применялся.',
 
@@ -581,6 +591,13 @@ const ru: Dict = {
   confLow: 'низкая',
   confNominal: 'обычная',
   confHigh: 'высокая',
+  unitMw: 'МВт',
+  ariaLang: 'Сменить язык',
+  ariaTheme: 'Сменить тему',
+  ariaYearPrev: 'Предыдущий год',
+  ariaYearNext: 'Следующий год',
+  ariaGlobe: 'Вращающийся глобус с вероятностью пожаров на будущую неделю',
+  ariaClose: 'Закрыть',
   unitKm2: 'км²',
   unitGt: 'Гт',
   placeHint: 'Любая точка Земли, из глобального архива',
@@ -695,7 +712,7 @@ const ru: Dict = {
   aboutWeatherWith: 'С погодой',
   aboutWeatherWithout: 'Только архив',
   aboutWeatherRaw: 'В цифрах: {withAp} против {withoutAp} по шкале выше. Вторая цифра в таблице, ROC AUC, — тот же вопрос с другой стороны, и двигается туда же: {withRoc} против {withoutRoc}.',
-  aboutCalibTitle: 'Значит ли 85% именно 85%',
+  aboutCalibTitle: 'Значит ли 85% именно 85%?',
   aboutCalibNote:
     'Сгруппируйте ячейки, которым модель дала примерно один шанс, и посчитайте, сколько сгорело. На линии — значит число значило то, что говорило. Модель может ранжировать идеально и при этом врать о своей уверенности, а средняя точность этого не показывает.',
   aboutKicker: 'NASA Space Apps 2026 \u00b7 Сведение очагов MODIS и VIIRS',
@@ -725,7 +742,7 @@ const ru: Dict = {
     'Она смотрит на {features} вещей про каждую ячейку 25 на 25 километров: как часто здесь горит в это время года, как давно горело, что делается у соседей, насколько год отошёл от своей нормы, где сейчас Эль-Ниньо — и прогноз погоды на ближайшую неделю, то есть ту половину, которую архив пожаров дать не может. Учится на {train}, настраивается на {validate}, а оценивается на {test} — годах, которых ни разу не видела. Погода почти удваивает её отрыв от простой сезонной догадки.',
   aboutModelNumbers: 'Измерено',
   aboutScoreGloss:
-    'Одно число от 0 до 1 — насколько хорошо способ расставляет ячейки по риску: выстройте все ячейки в порядке, идите по списку сверху и считайте, сколько из него действительно загорелось. Случайный выбор даёт 0.05, потому что горит одна ячейка из двадцати. Единицы не достигает никто: одна и та же погода на одной и той же земле иногда даёт пожар, а иногда нет.',
+    'Одно число от 0 до 1 — насколько хорошо способ расставляет ячейки по риску: выстройте все ячейки в порядке, идите по списку сверху и считайте, сколько из него действительно загорелось. Случайный выбор даёт 0,05, потому что горит одна ячейка из двадцати. Единицы не достигает никто: одна и та же погода на одной и той же земле иногда даёт пожар, а иногда нет.',
   aboutModelCaveat:
     'Одно важное: модель училась на погоде, которая уже случилась, а живая карта идёт по прогнозу погоды. Эти цифры — то, что достижимо, если прогноз погоды окажется верным.',
 
@@ -779,7 +796,7 @@ const ru: Dict = {
   skillPersistence: 'Горело на прошлой неделе',
   skillRandom: 'Случайный выбор',
   futureSkillNote:
-    'Средняя точность на {tested}. Один только сезон — очень сильная база; с погодой перевес над ней почти удваивается — с 2,5% до 4,7%. Одна оговорка, и она важная: модель училась на погоде, которая была на самом деле, а живая карта идёт по прогнозу погоды. То есть это то, что достижимо, если прогноз погоды верен, — верхняя граница, а не обещание. Здесь персистенция выглядит слабо, а на живой неделе ниже почти догоняет модель \u2014 и верно и то, и другое: в этой колонке средняя точность по всем ячейкам планеты, где \u00abгорело на прошлой неделе\u00bb нечего сказать о миллионах, где не горело. Живая лестница спрашивает уже\u0301 \u2014 из тысячи верхних ячеек сколько сгорело, \u2014 а на самом верху списка в разгар сезона огонь в основном продолжается там, где уже идёт.',
+    'Средняя точность на {tested}. Один только сезон — очень сильная база; с погодой перевес над ней почти удваивается — с 2,5% до 4,7%. Одна оговорка, и она важная: модель училась на погоде, которая была на самом деле, а живая карта идёт по прогнозу погоды. То есть это то, что достижимо, если прогноз погоды верен, — верхняя граница, а не обещание. Здесь персистенция выглядит слабо, а на живой неделе ниже почти догоняет модель \u2014 и верно и то, и другое: в этой колонке средняя точность по всем ячейкам планеты, где \u00abгорело на прошлой неделе\u00bb нечего сказать о миллионах, где не горело. Живая лестница спрашивает у\u0301же \u2014 из тысячи верхних ячеек сколько сгорело, \u2014 а на самом верху списка в разгар сезона огонь в основном продолжается там, где уже идёт.',
   futureBack: 'Назад к архиву',
   globeCall: 'Нажмите огонь, чтобы увидеть подробности',
   pickForecast: 'Ждём на неделе',
@@ -824,6 +841,7 @@ const ru: Dict = {
   proofRecordAgainst: 'бесплатный способ {pct}',
   proofRecallNote: 'при {flagged} отмеченных ячейках',
   trendOnModis: 'по MODIS с 2003 года — коэффициент сокращается',
+  trendOnRaw: 'по двум семействам сразу — считает и спутники, а не только пожары',
   proofCaught: 'Сгорело и отмечено',
   proofMissed: 'Сгорело, не отмечено',
   proofRecall: 'Поймано',
@@ -852,6 +870,8 @@ const ru: Dict = {
   riskMore: 'Показать ещё {n}',
   riskLess: 'Свернуть',
 
+  provenanceWorld:
+    'NASA FIRMS, MODIS и VIIRS, сведено в ячейки по градусу помесячно. {place}: {detections} засечек за {from}–{to}. Более подробные уровни ниже собраны из тех же строк.',
   provenanceLine:
     '{provenance}. {days} дней ряда, {detections} засечек, {dropped} строк отброшено как вулканы, газовые факелы и офшорные источники.',
 }
@@ -1007,6 +1027,27 @@ export function formatDays(n: number): string {
 }
 
 /** "cells" / "ячейка, ячейки, ячеек" — the noun alone, for a value printed beside it. */
+/** "days" / "день, дня, дней" — the noun alone, for a value printed beside it. */
+export function daysUnit(n: number): string {
+  return current === 'en'
+    ? plural(n, 'day', 'days', 'days')
+    : plural(n, 'день', 'дня', 'дней')
+}
+
+/** "cells alight" / "ячейка с огнём, ячейки с огнём, ячеек с огнём" */
+export function cellsLitUnit(n: number): string {
+  return current === 'en'
+    ? plural(n, 'cell alight', 'cells alight', 'cells alight')
+    : plural(n, 'ячейка с огнём', 'ячейки с огнём', 'ячеек с огнём')
+}
+
+/** "cells at risk" / "ячейка в зоне риска, ..." */
+export function cellsAtRiskUnit(n: number): string {
+  return current === 'en'
+    ? plural(n, 'cell at risk', 'cells at risk', 'cells at risk')
+    : plural(n, 'ячейка в зоне риска', 'ячейки в зоне риска', 'ячеек в зоне риска')
+}
+
 export function cellsUnit(n: number): string {
   return current === 'en'
     ? plural(n, 'cell', 'cells', 'cells')
@@ -1043,9 +1084,17 @@ export function formatNumber(value: number, digits = 0): string {
   }).format(value)
 }
 
+/**
+ * A full date: "9 May 2026" / "9 мая 2026".
+ *
+ * `MONTHS` is the nominative list, for a month standing on its own. After
+ * a day number Russian wants the genitive, and only May differs between
+ * the two short forms — so this printed "9 май 2026" in the worst-days
+ * list every May and read correctly for the other eleven months.
+ */
 export function formatDate(iso: string): string {
   const d = new Date(`${iso}T00:00:00Z`)
-  return `${d.getUTCDate()} ${months()[d.getUTCMonth()]} ${d.getUTCFullYear()}`
+  return `${d.getUTCDate()} ${MONTHS_SHORT_OF[current][d.getUTCMonth()]} ${d.getUTCFullYear()}`
 }
 
 /** Apply every `data-i18n` attribute in the document. */
@@ -1058,6 +1107,17 @@ export function applyStaticStrings(root: ParentNode = document): void {
   // because nothing ever read it.
   root.querySelectorAll<HTMLInputElement>('[data-i18n-placeholder]').forEach((el) => {
     el.placeholder = t(el.dataset.i18nPlaceholder!)
+  })
+  /*
+   * And the labels only a screen reader hears.
+   *
+   * These were written into the markup in English and never translated, so
+   * a Russian reader listening to the page heard "Switch language" and
+   * "Previous year". The year arrows are the sharp case: their visible text
+   * is a chevron, so the label is the only name they have.
+   */
+  root.querySelectorAll<HTMLElement>('[data-i18n-label]').forEach((el) => {
+    el.setAttribute('aria-label', t(el.dataset.i18nLabel!))
   })
 }
 
@@ -1086,12 +1146,12 @@ const aboutLists: Record<Lang, Record<string, readonly AboutRow[]>> = {
       ['Every cell that has ever burned, on every fourth day of 24 years, becomes one question: given what was known that morning, did it burn in the week that followed? Three million questions with the answers attached.', ''],
       ['Fires are rare \u2014 five cells in a hundred \u2014 so most of the quiet ones are set aside. Otherwise the shortest way to be right would be to answer \u201cno fire\u201d every time and score ninety-five per cent, and the model would learn exactly that. What it gives back is corrected afterwards so the numbers still mean what they say.', ''],
       ['The years are split by time, never shuffled: it learns on 2003\u20132013, is adjusted on 2014\u20132017, and sees 2018\u20132021 once, at the very end. Shuffling would let it learn from a Tuesday to answer about the Monday beside it, and the score would be a lie.', ''],
-      ['{trees} small decision trees, each correcting what the ones before it got wrong. Nothing deep and nothing fashionable: on a table of {features} columns this beats a neural network and, unlike one, can be asked why it said what it said \u2014 which is the chart above.', ''],
+      ['{trees} small decision trees, each correcting what the ones before it got wrong. Nothing deep and nothing fashionable: on a table of {features} columns this beats a neural network and, unlike one, can be asked why it said what it said \u2014 which is the chart below.', ''],
     ],
     aboutLimitsList: [
     ['The weather is six times coarser than the forecast', 'Every cell is 25 km across; the weather driving it comes off a 167 km grid, so 36 neighbouring cells are told about the same hot, dry, windy day. Fire weather is mostly synoptic and survives that, but a reader in a mountain valley should know the model is being told about the mountain.'],
     ['It knows nothing about people', 'Not population, not roads, not fields — and most fire on this planet is lit by someone. The model infers human activity only from where fire has been before, which works until the pattern changes.'],
-    ['It was marked on 2018-2021 and is running in 2026', 'The public ERA5 mirror ends in 2021, so the weather-fed model cannot be scored past it. Five years of drift are unmeasured here, which is why the forecast is also checked against fresh detections every week.'],
+    ['It was marked on 2018–2021 and is running in 2026', 'The public ERA5 mirror ends in 2021, so the weather-fed model cannot be scored past it. Five years of drift are unmeasured here, which is why the forecast is also checked against fresh detections every week.'],
     ['It learned on weather that happened', 'The live map runs on a forecast of the weather instead. The skill figures are what is reachable if that forecast is right \u2014 an upper bound, not a promise.'],
     ['A detection is not a fire', 'It is one satellite pass finding one pixel hot enough. A fire under cloud, or one that starts and dies between passes, is not in the record and so is not in the model.'],
     ],
@@ -1121,7 +1181,7 @@ const aboutLists: Record<Lang, Record<string, readonly AboutRow[]>> = {
       ['Каждая ячейка, где когда-либо горело, на каждый четвёртый день 24 лет становится вопросом: если знать только то, что было известно тем утром, — загорелось ли там в ближайшую неделю? Три миллиона вопросов с уже известными ответами.', ''],
       ['Пожары редки — пять ячеек из ста, — поэтому большую часть спокойных мы откладываем в сторону. Иначе самый лёгкий способ быть правой — всегда отвечать «не загорится» и попадать в 95% случаев, и модель именно этому бы и научилась. То, что она потом выдаёт, поправляется обратно, чтобы числа значили то, что говорят.', ''],
       ['Годы делятся по времени, а не вперемешку: учёба на 2003–2013, настройка на 2014–2017, а 2018–2021 она видит один раз, в самом конце. Если перемешать, модель сможет подглядеть во вторник, чтобы ответить про соседний понедельник, и оценка будет врать.', ''],
-      ['{trees} маленьких решающих деревьев, каждое правит ошибки предыдущих. Ничего глубокого и ничего модного: на таблице из {features} колонок это обходит нейросеть и, в отличие от неё, умеет объяснить, почему сказала именно так — это и есть график выше.', ''],
+      ['{trees} маленьких решающих деревьев, каждое правит ошибки предыдущих. Ничего глубокого и ничего модного: на таблице из {features} колонок это обходит нейросеть и, в отличие от неё, умеет объяснить, почему сказала именно так — это и есть график ниже.', ''],
     ],
     aboutLimitsList: [
     ['Погода в шесть раз грубее прогноза', 'Ячейка — 25 км, а погода к ней приходит с сетки в 167 км: 36 соседних ячеек узнают про один и тот же жаркий, сухой и ветреный день. Пожарная погода в основном синоптическая и это переживает, но читатель в горной долине должен знать, что модели рассказали про гору.'],
