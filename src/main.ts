@@ -2249,11 +2249,28 @@ function renderHero(ds: Dataset): void {
   if (!typical) {
     els.heroAnswer.textContent = t('heroNoSeason')
   } else {
-    const sentence = t('heroSeason', {
-      start: formatDoyLong(typical.start, state.year),
-      end: formatDoyLong(typical.end, state.year),
-      peak: formatDoyLong(typical.peak, state.year),
-    })
+    /*
+     * One season or two, and the difference is the whole sentence.
+     *
+     * The 10-to-90 rule takes a single window, so a place that burns in
+     * spring and again in autumn was being described as burning right
+     * through the summer it spends quiet. Punjab is the case: wheat
+     * stubble in April, rice stubble in October, and about a hundred and
+     * twenty days of nothing in between.
+     */
+    const sentence = typical.gap
+      ? t('heroSeasonTwice', {
+          start: formatDoyLong(typical.start, state.year),
+          end: formatDoyLong(typical.gap.from - 1, state.year),
+          start2: formatDoyLong(typical.gap.to + 1, state.year),
+          end2: formatDoyLong(typical.end, state.year),
+          peak: formatDoyLong(typical.peak, state.year),
+        })
+      : t('heroSeason', {
+          start: formatDoyLong(typical.start, state.year),
+          end: formatDoyLong(typical.end, state.year),
+          peak: formatDoyLong(typical.peak, state.year),
+        })
     els.heroAnswer.append(emphasiseDates(sentence))
   }
 
@@ -2285,7 +2302,21 @@ function renderHero(ds: Dataset): void {
   const totalFires = ds.days.reduce((s, d) => s + d.activeCells, 0)
 
   if (typical) {
-    heroStat(t('statTypical'), `${formatDoy(typical.start)} – ${formatDoy(typical.end)}`, formatDays(typical.length))
+    /*
+     * The span is true either way; the day count is not.
+     *
+     * With two seasons inside it, "190 days" counts a summer in which
+     * nothing burns, and sits directly under a headline that has just
+     * said the place burns twice. The note carries the days that
+     * actually burn instead.
+     */
+    heroStat(
+      t('statTypical'),
+      `${formatDoy(typical.start)} – ${formatDoy(typical.end)}`,
+      typical.gap
+        ? t('statTypicalTwo', { n: formatDays(typical.length - typical.gap.days) })
+        : formatDays(typical.length),
+    )
   }
   if (a?.shape) {
     heroStat(t('statThisYear'), `${formatDoy(a.shape.start, state.year)} – ${formatDoy(a.shape.end, state.year)}`, String(state.year))

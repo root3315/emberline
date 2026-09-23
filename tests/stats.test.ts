@@ -106,6 +106,42 @@ describe('season shape', () => {
   })
 })
 
+describe('a season that is really two', () => {
+  /** A year with `pulses` bursts of fire, each `len` days, evenly spread. */
+  const pulses = (bursts: number, len: number) => {
+    const row = new Float64Array(367)
+    for (let b = 0; b < bursts; b++) {
+      const at = 40 + Math.round((b * 300) / Math.max(bursts - 1, 1))
+      for (let d = at; d < at + len; d++) row[d] = 100
+    }
+    return row
+  }
+
+  it('finds no break in one continuous season', () => {
+    const row = new Float64Array(367)
+    for (let d = 100; d < 200; d++) row[d] = 100
+    expect(seasonShape(row, 365)!.gap).toBeNull()
+  })
+
+  it('finds the quiet months between two stubble seasons', () => {
+    const shape = seasonShape(pulses(2, 20), 365)!
+    expect(shape.gap).not.toBeNull()
+    // The break lies strictly inside the season it interrupts.
+    expect(shape.gap!.from).toBeGreaterThan(shape.start)
+    expect(shape.gap!.to).toBeLessThan(shape.end)
+    // And it is the summer, not a fortnight of rain.
+    expect(shape.gap!.days).toBeGreaterThan(200)
+  })
+
+  it('ignores a gap too short to be a second season', () => {
+    // Two bursts a fortnight apart is one season with weather in it.
+    const row = new Float64Array(367)
+    for (let d = 100; d < 120; d++) row[d] = 100
+    for (let d = 134; d < 160; d++) row[d] = 100
+    expect(seasonShape(row, 365)!.gap).toBeNull()
+  })
+})
+
 describe('critical periods', () => {
   const grid = new Map<number, Float64Array>()
   for (let y = 2000; y < 2015; y++) grid.set(y, row(seasonal(220, 100)))

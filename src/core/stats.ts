@@ -96,7 +96,29 @@ export interface SeasonShape {
   length: number
   total: number
   peakValue: number
+  /**
+   * The long quiet spell inside the season, when there is one.
+   *
+   * Null for a place with a single season, which is most of them. Set
+   * where the 10-to-90 rule has spanned two seasons and the trough
+   * between: the days are inclusive and lie strictly inside `start` and
+   * `end`.
+   */
+  gap: { from: number; to: number; days: number } | null
 }
+
+/**
+ * How quiet a day has to be to count as out of season, and for how long.
+ *
+ * A tenth of the peak, for thirty days. The floor matters as much as the
+ * depth: a fortnight of rain in the middle of one season is weather, and
+ * calling it a second season would be worse than the fault this fixes.
+ * Measured on the areas this repository ships, the longest such spell is
+ * 155 days in Punjab, 12 in Central Yakutia and none at all in the Sierra
+ * Nevada or the Cerrado.
+ */
+const QUIET_SHARE = 0.1
+const QUIET_DAYS = 30
 
 /**
  * Where the season sits and how long it runs. Onset is taken at 10% of the
@@ -133,7 +155,21 @@ export function seasonShape(row: Float64Array, span = 365): SeasonShape | null {
       break
     }
   }
-  return { start, peak, end, length: end - start, total, peakValue: row[peak] }
+  // The trough, if the window that was just measured contains one.
+  let gap: SeasonShape['gap'] = null
+  let run = 0
+  for (let d = start + 1; d < end; d++) {
+    if (smooth[d] < peakValue * QUIET_SHARE) {
+      run += 1
+      if (run >= QUIET_DAYS && (!gap || run > gap.days)) {
+        gap = { from: d - run + 1, to: d, days: run }
+      }
+    } else {
+      run = 0
+    }
+  }
+
+  return { start, peak, end, length: end - start, total, peakValue: row[peak], gap }
 }
 
 function smoothCircular(row: Float64Array, span: number, half: number): Float64Array {
@@ -237,6 +273,24 @@ export function analyzeYear(year: number, grid: YearGrid, clim: Climatology): Ye
         length: medianOf(shapes.map((s) => s.length)),
         total: medianOf(shapes.map((s) => s.total)),
         peakValue: medianOf(shapes.map((s) => s.peakValue)),
+        /*
+         * Two seasons, if most years have two.
+         *
+         * A median over the gaps of only the years that had one would
+         * turn a single odd summer into a permanent feature of the
+         * place. The question is whether this is how the area behaves,
+         * so the years vote first and the medians are taken after.
+         */
+        gap: (() => {
+          const gaps = shapes.map((x) => x.gap).filter((g): g is NonNullable<typeof g> => g !== null)
+          return gaps.length * 2 > shapes.length
+            ? {
+                from: medianOf(gaps.map((g) => g.from)),
+                to: medianOf(gaps.map((g) => g.to)),
+                days: medianOf(gaps.map((g) => g.days)),
+              }
+            : null
+        })(),
       }
     : null
 

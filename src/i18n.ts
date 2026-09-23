@@ -25,6 +25,7 @@ const en: Dict = {
     'Exactly what the satellites counted. The jump in 2012 is a better sensor arriving, not more fire.',
   modeCompare: 'Compare the two — watch the years before 2012.',
 
+  heroSeasonTwice: 'Fire here comes twice: {start} to {end}, and again {start2} to {end2}, the heavier of them peaking around {peak}.',
   heroSeason: 'Fire here runs from {start} to {end}, peaking around {peak}.',
   heroNoSeason: 'No burning has been detected in this area yet.',
   heroYearBusy: '{year} ran {ratio} a normal year.',
@@ -34,6 +35,7 @@ const en: Dict = {
   partialYear: '{year} is still running — the record ends {date}, so totals for it are incomplete.',
   partialYearShort: 'Not comparable yet: {year} has not finished.',
 
+  statTypicalTwo: '{n} in two windows',
   statTypical: 'Typical season',
   statThisYear: 'Selected year',
   statWatching: 'Watched since',
@@ -448,6 +450,7 @@ const ru: Dict = {
     'Ровно то, что насчитали спутники. Скачок в 2012-м — это приход более точного сенсора, а не рост пожаров.',
   modeCompare: 'Сравните два режима — смотрите на годы до 2012-го.',
 
+  heroSeasonTwice: 'Здесь горит дважды: с {start} по {end} и снова с {start2} по {end2}, и сильнее — около {peak}.',
   heroSeason: 'Здесь горит с {start} по {end}, пик приходится на {peak}.',
   heroNoSeason: 'Горения в этом районе пока не зафиксировано.',
   heroYearBusy: '{year} год дал {ratio} от обычного.',
@@ -457,6 +460,7 @@ const ru: Dict = {
   partialYear: '{year} год ещё идёт — данные заканчиваются {date}, поэтому итоги за него неполные.',
   partialYearShort: 'Сравнивать пока не с чем: {year} год не закончился.',
 
+  statTypicalTwo: '{n} в двух окнах',
   statTypical: 'Обычный сезон',
   statThisYear: 'Выбранный год',
   statWatching: 'Наблюдаем с',
