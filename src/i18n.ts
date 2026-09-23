@@ -89,7 +89,7 @@ const en: Dict = {
   daysUnit: 'days',
   pageTitle: 'Emberline — when and where it burns',
   unitCells: 'cells',
-  unitCellSize: '25 km each',
+  unitCellSize: '28 km each',
   /* Cells alight on a single day — not detections, and not cell-days:
      one number that three different words had been tried on. */
   unitCellsLit: 'cells alight',
@@ -131,10 +131,10 @@ const en: Dict = {
   mapHottest: 'Most persistent cell',
   mapArea: 'Area watched',
   pickerSearch: 'Search a place…',
-  cellDegree: '110 km',
-  cellQuarter: '25 km',
-  cellFine: '5 km',
-  cellFinest: '1 km',
+  cellDegree: '111 km',
+  cellQuarter: '28 km',
+  cellFine: '5.6 km',
+  cellFinest: '1.1 km',
   impactTitle: 'What the burning does',
   impactNote: 'The map says where and when. This is the part that makes it matter — and the part where our own numbers need the most care.',
   impactLead: 'Fires across the planet released roughly {co2} of CO₂ in {year} — about {share} of what fossil fuels put out in a year.',
@@ -312,7 +312,7 @@ const en: Dict = {
   aboutModelNote:
     'A gradient-boosted classifier, trained on the archive and on the weather of the week it is asked about.',
   aboutModelBody:
-    'It reads {features} things about every 25 km cell of the planet: how often it burns at this time of year, how recently it burned, what its neighbours are doing, how far the year is from its own normal, where El Ni\u00f1o stands \u2014 and the forecast weather of the week ahead, which is the half the fire archive cannot supply. It learns on {train}, is tuned on {validate}, and is marked on {test} \u2014 years it had never seen. The weather very nearly doubles how far it gets past a simple seasonal guess.',
+    'It reads {features} things about every 28 km cell of the planet: how often it burns at this time of year, how recently it burned, what its neighbours are doing, how far the year is from its own normal, where El Ni\u00f1o stands \u2014 and the forecast weather of the week ahead, which is the half the fire archive cannot supply. It learns on {train}, is tuned on {validate}, and is marked on {test} \u2014 years it had never seen. The weather very nearly doubles how far it gets past a simple seasonal guess.',
   aboutModelNumbers: 'Measured',
   aboutScoreGloss:
     'One number, from 0 to 1, for how well a method sorts cells by risk: put every cell in its order, walk down the list, and see how much of it is fire before the guesses run out. Picking at random scores 0.05, because one cell in twenty burns. Nothing reaches 1, because the same weather over the same ground sometimes burns and sometimes does not.',
@@ -344,7 +344,7 @@ const en: Dict = {
   futureWhere: '{from} to {to} \u00b7 built {asOf}',
   futureAnswer: 'Somewhere in <em>{cells}</em> cells, the next seven days carry a real chance of fire.',
   futureAside:
-    'A gradient-boosted model reads this archive <b>back to {since}</b> \u2014 where it has burned, how recently, what the season usually does \u2014 together with <b>the weather of the week ahead</b>: how hot, how windy, how much rain, and what is standing there to burn. Every 25 km cell gets the chance that the 1 km sensor sees a fire there before {to}.',
+    'A gradient-boosted model reads this archive <b>back to {since}</b> \u2014 where it has burned, how recently, what the season usually does \u2014 together with <b>the weather of the week ahead</b>: how hot, how windy, how much rain, and what is standing there to burn. Every 28 km cell gets the chance that the 1 km sensor sees a fire there before {to}.',
   futureStatCells: 'Cells at risk',
   futureStatTop: 'Widest front',
   futureStatTested: 'Scored on',
@@ -374,7 +374,7 @@ const en: Dict = {
   globeCall: 'Press a fire to see the detail',
   pickForecast: 'Expected next week',
   pickSeen: 'Detections the week before',
-  pickNote: 'The model\u2019s chance for this 25 km cell between {from} and {to}, beside what MODIS and VIIRS actually recorded on the same ground in the seven days before. One is a forecast; the other is a measurement.',
+  pickNote: 'The model\u2019s chance for this 28 km cell between {from} and {to}, beside what MODIS and VIIRS actually recorded on the same ground in the seven days before. One is a forecast; the other is a measurement.',
   pickNoneSeen: 'Nothing was recorded here last week, which is not the same as nothing burning: a satellite sees a fire only if it passes while the fire is alight and the sky is clear.',
   aboutLookTitle: 'See for yourself',
   aboutLookNote:
@@ -384,7 +384,7 @@ const en: Dict = {
   lookBy: 'Imagery: Esri, Maxar, Earthstar. Points: this model, one per quarter-degree cell.',
   lookFail: 'The imagery for this cell did not come down. The figures beside it are unaffected.',
   lookNote:
-    'Every point of light is a place the model expects to burn in the coming week, the brighter the likelier. The white outline is the cell that was pressed \u2014 about 25 km on a side, and the grid it belongs to is the one the whole forecast is made on.',
+    'Every point of light is a place the model expects to burn in the coming week, the brighter the likelier. The white outline is the cell that was pressed \u2014 about 28 km on a side, and the grid it belongs to is the one the whole forecast is made on.',
   weekPlay: 'Play the week',
   weekStop: 'Stop',
   weekLoading: 'Loading the days\u2026',
@@ -530,7 +530,7 @@ const ru: Dict = {
   daysUnit: 'дней',
   pageTitle: 'Emberline — когда и где горит',
   unitCells: 'ячеек',
-  unitCellSize: 'по 25 км',
+  unitCellSize: 'по 28 км',
   unitCellsLit: 'ячеек с огнём',
   statFires: 'Ячеек × дней с огнём',
   metricActive: 'Ячеек × дней с огнём',
@@ -570,10 +570,10 @@ const ru: Dict = {
   mapHottest: 'Самая упорная ячейка',
   mapArea: 'Площадь наблюдения',
   pickerSearch: 'Найти место…',
-  cellDegree: '110 км',
-  cellQuarter: '25 км',
-  cellFine: '5 км',
-  cellFinest: '1 км',
+  cellDegree: '111 км',
+  cellQuarter: '28 км',
+  cellFine: '5,6 км',
+  cellFinest: '1,1 км',
   impactTitle: 'Чем это отзывается',
   impactNote: 'Карта говорит где и когда. Здесь — зачем это важно, и здесь же наши собственные цифры требуют больше всего осторожности.',
   impactLead: 'Пожары планеты за {year} год выбросили примерно {co2} CO₂ — около {share} от годовых выбросов от ископаемого топлива.',
@@ -783,7 +783,7 @@ const ru: Dict = {
   futureWhere: 'с {from} по {to} · считано {asOf}',
   futureAnswer: 'В <em>{cells}</em> ячейках ближайшие семь дней несут реальный шанс пожара.',
   futureAside:
-    'Модель градиентного бустинга читает архив <b>с {since} года</b> — где горело, как давно, что обычно делает сезон — и вместе с этим <b>погоду ближайшей недели</b>: жару, ветер, дождь и то, чему там гореть. Каждая ячейка 25 км получает вероятность того, что километровый сенсор увидит там огонь до {to}.',
+    'Модель градиентного бустинга читает архив <b>с {since} года</b> — где горело, как давно, что обычно делает сезон — и вместе с этим <b>погоду ближайшей недели</b>: жару, ветер, дождь и то, чему там гореть. Каждая ячейка 28 км получает вероятность того, что километровый сенсор увидит там огонь до {to}.',
   futureStatCells: 'Ячеек в зоне риска',
   futureStatTop: 'Самый широкий фронт',
   futureStatTested: 'Проверено на',
@@ -813,7 +813,7 @@ const ru: Dict = {
   globeCall: 'Нажмите огонь, чтобы увидеть подробности',
   pickForecast: 'Ждём на неделе',
   pickSeen: 'Засечек за неделю до',
-  pickNote: 'Шанс, который модель даёт этой ячейке 25 км с {from} по {to}, рядом с тем, что MODIS и VIIRS реально засекли на той же земле за семь дней до этого. Одно — прогноз, второе — измерение.',
+  pickNote: 'Шанс, который модель даёт этой ячейке 28 км с {from} по {to}, рядом с тем, что MODIS и VIIRS реально засекли на той же земле за семь дней до этого. Одно — прогноз, второе — измерение.',
   pickNoneSeen: 'За прошлую неделю здесь ничего не засекли — это не то же, что ничего не горело: спутник видит огонь, только если пролетает, пока тот горит, и небо чистое.',
   aboutLookTitle: 'Посмотрите сами',
   aboutLookNote:
@@ -823,7 +823,7 @@ const ru: Dict = {
   lookBy: 'Снимок: Esri, Maxar, Earthstar. Точки: эта модель, по одной на ячейку в четверть градуса.',
   lookFail: 'Снимок этой ячейки не загрузился. На числа рядом это не влияет.',
   lookNote:
-    'Каждая светящаяся точка — место, где модель ждёт огонь на ближайшей неделе: чем ярче, тем вероятнее. Белым обведена та самая ячейка — около 25 км в поперечнике, — та самая сетка, на которой считается весь прогноз.',
+    'Каждая светящаяся точка — место, где модель ждёт огонь на ближайшей неделе: чем ярче, тем вероятнее. Белым обведена та самая ячейка — около 28 км в поперечнике, — та самая сетка, на которой считается весь прогноз.',
   weekPlay: 'Прокрутить неделю',
   weekStop: 'Стоп',
   weekLoading: 'Загружаем дни…',
@@ -1161,7 +1161,7 @@ const aboutLists: Record<Lang, Record<string, readonly AboutRow[]>> = {
       ['{trees} small decision trees, each correcting what the ones before it got wrong. Nothing deep and nothing fashionable: on a table of {features} columns this beats a neural network and, unlike one, can be asked why it said what it said \u2014 which is the chart below.', ''],
     ],
     aboutLimitsList: [
-    ['The weather is six times coarser than the forecast', 'Every cell is 25 km across; the weather driving it comes off a 167 km grid, so 36 neighbouring cells are told about the same hot, dry, windy day. Fire weather is mostly synoptic and survives that, but a reader in a mountain valley should know the model is being told about the mountain.'],
+    ['The weather is six times coarser than the forecast', 'Every cell is 28 km across; the weather driving it comes off a 167 km grid, so 36 neighbouring cells are told about the same hot, dry, windy day. Fire weather is mostly synoptic and survives that, but a reader in a mountain valley should know the model is being told about the mountain.'],
     ['It knows nothing about people', 'Not population, not roads, not fields — and most fire on this planet is lit by someone. The model infers human activity only from where fire has been before, which works until the pattern changes.'],
     ['It was marked on 2018–2021 and is running in 2026', 'The public ERA5 mirror ends in 2021, so the weather-fed model cannot be scored past it. Five years of drift are unmeasured here, which is why the forecast is also checked against fresh detections every week.'],
     ['It learned on weather that happened', 'The live map runs on a forecast of the weather instead. The skill figures are what is reachable if that forecast is right \u2014 an upper bound, not a promise.'],
@@ -1196,7 +1196,7 @@ const aboutLists: Record<Lang, Record<string, readonly AboutRow[]>> = {
       ['{trees} маленьких решающих деревьев, каждое правит ошибки предыдущих. Ничего глубокого и ничего модного: на таблице из {features} колонок это обходит нейросеть и, в отличие от неё, умеет объяснить, почему сказала именно так — это и есть график ниже.', ''],
     ],
     aboutLimitsList: [
-    ['Погода в шесть раз грубее прогноза', 'Ячейка — 25 км, а погода к ней приходит с сетки в 167 км: 36 соседних ячеек узнают про один и тот же жаркий, сухой и ветреный день. Пожарная погода в основном синоптическая и это переживает, но читатель в горной долине должен знать, что модели рассказали про гору.'],
+    ['Погода в шесть раз грубее прогноза', 'Ячейка — 28 км, а погода к ней приходит с сетки в 167 км: 36 соседних ячеек узнают про один и тот же жаркий, сухой и ветреный день. Пожарная погода в основном синоптическая и это переживает, но читатель в горной долине должен знать, что модели рассказали про гору.'],
     ['Про людей она не знает ничего', 'Ни населения, ни дорог, ни полей — а большинство пожаров на планете зажигает человек. О людях модель догадывается только по тому, где горело раньше, и это работает, пока привычка не меняется.'],
     ['Оценена на 2018–2021, работает в 2026-м', 'Публичное зеркало ERA5 кончается 2021 годом, поэтому модель с погодой дальше не на чем оценивать. Пять лет сноса здесь не измерены — именно поэтому прогноз ещё и сверяется со свежими засечками каждую неделю.'],
     ['Училась на погоде, которая случилась', 'А живая карта идёт по прогнозу погоды. Цифры точности — это то, что достижимо, если прогноз верен: верхняя граница, а не обещание.'],
