@@ -2299,7 +2299,18 @@ function renderHero(ds: Dataset): void {
   }
 
   els.heroStats.innerHTML = ''
-  const totalFires = ds.days.reduce((s, d) => s + d.activeCells, 0)
+  /*
+   * Summed from the series that is on screen, not from the raw record.
+   *
+   * `ds.days` holds what the instruments counted, and `state.grid` holds
+   * whatever the raw/reconciled toggle is asking for. Reading the first
+   * put the raw total — 2.31M for Punjab — under a page whose every
+   * per-year figure beside it was reconciled, and whose column adds up to
+   * 3.53M. A reader who sums the table finds the headline does not match
+   * it, which is the one thing this project cannot afford.
+   */
+  let totalFires = 0
+  for (const row of state.grid.values()) for (const v of row) totalFires += v
 
   if (typical) {
     /*
@@ -2418,8 +2429,11 @@ function renderMetrics(ds: Dataset, totals: Map<number, number>): void {
   els.metrics.innerHTML = ''
   els.metrics.hidden = false
 
-  const activeCellDays = ds.days.reduce((s, d) => s + d.activeCells, 0)
-  const merged = Math.max(0, ds.totals.rawDetections - activeCellDays)
+  // The tile shows the series on screen; the merge share is raw against
+  // raw, so it keeps the instruments' own count and is never displayed.
+  const activeCellDays = [...totals.values()].reduce((a, b) => a + b, 0)
+  const rawCellDays = ds.days.reduce((a, d) => a + d.activeCells, 0)
+  const merged = Math.max(0, ds.totals.rawDetections - rawCellDays)
   const mergedPct = ds.totals.rawDetections > 0 ? (merged / ds.totals.rawDetections) * 100 : 0
   const peakDay = ds.days.reduce((best, d) => (d.frp > best.frp ? d : best), ds.days[0])
   const biggest = [...totals.entries()].sort((a, b) => b[1] - a[1])[0]
