@@ -444,6 +444,10 @@ function mountTiles(kind: Basemap): void {
 /** The widest the distance bar is allowed to be, in pixels. */
 const SCALE_MAX_PX = 120
 
+/** What one detection covers on the ground, per family. */
+const VIIRS_PIXEL_M = 375
+const MODIS_PIXEL_M = 1000
+
 /**
  * A round number to put under the bar.
  *
@@ -473,23 +477,56 @@ function formatKm(km: number, unit = true): string {
  * only at the equator. Taken at the middle of the view, so it describes
  * what the reader is looking at.
  */
+/**
+ * A cell that is not square on the ground, written in one unit.
+ *
+ * Sizing each side on its own merits mixed them: 1.113 km by 964 m came
+ * out "1,1 × 964 м", which reads as a cell one metre tall. The taller side
+ * picks the unit and the shorter one follows it.
+ */
+function cellPair(nsKm: number, ewKm: number): { ns: string; ew: string } {
+  const metres = nsKm < 1
+  const one = (km: number, unit: boolean): string => {
+    const n = metres ? formatNumber(km * 1000, 0) : formatNumber(km, km < 10 ? 1 : 0)
+    return unit ? `${n} ${t(metres ? 'unitM' : 'unitKm')}` : n
+  }
+  return { ns: one(nsKm, false), ew: one(ewKm, true) }
+}
+
 function cellSizeLabel(model: MapModel, atLat: number): string | null {
   /*
-   * Nothing, when there are no cells.
+   * Past a certain zoom there is no grid, and the question changes.
    *
-   * The live week draws individual detections rather than a grid, and its
-   * model carries `cellKm: 1` as a placeholder nothing reads. This printed
-   * "ячейка 1,0 км" over a map with no squares on it at all, which is a
-   * confident answer to a question that does not apply.
+   * The map stops drawing squares at zoom 9.5 and draws the detections
+   * themselves, because by then the finest grid — a hundredth of a degree,
+   * about 1.1 km — is finer than the sensor that made it, and a square
+   * there would claim a precision the instrument does not have. So the
+   * square is not shrinking; it has given way to what it was made of.
+   *
+   * The size still matters, and it is the one this project is about: a
+   * VIIRS pixel is 375 m and a MODIS pixel is 1 km. The model carries
+   * `cellKm: 1` at that zoom as a placeholder nothing reads, and this used
+   * to print it as "ячейка 1,0 км" over a map with no squares on it — a
+   * confident answer to a question that did not apply. It answers the one
+   * that does instead, and goes quiet only when there is nothing drawn.
    */
-  if (!model.cells.length) return null
+  if (!model.cells.length) {
+    const pts = model.points
+    if (!pts || !pts.length) return null
+    const fine = formatKm(VIIRS_PIXEL_M / 1000)
+    const coarse = formatKm(MODIS_PIXEL_M / 1000)
+    const viirs = pts.some((pt) => pt.viirs)
+    const modis = pts.some((pt) => !pt.viirs)
+    if (viirs && modis) return t('scaleDotBoth', { fine, coarse })
+    return t('scaleDot', { size: viirs ? fine : coarse })
+  }
   if (!model.cellDeg) return t('scaleCell', { size: formatKm(model.cellKm) })
   const ns = model.cellDeg * 111.32
   const ew = ns * Math.cos((atLat * Math.PI) / 180)
   // One number while they are within a tenth of each other; the reader does
   // not need "111 x 110".
   if (ew > 0 && Math.abs(ns - ew) / ns < 0.1) return t('scaleCell', { size: formatKm(ns) })
-  return t('scaleCellWide', { ns: formatKm(ns, false), ew: formatKm(Math.max(ew, 0)) })
+  return t('scaleCellWide', cellPair(ns, Math.max(ew, 0)))
 }
 
 /**
