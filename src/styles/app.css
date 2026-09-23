@@ -820,8 +820,16 @@ canvas {
 /* ---- metric strip under the calendar ---- */
 
 .metrics {
-  display: flex;
-  flex-wrap: wrap;
+  /*
+   * Three rows, shared by every cell: label, figure, note.
+   *
+   * As a flex row each cell sized itself, so a note that wrapped pushed
+   * its own figure up while its neighbours' stayed put — a row of numbers
+   * on three different lines. `subgrid` hands the cells the strip's own
+   * rows, and the figures land on one baseline whatever the notes do.
+   */
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(124px, 1fr));
   gap: var(--s-4) 0;
   margin: var(--s-6) 0 0;
   padding-top: var(--s-5);
@@ -837,12 +845,26 @@ canvas {
  * that broke rather than one that adapted.
  */
 .metrics > div {
-  display: flex;
-  flex: 1 1 124px;
-  flex-direction: column;
+  display: grid;
+  grid-row: span 3;
+  grid-template-rows: subgrid;
   min-width: 0;
   padding: 0 var(--s-4);
   border-left: 1px solid var(--edge-soft);
+}
+
+/* Without subgrid the cells keep the old behaviour rather than collapsing. */
+@supports not (grid-template-rows: subgrid) {
+  .metrics {
+    display: flex;
+    flex-wrap: wrap;
+  }
+
+  .metrics > div {
+    display: flex;
+    flex: 1 1 124px;
+    flex-direction: column;
+  }
 }
 
 .metrics > div:first-child {
@@ -871,9 +893,9 @@ canvas {
 
 .metrics dd {
   margin: 3px 0 0;
-  /* Pushed to the foot of its column, so a two-line label above does not
-     drop its own number below the rest of the row. */
-  margin-top: auto;
+  /* The row is shared; sit at the foot of it, so a two-line label above
+     does not drop its own number below the rest of the strip. */
+  align-self: end;
   padding-top: 3px;
   font-family: var(--font-display);
   font-size: var(--t-h4);
@@ -883,8 +905,9 @@ canvas {
   white-space: nowrap;
 }
 
-.metrics dd small {
-  margin-left: 5px;
+.metrics > div > small {
+  align-self: start;
+  margin-top: 2px;
   white-space: normal;
   font-family: var(--font-ui);
   font-size: var(--t-caption);
@@ -3564,4 +3587,48 @@ canvas {
 
 .skill__row[data-ours='yes'] .skill__bar i {
   background: var(--ember);
+}
+
+/*
+ * The map's two readings: how far, and how big one cell is.
+ *
+ * Bottom left, clear of the zoom buttons and the attribution, and quiet
+ * enough that it reads as part of the map rather than as a label pinned
+ * over it. The bar is the width the distance beside it measures.
+ */
+.map-scale {
+  margin: 0 0 8px 8px !important;
+  padding: 5px 7px;
+  border: 1px solid var(--edge-soft);
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--ash-panel) 84%, transparent);
+  backdrop-filter: blur(4px);
+  font-family: var(--font-ui);
+  font-size: var(--t-caption);
+  line-height: 1.35;
+  color: var(--ink-secondary);
+  pointer-events: none;
+}
+
+.map-scale__row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.map-scale__bar {
+  height: 7px;
+  border: 1px solid var(--ink-tertiary);
+  border-top: 0;
+  transition: width 120ms ease-out;
+}
+
+.map-scale__dist {
+  font-variant-numeric: tabular-nums;
+}
+
+.map-scale__cell {
+  display: block;
+  margin-top: 2px;
+  color: var(--ink-tertiary);
 }

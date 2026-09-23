@@ -15,6 +15,7 @@
 
 import L from 'leaflet'
 
+import { formatNumber, t } from '../i18n'
 import { heat, heatScale, rgba, varColor } from './paint'
 import type { Bounds } from '../core/types'
 
@@ -396,6 +397,7 @@ let fire: FireLayerInstance | null = null
 let aoiFrame: L.Rectangle | null = null
 let basemap: Basemap = 'dark'
 let currentModel: MapModel | null = null
+let scaleBox: HTMLElement | null = null
 
 export interface MapProbe {
   lat: number
@@ -436,6 +438,124 @@ function mountTiles(kind: Basemap): void {
   labelTiles = labels
     ? L.tileLayer(labels, { maxZoom: TILES[kind].maxZoom, pane: 'labels', crossOrigin: true }).addTo(map)
     : null
+}
+
+
+/** The widest the distance bar is allowed to be, in pixels. */
+const SCALE_MAX_PX = 120
+
+/**
+ * A round number to put under the bar.
+ *
+ * Every map does this and for the same reason: a bar labelled "3.7 km" is
+ * a measurement of the viewport, not a unit a reader can carry across the
+ * picture. The longest of 1, 2 or 5 times a power of ten that still fits.
+ */
+function niceDistance(metres: number): number {
+  const pow = Math.pow(10, Math.floor(Math.log10(metres)))
+  for (const step of [5, 2, 1]) if (pow * step <= metres) return pow * step
+  return pow
+}
+
+function formatKm(km: number, unit = true): string {
+  if (km < 1) return `${formatNumber(km * 1000, 0)}${unit ? ` ${t('unitM')}` : ''}`
+  // A decimal only when it says something: "5 km", not "5.0 km".
+  const digits = km < 10 && Math.round(km) !== Math.round(km * 10) / 10 ? 1 : 0
+  return `${formatNumber(km, digits)}${unit ? ` ${t('unitKm')}` : ''}`
+}
+
+/**
+ * How wide one cell of the current grid is, on the ground, here.
+ *
+ * `cellKm` is already metric where the grid is. Where it is square in
+ * degrees it is not square on the ground, and the difference is most of
+ * the map: a one-degree cell is 111 km tall everywhere and 111 km wide
+ * only at the equator. Taken at the middle of the view, so it describes
+ * what the reader is looking at.
+ */
+function cellSizeLabel(model: MapModel, atLat: number): string | null {
+  /*
+   * Nothing, when there are no cells.
+   *
+   * The live week draws individual detections rather than a grid, and its
+   * model carries `cellKm: 1` as a placeholder nothing reads. This printed
+   * "ячейка 1,0 км" over a map with no squares on it at all, which is a
+   * confident answer to a question that does not apply.
+   */
+  if (!model.cells.length) return null
+  if (!model.cellDeg) return t('scaleCell', { size: formatKm(model.cellKm) })
+  const ns = model.cellDeg * 111.32
+  const ew = ns * Math.cos((atLat * Math.PI) / 180)
+  // One number while they are within a tenth of each other; the reader does
+  // not need "111 x 110".
+  if (ew > 0 && Math.abs(ns - ew) / ns < 0.1) return t('scaleCell', { size: formatKm(ns) })
+  return t('scaleCellWide', { ns: formatKm(ns, false), ew: formatKm(Math.max(ew, 0)) })
+}
+
+/**
+ * Redraw both readings.
+ *
+ * Called on zoom and on pan, because the bar depends on the zoom and the
+ * cell width on the latitude, and called again whenever the model changes
+ * because that is when the pyramid has swapped level under the reader.
+ */
+function paintScale(): void {
+  if (!map || !scaleBox) return
+  const size = map.getSize()
+  if (size.x <= 0) return
+
+  /*
+   * A reading, or nothing, but never an exception.
+   *
+   * `containerPointToLatLng` needs a centre and a zoom, and a map that has
+   * neither throws rather than returning null. This control used to be
+   * installed before `setView` ran, so that throw escaped `ensureMap` and
+   * took the tile layer and the fire layer with it: a blank map, and a
+   * scale that never filled because `updateMap` returned early ever after.
+   * It is installed last now, and it still refuses to be the thing that
+   * breaks the map.
+   */
+  let span = 0
+  const midY = size.y / 2
+  try {
+    span = map.distance(map.containerPointToLatLng([0, midY]), map.containerPointToLatLng([SCALE_MAX_PX, midY]))
+  } catch {
+    return
+  }
+  if (!Number.isFinite(span) || span <= 0) return
+
+  const round = niceDistance(span)
+  const px = Math.max(24, Math.round((round / span) * SCALE_MAX_PX))
+
+  const bar = scaleBox.querySelector<HTMLElement>('.map-scale__bar')
+  const dist = scaleBox.querySelector<HTMLElement>('.map-scale__dist')
+  const cell = scaleBox.querySelector<HTMLElement>('.map-scale__cell')
+  if (bar) bar.style.width = `${px}px`
+  if (dist) dist.textContent = formatKm(round / 1000)
+  if (cell) {
+    const label = currentModel ? cellSizeLabel(currentModel, map.getCenter().lat) : null
+    cell.textContent = label ?? ''
+    cell.hidden = label === null
+  }
+}
+
+/** Build the corner once, and keep a handle on it. */
+function addScale(target: L.Map): void {
+  const Scale = L.Control.extend({
+    options: { position: 'bottomleft' as L.ControlPosition },
+    onAdd() {
+      const box = L.DomUtil.create('div', 'map-scale')
+      box.innerHTML =
+        '<div class="map-scale__row"><i class="map-scale__bar"></i><span class="map-scale__dist"></span></div>' +
+        '<span class="map-scale__cell"></span>'
+      L.DomEvent.disableClickPropagation(box)
+      scaleBox = box
+      return box
+    },
+  })
+  target.addControl(new Scale())
+  target.on('zoomend moveend resize', paintScale)
+  paintScale()
 }
 
 /** Create the map once; later calls only swap data. */
@@ -488,6 +608,10 @@ export function ensureMap(container: HTMLElement, onProbe: (probe: MapProbe | nu
   // Ctrl/⌘ + wheel zooms, which keeps the page scrollable but still allows it.
   map.on('mousemove', (e: L.LeafletMouseEvent) => onProbe(probeAt(e.latlng.lat, e.latlng.lng)))
   map.on('mouseout', () => onProbe(null))
+
+  // Last, and only once the view exists: the scale asks the map to convert
+  // pixels to ground, and a map without a centre throws when asked.
+  addScale(map)
 }
 
 function probeAt(lat: number, lon: number): MapProbe | null {
@@ -546,6 +670,8 @@ export function refreshBasemapTheme(): void {
 export function updateMap(model: MapModel | null, fit: boolean): void {
   if (!map || !fire || !model) return
   currentModel = model
+  // The grid may have changed level; the corner has to say the new size.
+  paintScale()
 
   const b = L.latLngBounds([model.bounds.south, model.bounds.west], [model.bounds.north, model.bounds.east])
 

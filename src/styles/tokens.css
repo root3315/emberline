@@ -29,9 +29,19 @@
   --ink-tertiary: hsl(30 9% 60%);
   --ink-muted: hsl(30 8% 50%);
 
-  /* ---- edges: found when looked for, invisible otherwise ---- */
-  --edge: hsl(34 20% 88% / 0.09);
-  --edge-soft: hsl(34 20% 88% / 0.055);
+  /*
+   * ---- edges: found when looked for, quiet otherwise ----
+   *
+   * `--edge-soft` was 0.055, which over the page background composites
+   * to rgb(42, 39, 36) against rgb(31, 28, 25): a ratio of 1.13 to 1,
+   * on a border the renderer then snaps below a device pixel. Every
+   * divider between bands, the rule over the metrics strip and the
+   * separators between its columns were drawn and could not be seen.
+   * At 0.12 it composites to rgb(55, 52, 48), about 1.34 to 1 — still
+   * a hairline, and one that is there.
+   */
+  --edge: hsl(34 20% 88% / 0.14);
+  --edge-soft: hsl(34 20% 88% / 0.12);
   --edge-strong: hsl(34 20% 88% / 0.16);
   --edge-focus: hsl(31 92% 58% / 0.55);
 

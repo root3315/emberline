@@ -2499,12 +2499,22 @@ function metric(label: string, value: string, note: string, tone?: 'up' | 'down'
   const dd = document.createElement('dd')
   dd.textContent = value
   if (tone) dd.dataset.tone = tone
+  wrap.append(dt, dd)
+  /*
+   * The note is a sibling of the figure, not a child of it.
+   *
+   * Inside the `dd` it was an inline run that wrapped, and since the `dd`
+   * is pinned to the foot of its column a five-line note grew the box
+   * upward and lifted the number with it: "Изменение за год" printed its
+   * +4,3% seventy-five pixels above the row it belongs to. Out here the
+   * stylesheet can give the strip three shared rows and put every figure
+   * on the same one.
+   */
   if (note) {
     const small = document.createElement('small')
     small.textContent = note
-    dd.append(small)
+    wrap.append(small)
   }
-  wrap.append(dt, dd)
   els.metrics.append(wrap)
 }
 
