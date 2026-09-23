@@ -262,29 +262,62 @@ const FireLayer = L.Layer.extend({
     const bounds = map.getBounds().pad(0.05)
 
     /**
-     * Detections, when there are any: one dot each, all the same size.
+     * Detections, when there are any: each one the size of its own pixel.
      *
-     * The same size on purpose. The footprint of a detection is not knowable
-     * from the row — it depends where in the swath the pixel fell — so drawing
-     * circles of different radii would be inventing a shape. FIRMS draws fixed
-     * markers for the same reason. Colour carries the one thing that *is*
-     * measured, the radiative power, and the faintest ring marks a low
-     * confidence flag.
+     * Two sizes, because there are two instruments: 375 m for VIIRS and a
+     * kilometre for MODIS, the nominal at-nadir footprints these products
+     * are named by. Zoomed in far enough to see one fire, the difference
+     * between the families is the whole subject of this site, and a map
+     * that drew both as the same three-pixel dot was the one place it was
+     * never shown.
+     *
+     * Nominal, and deliberately not per-detection. A scan stretches toward
+     * the edge of the swath and the row does not say where in the swath it
+     * fell, so the true footprint of one pixel is not knowable and radii
+     * that varied would be inventing a shape. What is knowable is the
+     * instrument, and that is what this draws.
+     *
+     * Floored at three pixels, which is what every detection used to be, so
+     * a zoomed-out view behaves exactly as it did.
+     *
+     * Colour still carries the one thing that is measured, the radiative
+     * power, and the faintest ring marks a low confidence flag.
      */
     if (this._points) {
       const ceiling = Math.max(1, this._ceiling)
+      // Metres to a pixel, here, now. Taken across the middle of the view so
+      // the projection is read at the latitude actually on screen.
+      const mid = map.getSize().y / 2
+      const across = 100
+      const metresPerPx =
+        map.distance(map.containerPointToLatLng([0, mid]), map.containerPointToLatLng([across, mid])) / across
+      const radiusPx = (viirs: boolean): number =>
+        Math.max(3, (viirs ? VIIRS_PIXEL_M : MODIS_PIXEL_M) / 2 / Math.max(metresPerPx, 1e-6))
       for (const pt of this._points) {
         if (pt.lat > bounds.getNorth() || pt.lat < bounds.getSouth()) continue
         if (pt.lon > bounds.getEast() || pt.lon < bounds.getWest()) continue
         const t = heatScale(Math.max(1, pt.frp), ceiling, 0.55)
         const at = map.latLngToContainerPoint([pt.lat, pt.lon])
+        const r = radiusPx(pt.viirs)
         ctx.beginPath()
-        ctx.arc(at.x, at.y, 3, 0, Math.PI * 2)
-        ctx.fillStyle = rgba(heat(t), pt.confidence === 0 ? 0.35 : 0.85)
+        ctx.arc(at.x, at.y, r, 0, Math.PI * 2)
+        /*
+         * A footprint you can see through, once it is one.
+         *
+         * At three pixels a solid disc is a marker and reads correctly. At a
+         * hundred and fifty — which is what 375 m becomes when the scale bar
+         * says 200 m — the same alpha is a blanket over the ground the
+         * reader zoomed in to look at. So the fill thins as the circle
+         * grows, and an outline keeps the edge legible once thinning has
+         * taken the fill below where it would read on its own.
+         */
+        const solid = pt.confidence === 0 ? 0.35 : 0.85
+        const fade = r <= 6 ? 1 : Math.max(0.28, 6 / r)
+        ctx.fillStyle = rgba(heat(t), solid * fade)
         ctx.fill()
-        if (pt.confidence === 2) {
+        if (r > 6 || pt.confidence === 2) {
           ctx.lineWidth = 1
-          ctx.strokeStyle = rgba(heat(Math.min(1, t + 0.25)), 0.9)
+          ctx.strokeStyle = rgba(heat(Math.min(1, t + 0.25)), pt.confidence === 0 ? 0.45 : 0.9)
           ctx.stroke()
         }
       }
