@@ -1840,8 +1840,21 @@ async function renderProof(): Promise<void> {
    * into the window we are; `renderTrust` draws that chart from the model
    * card alone and has no idea what day it is.
    */
-  if (!got.whole) {
-    els.calibCaption.textContent += ` ${t('calibPartialSlope', { n: String(got.elapsed) })}`
+  if (!got.whole && got.bands.length > 1) {
+    /*
+     * The two ends of the ladder, measured rather than remembered.
+     *
+     * These ratios were written into the sentence by hand on the day it
+     * was added, which would have made it a lie on the next check. The
+     * bands carry both numbers already; nobody was reading them.
+     */
+    const share = (b: (typeof got.bands)[number]) =>
+      b.dueByNow > 0 ? `${Math.round((b.burned / b.dueByNow) * 100)}%` : '—'
+    els.calibCaption.textContent += ` ${t('calibPartialSlope', {
+      n: String(got.elapsed),
+      high: share(got.bands[got.bands.length - 1]),
+      low: share(got.bands[0]),
+    })}`
   }
 
   els.proofLegend.hidden = !base
@@ -2342,7 +2355,8 @@ function redrawCanvases(): void {
 /**
  * The band under the calendar. Six numbers that say how much record there is,
  * how much of it harmonization actually merged, and which way it is moving —
- * the questions a reader has before they trust any single year.
+ * the questions a reader has before they trust any single year. Seven of
+ * them, and the count is here in words because it was wrong for a while.
  */
 function renderMetrics(ds: Dataset, totals: Map<number, number>): void {
   els.metrics.innerHTML = ''

@@ -285,10 +285,13 @@ export interface AdjustedDay {
  * ── One thing to know about the level ─────────────────────────────────
  *
  * `k` is the median of the daily ratios, and a median ratio is not the
- * ratio of the totals: small-fire days carry the highest ratios, so
- * summing MODIS x k over a year lands above what the instruments together
- * actually counted that year. On Punjab's overlap era it is about 40%
- * above. That is a level, not a slope — the same factor applies to 2005
+ * ratio of the totals. Measured over each area's own overlap era, the
+ * comparable series lands *below* what the two instruments together
+ * actually counted: Punjab 0.97 of it, Sierra 0.94, Yakutia 0.94,
+ * Cerrado 0.73. The median daily ratio is the smaller of the two
+ * estimates, and `dailySensitivityRatios` only counts days with at least
+ * three MODIS cells, which trims the very days where the ratio runs
+ * highest. That is a level, not a slope — the same factor applies to 2005
  * and to 2020, so every comparison the page makes is unaffected, and the
  * observed counts are always one click away under "as recorded".
  *

@@ -274,6 +274,23 @@ export interface Trend {
  * the one catastrophic year that would drag an ordinary least-squares line
  * across the whole record.
  */
+/**
+ * The first year the MODIS pair was complete.
+ *
+ * Terra came up in November 2000 and Aqua in July 2002, and two
+ * satellites see roughly twice the overpasses of one. Measured on this
+ * repository's own archives, Punjab's MODIS cell-days average 77.6k
+ * before Aqua and 148.7k over the nine years after it — a 1.9x step with
+ * no fire behind it, which is the same defect this project exists to
+ * remove, one satellite generation earlier than the one it is named for.
+ *
+ * It only matters where a statistic integrates across the seam. A
+ * calendar row is one year and implies no comparison; a climatology pools
+ * twenty-odd years and two of them barely move it. A trend is exactly the
+ * thing that must not span it.
+ */
+export const MODIS_PAIR_FROM = 2003
+
 export function annualTrend(grid: YearGrid, whole?: { from: string; to: string }): Trend | null {
   /*
    * Part years are left out, because a part year is a low year for a
@@ -281,14 +298,19 @@ export function annualTrend(grid: YearGrid, whole?: { from: string; to: string }
    *
    * The archive opens in November 2000, when Terra came up, and closes on
    * whatever day it was last built. Both of those years hold a fraction
-   * of a season and both pulled on the slope: dropping them moves Yakutia
-   * from -0.98% to -0.15%, which is the difference between a trend the
-   * page would print and one it would not.
+   * of a season and both pull on the slope. Yakutia, whose record starts
+   * in May 2001, is the clearest case: every year gives -0.98%, this rule
+   * gives +0.68%, and the sign is the part that matters rather than the
+   * size. None of the three clears the one per cent the page needs before
+   * it prints a trend at all, so what this fixes is the number behind the
+   * words, not the words.
    *
    * The range is optional so the statistic can still be taken over a bare
    * grid, which is what the tests do.
    */
-  const first = whole ? Number(whole.from.slice(0, 4)) + (whole.from.endsWith('-01-01') ? 0 : 1) : -Infinity
+  const opens = whole ? Number(whole.from.slice(0, 4)) + (whole.from.endsWith('-01-01') ? 0 : 1) : -Infinity
+  // And never before both MODIS satellites were up, for the reason above.
+  const first = whole ? Math.max(opens, MODIS_PAIR_FROM) : -Infinity
   const last = whole ? Number(whole.to.slice(0, 4)) - (whole.to.endsWith('-12-31') ? 0 : 1) : Infinity
 
   const totals: Array<[number, number]> = []

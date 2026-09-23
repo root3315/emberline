@@ -178,6 +178,61 @@ describe('annual trend', () => {
   })
 })
 
+describe('the trend leaves out the years it cannot compare', () => {
+  /** A grid whose totals rise by a fixed amount every year. */
+  const rising = (from: number, to: number, step: number, seam?: [number, number]) => {
+    const grid = new Map<number, Float64Array>()
+    for (let y = from; y <= to; y++) {
+      const row = new Float64Array(367)
+      const level = seam && y <= seam[0] ? seam[1] : (y - from + 1) * step
+      row[100] = level
+      grid.set(y, row)
+    }
+    return grid
+  }
+
+  it('drops a part year at either end', () => {
+    // 2010 is worth ten times the rest and would dominate the slope; with
+    // the range saying the record starts mid-2010 it must not count.
+    const grid = rising(2010, 2020, 100)
+    grid.get(2010)![100] = 100_000
+    const all = annualTrend(grid)!
+    const trimmed = annualTrend(grid, { from: '2010-06-01', to: '2020-12-31' })!
+    expect(all.years).toBe(11)
+    expect(trimmed.years).toBe(10)
+    /*
+     * Asserted against the same years asked for directly, rather than
+     * against a direction. Theil-Sen takes the median of the pairwise
+     * slopes and shrugs off a single outlier, so "the slope must fall"
+     * would be a guess about the estimator; "the part year is not in it"
+     * is the contract.
+     */
+    const without2010 = new Map([...grid.entries()].filter(([y]) => y >= 2011))
+    expect(trimmed.slope).toBeCloseTo(annualTrend(without2010)!.slope, 6)
+  })
+
+  it('never reaches back past the year the MODIS pair was complete', () => {
+    // Terra alone, then both: the step is instrument, not fire, and a
+    // trend measured across it points the wrong way.
+    const grid = rising(2001, 2015, 100, [2002, 10])
+    const trimmed = annualTrend(grid, { from: '2001-01-01', to: '2015-12-31' })!
+    expect(trimmed.years).toBe(2015 - 2003 + 1)
+    // Same years, asked for directly: the answer has to match.
+    const from2003 = new Map([...grid.entries()].filter(([y]) => y >= 2003))
+    expect(trimmed.slope).toBeCloseTo(annualTrend(from2003)!.slope, 6)
+  })
+
+  it('is unchanged by a constant factor, which is what makes it instrument-free', () => {
+    const grid = rising(2003, 2020, 100)
+    const scaled = new Map(
+      [...grid.entries()].map(([y, row]) => [y, row.map((v) => v * 7.07) as Float64Array]),
+    )
+    const a = annualTrend(grid, { from: '2003-01-01', to: '2020-12-31' })!
+    const b = annualTrend(scaled, { from: '2003-01-01', to: '2020-12-31' })!
+    expect(b.slopePct).toBeCloseTo(a.slopePct, 12)
+  })
+})
+
 describe('FIRMS CSV parsing', () => {
   const header =
     'latitude,longitude,bright_ti4,scan,track,acq_date,acq_time,satellite,instrument,confidence,version,bright_ti5,frp,daynight,type'

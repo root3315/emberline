@@ -24,7 +24,7 @@ Emberline reconciles the two records into a single comparable series, and shows 
 
 ## How harmonization works
 
-Six steps, in `src/core/`:
+Seven steps, in `src/core/`:
 
 1. **One shared grid.** Every detection is snapped to a ~1 km equal-area cell (`grid.ts`). The unit of measure becomes *active cells per day*, which does not depend on pixel size, instead of *detections*, which does.
 2. **Local solar days.** A day is defined by the sun at that longitude, not by UTC (`grid.ts`). A UTC date cuts the night in half for most of the world, pushing evening fires onto the following day.
@@ -168,8 +168,14 @@ python scripts/build_land.py        # coastlines for the globe
 
 # the model
 python scripts/train_fire_model.py  # build the feature matrix, fit, score
-python scripts/tune_fire_model.py   # hyperparameter sweep on the tuning era
+python scripts/fit_fire_model.py    # writes models/fire-7d.pkl and .json
+python scripts/train_fire_model.py 7 dry   # and again without the weather,
+python scripts/fit_fire_model.py 7 dry     # which is what "the weather bought"
+                                           # on the page is measured against
 python scripts/fit_fire_model_v2.py # prune, re-tune, refit; gate on test AP
+python scripts/tune_fire_model.py   # the sweep, which reads v2's column list
+python scripts/calibrate_fire_model.py     # tries two calibration curves and,
+                                           # so far, rejects both
 python scripts/build_model_card.py  # the model's paperwork, for the page
 
 # the week ahead
@@ -257,7 +263,9 @@ The plan for a worldwide map — measured download costs, the resolution pyramid
 
 - Active fire hotspots are **not burned area**. They mark burning at the moment of overpass; a fire under cloud or between overpasses is invisible.
 - The reconciled series is an estimate with a stated range for its **whole** length, not only before 2012 — it is MODIS scaled by a measured ratio. Read it against “as recorded”, which is the observation.
-- A day that only VIIRS saw reads as zero in the reconciled series. MODIS could not see that fire, and could not have seen it in 2005 either, so a series meant for comparison across the record must not carry it. Between 0.2% and 2.7% of cell-days, by area.
+- The reconciled series does not carry the cell-days only VIIRS saw, and there are a great many of them: 38% of the record in Central Yakutia, 78% in Punjab, and 50–86% within the VIIRS era itself. MODIS could not see those fires, and could not have seen them in 2005 either, so a series meant for comparison across the record must not contain them one by one — the coefficient is how the total is put back.
+- Putting it back is an estimate and it comes out low. Measured over each area's own overlap era, the reconciled totals are 0.97 of the observed combined count in Punjab, 0.94 in the Sierra Nevada, 0.94 in Central Yakutia and 0.73 in the Cerrado. The same factor applies to every year, so comparisons across the record hold; the absolute level does not claim to match what the instruments counted.
+- A day on which MODIS saw nothing at all reads as exactly zero. That is 5.5% of days in the Cerrado and 52% in Central Yakutia, carrying between 0.3% and 3.1% of the era's cell-days — the quiet days, which is why the shape of a season survives it.
 - Cloud cover, overpass timing and viewing geometry all bias detection in ways this does not correct.
 - The map uses a coarser 5 km grid than the 1 km harmonization grid, for legibility and file size.
 

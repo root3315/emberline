@@ -22,7 +22,6 @@ joblib==1.5.3           # ditto
 # `fetch_arco.py` reads the public ERA5 mirror over HTTP and unpacks Zarr
 # chunks itself, which is why numcodecs is here and zarr is not.
 numcodecs==0.13.1
-fsspec==2026.6.0
 
 # `fetch_gfs.py` reads GRIB2 from NOAA for the live forecast week.
 eccodes==2.48.0

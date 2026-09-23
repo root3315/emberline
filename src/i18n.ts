@@ -58,7 +58,7 @@ const en: Dict = {
   metricYears: 'Years of record',
   metricDetections: 'Detections',
   metricMerged: 'Duplicates removed',
-  mergedNote: 'same fire, several satellites',
+  mergedNote: 'several detections, one cell-day',
   metricTrend: 'Change per year',
   metricPeakYear: 'Worst year',
   metricPower: 'Peak power',
@@ -119,7 +119,7 @@ const en: Dict = {
   legendBoth: 'both',
 
   sensitivity:
-    'Here the 375 m sensor picks up {k}x as many fires as the 1 km one on the same day (between {lo}x and {hi}x, measured across {n} days when both were watching). Years before 2012 are scaled by that, and the uncertainty is kept.',
+    'Here the 375 m sensor picks up {k}x as many fires as the 1 km one on the same day (between {lo}x and {hi}x, measured across {n} days when both were watching). The whole series is built from MODIS and scaled by that, so no satellite launch can move it, and the uncertainty is kept.',
   sensitivityUnknown:
     'The two sensor families do not overlap enough in this record to measure a correction, so nothing has been scaled.',
 
@@ -325,7 +325,7 @@ const en: Dict = {
   windowClosed: 'closed {n} ago \u2014 time to build the next one',
   windowEarly: 'it has not begun yet',
   calibPartialSlope:
-    'On a part week the two columns cannot be read as calibration, and the shape of the gap is still worth having: on day {n} the cells above 70% have already reached the share their seven-day number implies, while the cells under 5% are running at two thirds of theirs. Either the low end is overstated or its fire is still to come, and only the finished week can say which.',
+    'On a part week the two columns cannot be read as calibration, and the shape of the gap is still worth having: on day {n} the cells the model put above 70% stand at {high} of the share their seven-day number implies, and the cells under 5% at {low}. Either the low end is overstated or its fire is still to come, and only the finished week can say which.',
   futureWhere: '{from} to {to} \u00b7 built {asOf}',
   futureAnswer: 'Somewhere in <em>{cells}</em> cells, the next seven days carry a real chance of fire.',
   futureAside:
@@ -347,7 +347,7 @@ const en: Dict = {
   futureTrustNote:
     'A forecast that cannot be checked is decoration. Everything below was scored on years the model never saw while it was learning.',
   calibCaption:
-    'Each dot is a group of cells the model gave about the same chance. On the line means the chance was right. Ours sit just above it: when it says 85%, about 89% burn \u2014 it is slightly too cautious, which is the safer way to be wrong.',
+    'Each dot is a group of cells the model gave about the same chance. On the line means the chance was right. Ours sit just above it: when it says 84%, about 90% burn \u2014 it is slightly too cautious, which is the safer way to be wrong.',
   futureSkillHead: 'Measured against',
   skillModel: 'This model',
   skillClimatology: 'The season alone',
@@ -397,7 +397,7 @@ const en: Dict = {
   proofRecordSoFar: 'computed {computed}, {days} in',
   proofRecordAgainst: 'free method {pct}',
   proofRecallNote: 'with {flagged} cells flagged',
-  trendOnModis: 'on MODIS alone — the ratio cancels',
+  trendOnModis: 'on MODIS since 2003 — the ratio cancels',
   proofCaught: 'Burned and flagged',
   proofMissed: 'Burned, not flagged',
   proofRecall: 'Caught',
@@ -478,7 +478,7 @@ const ru: Dict = {
   metricYears: 'Лет наблюдений',
   metricDetections: 'Засечек',
   metricMerged: 'Дублей убрано',
-  mergedNote: 'один очаг, несколько спутников',
+  mergedNote: 'несколько засечек в одной ячейке',
   metricTrend: 'Изменение за год',
   metricPeakYear: 'Худший год',
   metricPower: 'Пик мощности',
@@ -537,7 +537,7 @@ const ru: Dict = {
   legendBoth: 'оба',
 
   sensitivity:
-    'Здесь 375-метровый сенсор различает в {k} раза больше очагов, чем километровый, в тот же день (от {lo}× до {hi}×, измерено по {n} дням, когда работали оба). Годы до 2012-го пересчитаны с этим коэффициентом, погрешность сохранена.',
+    'Здесь 375-метровый сенсор различает в {k} раза больше очагов, чем километровый, в тот же день (от {lo}× до {hi}×, измерено по {n} дням, когда работали оба). Весь ряд строится из MODIS и умножается на этот коэффициент, поэтому запуск нового спутника его не двигает; погрешность сохранена.',
   sensitivityUnknown:
     'Два семейства сенсоров пересекаются в этих данных слишком мало, чтобы измерить поправку, поэтому пересчёт не применялся.',
 
@@ -743,7 +743,7 @@ const ru: Dict = {
   windowClosed: 'закрылось {n} назад — пора считать следующее',
   windowEarly: 'ещё не началось',
   calibPartialSlope:
-    'На неполной неделе две колонки нельзя читать как калибровку, но форма расхождения всё равно чего-то стоит: на {n}-й день ячейки выше 70% уже добрали долю, которую подразумевает их недельное число, а ячейки ниже 5% идут на двух третях от своей. Либо нижний конец завышен, либо его огонь ещё впереди — и сказать, что из двух, может только закрывшаяся неделя.',
+    'На неполной неделе две колонки нельзя читать как калибровку, но форма расхождения всё равно чего-то стоит: на {n}-й день ячейки выше 70% стоят на {high} от доли, которую подразумевает их недельное число, а ячейки ниже 5% — на {low}. Либо нижний конец завышен, либо его огонь ещё впереди, и сказать, что из двух, может только закрывшаяся неделя.',
   futureWhere: 'с {from} по {to} · считано {asOf}',
   futureAnswer: 'В <em>{cells}</em> ячейках ближайшие семь дней несут реальный шанс пожара.',
   futureAside:
@@ -765,7 +765,7 @@ const ru: Dict = {
   futureTrustNote:
     'Прогноз, который нельзя проверить, — это украшение. Всё ниже посчитано на годах, которых модель при обучении не видела.',
   calibCaption:
-    'Каждая точка — группа ячеек, которым модель дала примерно одинаковый шанс. На линии — значит шанс был верный. Наши лежат чуть выше: когда модель говорит 85%, горит около 89% — она слегка перестраховывается, и это безопасная сторона ошибки.',
+    'Каждая точка — группа ячеек, которым модель дала примерно одинаковый шанс. На линии — значит шанс был верный. Наши лежат чуть выше: когда модель говорит 84%, горит около 90% — она слегка перестраховывается, и это безопасная сторона ошибки.',
   futureSkillHead: 'С чем сравниваем',
   skillModel: 'Эта модель',
   skillClimatology: 'Один только сезон',
@@ -813,7 +813,7 @@ const ru: Dict = {
   proofRecordSoFar: 'посчитан {computed}, прошло {days}',
   proofRecordAgainst: 'бесплатный способ {pct}',
   proofRecallNote: 'при {flagged} отмеченных ячейках',
-  trendOnModis: 'по MODIS — коэффициент сокращается',
+  trendOnModis: 'по MODIS с 2003 года — коэффициент сокращается',
   proofCaught: 'Сгорело и отмечено',
   proofMissed: 'Сгорело, не отмечено',
   proofRecall: 'Поймано',
@@ -1034,12 +1034,12 @@ const aboutLists: Record<Lang, Record<string, readonly AboutRow[]>> = {
     ['A detection is not a fire', 'It is one satellite pass finding one pixel hot enough. A fire under cloud, or one that starts and dies between passes, is not in the record and so is not in the model.'],
     ],
     aboutTriedList: [
-      ['A fitted calibration curve', 'The model is slightly under-confident: on the test years it says 84% where 90% burns. Isotonic regression and Platt scaling were both fitted on the tuning years and measured once on the test years. Isotonic matched the shipped Brier score of 0.0315 exactly and cost 0.0060 of average precision, because its staircase puts cells the model had ranked apart onto one tread. Platt kept the ranking and came out slightly worse on Brier, 0.0315 against 0.0315. Neither passed, so neither shipped, and the chart below is the uncalibrated model.'],
+      ['A fitted calibration curve', 'The model is slightly under-confident: on the test years it says 84% where 90% burns. Isotonic regression and Platt scaling were both fitted on the tuning years and measured once on the test years. Isotonic matched the shipped Brier score of 0.0315 exactly and cost 0.0060 of average precision, because its staircase puts cells the model had ranked apart onto one tread. Platt kept the ranking and came out slightly worse on Brier, 0.031510 against 0.031466. Neither passed, so neither shipped, and the chart below is the uncalibrated model.'],
       ['Where the people are', 'Every feature this model has is about fire, and most fire on this planet is lit by somebody \u2014 so the European Commission\u2019s global settlement layer went in as population per cell and population of the eight neighbours. Test average precision moved from 0.5579 to 0.5581. The two features came 12th and 13th of 27 by how much the score drops when each is scrambled: 0.0031 and 0.0030, against climatology\u2019s 0.387. The fire archive already knows where people are, because they have been lighting fires in it for twenty-four years.'],
       ['More trees', 'Training loss was still falling at a thousand trees, which reads like a model cut off early. It was not. Validation average precision peaks at 200 trees, 0.7147, and then goes backwards: 0.7132 at 300, 0.7125 at a thousand. Five times the compute for slightly less skill.'],
     ],
     aboutCheckList: [
-    ['Nothing was chosen on the test years', 'How many trees, which features to keep, how deep to grow — every one of those was decided on 2014–2017 and the test years were opened once, at the end. Picking any of them by the test score is how a model flatters itself, and the scripts are written so that it cannot.'],
+    ['The test years were opened once', 'How many trees, which features to keep, how deep to grow — every one of those was decided on 2014–2017, and then the test years were opened, at the end. Tuning against a test score is how a model flatters itself, and the scripts are written so that it cannot. Two of the three rejections below are the one place the test years did decide something: population and the calibration curves were each already losing on the tuning years, and the test run is where that was confirmed and the decision recorded. Said plainly rather than left for a reader to notice.'],
     ['The forecast is scored against reality', 'The week on the map was computed before it happened. verify_forecast.py asks NASA what has burned since and scores it \u2014 ranking from day one, calibration once the week closes. The answer did not exist when the question was asked.'],
     ['The reconciliation is a switch', 'Every chart has "as recorded" beside "reconciled". If the correction were doing something dishonest, it would be visible in one click.'],
     ['The skill figure is the unflattering one', 'Average precision against a seasonal baseline that already knows where fires usually are \u2014 not accuracy against a 5% base rate, which would read as 95% and mean nothing.'],
@@ -1069,12 +1069,12 @@ const aboutLists: Record<Lang, Record<string, readonly AboutRow[]>> = {
     ['Засечка — это не пожар', 'Это один пролёт спутника, нашедший один пиксель достаточно горячим. Пожар под облаком или тот, что начался и погас между пролётами, в архив не попал — значит, его нет и в модели.'],
     ],
     aboutTriedList: [
-      ['Подогнанная калибровочная кривая', 'Модель слегка перестраховывается: на тестовых годах она говорит 84% там, где горит 90%. Изотоническую регрессию и шкалирование Платта обе подогнали на настроечных годах и измерили один раз на тестовых. Изотоника в точности повторила шипнутый Brier 0.0315 и стоила 0.0060 средней точности: её ступенька сводит на одну ступень ячейки, которые модель развела. Платт ранжирование сохранил, но по Brier вышел чуть хуже. Ни одна не прошла порог — значит ни одна не поехала, и график ниже показывает некалиброванную модель.'],
+      ['Подогнанная калибровочная кривая', 'Модель слегка перестраховывается: на тестовых годах она говорит 84% там, где горит 90%. Изотоническую регрессию и шкалирование Платта обе подогнали на настроечных годах и измерили один раз на тестовых. Изотоника в точности повторила шипнутый Brier 0.0315 и стоила 0.0060 средней точности: её ступенька сводит на одну ступень ячейки, которые модель развела. Платт ранжирование сохранил, но по Brier вышел чуть хуже: 0.031510 против 0.031466. Ни одна не прошла порог — значит ни одна не поехала, и график ниже показывает некалиброванную модель.'],
       ['Где живут люди', 'Все признаки этой модели — про огонь, а большинство пожаров на планете зажигает человек. Поэтому в неё добавили слой расселения Европейской комиссии: население ячейки и население восьми соседей. Средняя точность на тесте сдвинулась с 0.5579 до 0.5581. Два признака заняли 12-е и 13-е места из 27 по тому, насколько падает оценка, если каждый перемешать: 0.0031 и 0.0030 против 0.387 у климатологии. Архив пожаров уже знает, где люди, — они двадцать четыре года в нём и жгут.'],
       ['Больше деревьев', 'На тысяче деревьев ошибка на обучении всё ещё падала — так выглядит модель, которую оборвали рано. Это оказалось не так. Средняя точность на валидации достигает максимума на 200 деревьях, 0.7147, и дальше идёт назад: 0.7132 на 300 и 0.7125 на тысяче. Впятеро больше счёта за чуть меньшее умение.'],
     ],
     aboutCheckList: [
-    ['Ничто не выбиралось по тестовым годам', 'Сколько деревьев, какие признаки оставить, насколько глубоко растить — всё это решалось на 2014–2017, а тестовые годы открыли один раз, в самом конце. Подобрать что-нибудь по тесту — это и есть способ модели польстить себе, и скрипты написаны так, чтобы она не смогла.'],
+    ['Тестовые годы открыли один раз', 'Сколько деревьев, какие признаки оставить, насколько глубоко растить — всё это решалось на 2014–2017, а тестовые годы открыли один раз, в самом конце. Подобрать что-нибудь по тесту — это и есть способ модели польстить себе, и скрипты написаны так, чтобы она не смогла. Два из трёх отказов ниже — единственное место, где тест что-то решил: и население, и калибровочные кривые уже проигрывали на настроечных годах, а на тесте это подтвердилось и было записано. Говорим прямо, а не оставляем читателю заметить самому.'],
     ['Прогноз сверяется с реальностью', 'Неделя на карте посчитана до того, как она случилась. verify_forecast.py спрашивает у NASA, что сгорело с тех пор, и считает оценку: ранжирование с первого дня, калибровка когда неделя закроется. Ответа не существовало в момент вопроса.'],
     ['Сведение — это переключатель', 'У каждого графика рядом с «сведено» есть «как снято». Если бы поправка делала что-то нечестное, это было бы видно в один клик.'],
     ['Цифра точности — самая невыгодная', 'Средняя точность против сезонной базы, которая уже знает, где обычно горит, — а не «доля верных ответов» при базе 5%, которая дала бы 95% и не значила бы ничего.'],
