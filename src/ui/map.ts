@@ -628,6 +628,25 @@ function addScale(target: L.Map): void {
   paintScale()
 }
 
+/**
+ * Leaflet's zoom buttons carry English titles of their own ("Zoom in"),
+ * which a Russian reader heard from a screen reader and saw on hover.
+ * Called on creation and on every language switch.
+ */
+export function localizeMapControls(): void {
+  const root = map?.getContainer()
+  if (!root) return
+  for (const [cls, key] of [
+    ['.leaflet-control-zoom-in', 'mapZoomIn'],
+    ['.leaflet-control-zoom-out', 'mapZoomOut'],
+  ] as const) {
+    const el = root.querySelector<HTMLElement>(cls)
+    if (!el) continue
+    el.title = t(key)
+    el.setAttribute('aria-label', t(key))
+  }
+}
+
 /** Create the map once; later calls only swap data. */
 export function ensureMap(container: HTMLElement, onProbe: (probe: MapProbe | null) => void): void {
   if (map) return
@@ -650,6 +669,7 @@ export function ensureMap(container: HTMLElement, onProbe: (probe: MapProbe | nu
     zoomSnap: 0,
   })
   map.attributionControl.setPrefix('')
+  localizeMapControls()
 
   /**
    * Give it a view immediately, before anything else can need one.

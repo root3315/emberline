@@ -25,7 +25,12 @@ export const SENSOR_META: Record<SensorId, { platform: Platform; pixelM: number;
   modis_terra: { platform: 'modis', pixelM: 1000, since: '2000-11-01', label: 'MODIS Terra' },
   modis_aqua: { platform: 'modis', pixelM: 1000, since: '2002-07-04', label: 'MODIS Aqua' },
   viirs_snpp: { platform: 'viirs', pixelM: 375, since: '2012-01-20', label: 'VIIRS S-NPP' },
-  viirs_noaa20: { platform: 'viirs', pixelM: 375, since: '2018-01-01', label: 'VIIRS NOAA-20' },
+  // The same rule as NOAA-21 below: `build-archive.ts` asks for the NOAA-20
+  // standard product from 2018-04-01, so that is where it begins here. The
+  // eras `sensitivityByEra` splits the ratio into are read off these dates,
+  // and three months of S-NPP-only days filed under two satellites would
+  // pull the second era's ratio down.
+  viirs_noaa20: { platform: 'viirs', pixelM: 375, since: '2018-04-01', label: 'VIIRS NOAA-20' },
   // NOAA-21 launched in November 2022, but FIRMS did not serve its product
   // until 2024-01-17, which is where `build-archive.ts` starts asking for
   // it. The rail is meant to show the fleet the archive actually holds, so

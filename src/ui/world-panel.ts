@@ -6,15 +6,22 @@
  * answer is the pair of questions the regions answer at their own scale, and
  * it answers them with something the regions cannot: the whole surface at once.
  *
- * Both charts keep MODIS and VIIRS apart. Stacking them into one total would
- * be the easy thing and the wrong one — VIIRS arrives in 2012 and sees several
- * times as many fires as MODIS over the same ground, so a combined line rises
- * sharply in 2012 for a reason that has nothing to do with fire. Side by side,
- * that seam is visible and the reader can discount it.
+ * "As recorded", the year bars keep MODIS and VIIRS apart. Stacking them into
+ * one total would be the easy thing and the wrong one — VIIRS arrives in 2012
+ * and sees several times as many fires as MODIS over the same ground, so a
+ * combined line rises sharply in 2012 for a reason that has nothing to do
+ * with fire. Side by side, that seam is visible and the reader can discount it.
+ *
+ * "Reconciled", both charts draw MODIS times the ratio the ribbon above uses,
+ * through `comparable()`. They used to draw the recorded counts whichever way
+ * the switch was set, so the planet's page said "reconciled" over 2005 lying
+ * near zero and 2025 at eleven times its height.
  */
 
-import { formatCompact, formatNumber, months, t } from '../i18n'
-import { fitCanvas, LABEL, MONO, rgba, roundRect, varColor } from './paint'
+import { comparable } from '../core/harmonize'
+import { MODIS_PAIR_FROM } from '../core/stats'
+import { counted, detectionsUnit, formatCompact, formatNumber, months, t } from '../i18n'
+import { fitCanvas, LABEL, MONO, niceCeil, rgba, roundRect, varColor } from './paint'
 
 export interface WorldSeason {
   year: number
@@ -58,13 +65,38 @@ function axisLabels(ctx: CanvasRenderingContext2D, peak: number): { at: number[]
  * isolation — that a year peaked in August means little until you can see
  * that they all do.
  */
-export function drawWorldSeason(canvas: HTMLCanvasElement, seasons: WorldSeason[], year: number): void {
+export function drawWorldSeason(
+  canvas: HTMLCanvasElement,
+  seasons: WorldSeason[],
+  year: number,
+  k: number | null = null,
+  observed?: { from: string; to: string },
+): void {
   const surface = fitCanvas(canvas, SEASON_H)
   if (!surface || seasons.length === 0) return
   const { ctx, width } = surface
 
-  const series = seasons.map((s) => s.modis.map((m, i) => m + s.viirs[i]))
-  const peak = Math.max(1, ...series.flat())
+  const series = seasons.map((s) => s.modis.map((m, i) => comparable(m, s.viirs[i], k)))
+
+  /*
+   * Which months of each year were watched. The running year's months after
+   * the last day of data are not zeros, they are the future, and the first
+   * year starts in November; both were drawn as a fall to the floor. A month
+   * the record only partly covers is drawn, dashed, rather than hidden.
+   */
+  const span = (y: number): { first: number; last: number; partialLast: boolean } => {
+    let first = 0
+    let last = 11
+    let partialLast = false
+    if (observed && y === Number(observed.from.slice(0, 4))) first = Number(observed.from.slice(5, 7)) - 1
+    if (observed && y === Number(observed.to.slice(0, 4))) {
+      last = Number(observed.to.slice(5, 7)) - 1
+      const end = new Date(Date.UTC(y, last + 1, 0)).getUTCDate()
+      partialLast = Number(observed.to.slice(8, 10)) < end
+    }
+    return { first, last, partialLast }
+  }
+  const peak = niceCeil(Math.max(1, ...series.flat()))
 
   const axis = axisLabels(ctx, peak)
   const plotW = width - axis.left - PAD.right
@@ -86,7 +118,7 @@ export function drawWorldSeason(canvas: HTMLCanvasElement, seasons: WorldSeason[
     ctx.moveTo(axis.left, gy)
     ctx.lineTo(axis.left + plotW, gy)
     ctx.stroke()
-    ctx.fillStyle = rgba(inkTertiary, 0.8)
+    ctx.fillStyle = rgba(inkTertiary, 1)
     ctx.font = MONO
     ctx.textAlign = 'right'
     ctx.textBaseline = 'middle'
@@ -97,30 +129,49 @@ export function drawWorldSeason(canvas: HTMLCanvasElement, seasons: WorldSeason[
   ctx.lineWidth = 1
   for (let i = 0; i < seasons.length; i++) {
     if (seasons[i].year === year) continue
+    const { first, last } = span(seasons[i].year)
     ctx.strokeStyle = rgba(inkTertiary, 0.22)
     ctx.beginPath()
-    series[i].forEach((v, m) => (m === 0 ? ctx.moveTo(x(m), y(v)) : ctx.lineTo(x(m), y(v))))
+    for (let m = first; m <= last; m++) (m === first ? ctx.moveTo(x(m), y(series[i][m])) : ctx.lineTo(x(m), y(series[i][m])))
     ctx.stroke()
   }
 
   // The chosen one, over the top.
   const pick = seasons.findIndex((s) => s.year === year)
   if (pick >= 0) {
+    const { first, last, partialLast } = span(year)
+    const solidTo = partialLast ? last - 1 : last
     ctx.strokeStyle = rgba(ember, 0.95)
     ctx.lineWidth = 2
     ctx.beginPath()
-    series[pick].forEach((v, m) => (m === 0 ? ctx.moveTo(x(m), y(v)) : ctx.lineTo(x(m), y(v))))
+    for (let m = first; m <= solidTo; m++) (m === first ? ctx.moveTo(x(m), y(series[pick][m])) : ctx.lineTo(x(m), y(series[pick][m])))
     ctx.stroke()
-    ctx.fillStyle = rgba(ember, 1)
-    series[pick].forEach((v, m) => {
+    if (partialLast && last > first) {
+      ctx.save()
+      ctx.setLineDash([4, 3])
       ctx.beginPath()
-      ctx.arc(x(m), y(v), 2.4, 0, Math.PI * 2)
-      ctx.fill()
-    })
+      ctx.moveTo(x(last - 1), y(series[pick][last - 1]))
+      ctx.lineTo(x(last), y(series[pick][last]))
+      ctx.stroke()
+      ctx.restore()
+    }
+    for (let m = first; m <= last; m++) {
+      const open = partialLast && m === last
+      ctx.beginPath()
+      ctx.arc(x(m), y(series[pick][m]), 2.4, 0, Math.PI * 2)
+      if (open) {
+        ctx.strokeStyle = rgba(ember, 1)
+        ctx.lineWidth = 1.5
+        ctx.stroke()
+      } else {
+        ctx.fillStyle = rgba(ember, 1)
+        ctx.fill()
+      }
+    }
   }
 
   const names = months()
-  ctx.fillStyle = rgba(inkTertiary, 0.9)
+  ctx.fillStyle = rgba(inkTertiary, 1)
   ctx.font = LABEL
   ctx.textAlign = 'center'
   ctx.textBaseline = 'top'
@@ -140,6 +191,7 @@ export function drawWorldYears(
   totals: WorldTotal[],
   year: number,
   temps?: Map<number, number>,
+  k: number | null = null,
 ): void {
   const surface = fitCanvas(canvas, YEARS_H)
   if (!surface || totals.length === 0) return
@@ -154,7 +206,7 @@ export function drawWorldYears(
    */
   const hasTemp = Boolean(temps && temps.size >= 2)
   const padRight = hasTemp ? 44 : PAD.right
-  const peak = Math.max(1, ...totals.map((d) => Math.max(d.modis, d.viirs)))
+  const peak = niceCeil(Math.max(1, ...totals.map((d) => (k === null ? Math.max(d.modis, d.viirs) : d.modis * k))))
   const axis = axisLabels(ctx, peak)
   const plotW = width - axis.left - padRight
   const plotH = YEARS_H - PAD.top - PAD.bottom
@@ -166,6 +218,7 @@ export function drawWorldYears(
   const edgeSoft = varColor('--edge-soft')
   const cModis = varColor('--sensor-modis')
   const cViirs = varColor('--sensor-viirs')
+  const cOne = varColor('--ember')
 
   ctx.strokeStyle = rgba(edgeSoft, 0.7)
   ctx.lineWidth = 1
@@ -175,7 +228,7 @@ export function drawWorldYears(
     ctx.moveTo(axis.left, gy)
     ctx.lineTo(axis.left + plotW, gy)
     ctx.stroke()
-    ctx.fillStyle = rgba(inkTertiary, 0.8)
+    ctx.fillStyle = rgba(inkTertiary, 1)
     ctx.font = MONO
     ctx.textAlign = 'right'
     ctx.textBaseline = 'middle'
@@ -185,15 +238,23 @@ export function drawWorldYears(
   totals.forEach((d, i) => {
     const cx = axis.left + step * (i + 0.5)
     const on = d.year === year
-    const pairs: Array<[number, ReturnType<typeof varColor>, number]> = [
-      [d.modis, cModis, cx - barW - 1],
-      [d.viirs, cViirs, cx + 1],
-    ]
-    for (const [v, colour, bx] of pairs) {
+    // Reconciled is one quantity, so one bar the width of the pair.
+    const pairs: Array<[number, ReturnType<typeof varColor>, number, number]> =
+      k === null
+        ? [
+            [d.modis, cModis, cx - barW - 1, barW],
+            [d.viirs, cViirs, cx + 1, barW],
+          ]
+        : [[d.modis * k, cOne, cx - barW - 1, barW * 2 + 2]]
+    // Before 2003 only Terra flew, and a year of one MODIS is about a third
+    // of a year of two. Those bars are drawn faint so the step at 2003 reads
+    // as the instrument it is.
+    const terra = d.year < MODIS_PAIR_FROM
+    for (const [v, colour, bx, w] of pairs) {
       if (v <= 0) continue
       const h = Math.max(1.5, (v / peak) * plotH)
-      roundRect(ctx, bx, PAD.top + plotH - h, barW, h, 2)
-      ctx.fillStyle = rgba(colour, on ? 1 : 0.6)
+      roundRect(ctx, bx, PAD.top + plotH - h, w, h, 2)
+      ctx.fillStyle = rgba(colour, (on ? 1 : 0.6) * (terra ? 0.4 : 1))
       ctx.fill()
     }
     // Label every fifth year, and always the selected one — but never both
@@ -246,7 +307,7 @@ export function drawWorldYears(
   })
   ctx.stroke()
 
-  ctx.fillStyle = rgba(inkTertiary, 0.85)
+  ctx.fillStyle = rgba(inkTertiary, 1)
   ctx.font = MONO
   ctx.textAlign = 'left'
   ctx.textBaseline = 'middle'
@@ -255,14 +316,17 @@ export function drawWorldYears(
 }
 
 /** The one-line summary above the charts. */
-export function worldHeadline(totals: WorldTotal[], year: number): string {
+export function worldHeadline(totals: WorldTotal[], year: number, k: number | null = null): string {
   const pick = totals.find((d) => d.year === year)
-  const all = totals.reduce((s, d) => s + d.modis + d.viirs, 0)
-  return t('worldHeadline', {
-    all: formatNumber(all),
+  const one = (d: WorldTotal) => comparable(d.modis, d.viirs, k)
+  const all = totals.reduce((s, d) => s + one(d), 0)
+  return t(k === null ? 'worldHeadline' : 'worldHeadlineReconciled', {
+    all: k === null ? formatNumber(Math.round(all)) : formatCompact(all),
     from: String(totals[0]?.year ?? ''),
     to: String(totals[totals.length - 1]?.year ?? ''),
     year: String(year),
-    fires: formatNumber(pick ? pick.modis + pick.viirs : 0),
+    // Reconciled figures are estimates and printed like one: "about 16M",
+    // not "about 15,645,665" beside a ratio known to a few per cent.
+    fires: k === null ? counted(Math.round(pick ? one(pick) : 0), detectionsUnit) : formatCompact(pick ? one(pick) : 0),
   })
 }

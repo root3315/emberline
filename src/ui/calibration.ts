@@ -21,6 +21,7 @@
  * record.
  */
 
+import { t } from '../i18n'
 import { fitCanvas, MONO, rgba, varColor } from './paint'
 
 export interface Bucket {
@@ -45,7 +46,8 @@ export function drawCalibration(canvas: HTMLCanvasElement, buckets: Bucket[]): v
   const y = (v: number) => PAD.top + (1 - v) * plotH
 
   const soft = varColor('--edge-soft')
-  const muted = varColor('--ink-muted')
+  // Tertiary, not muted: the axis labels are text and muted is below 4.5:1.
+  const muted = varColor('--ink-tertiary')
   const ember = varColor('--ember')
 
   // The grid, quiet enough to read through.
@@ -73,6 +75,14 @@ export function drawCalibration(canvas: HTMLCanvasElement, buckets: Bucket[]): v
     const v = g / 4
     ctx.fillText(`${Math.round(v * 100)}%`, x(v), HEIGHT - PAD.bottom + 8)
   }
+  // The axes named, inside the plot where there is room: percentages on
+  // both sides with nothing to say which is which read as one scale twice.
+  ctx.textAlign = 'right'
+  ctx.textBaseline = 'bottom'
+  ctx.fillText(t('calibAxisSaid'), x(1), y(0) - 4)
+  ctx.textAlign = 'left'
+  ctx.textBaseline = 'top'
+  ctx.fillText(t('calibAxisBurned'), x(0) + 4, y(1) + 4)
 
   /*
    * Perfect calibration, dashed.

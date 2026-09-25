@@ -23,18 +23,28 @@
  *
  * ── The seam, made structural ─────────────────────────────────────────────
  *
- * In "as recorded" the rings brighten abruptly partway out. That ring is
- * 2012, and it is VIIRS arriving rather than the Earth igniting: a sharper
- * instrument counting fires the older one averaged away. Nothing else in
- * the record changes that year. Switch to "reconciled" and the step
- * disappears, because the older years are lifted to what today's sensor
- * would have seen.
+ * In "as recorded" the rings brighten abruptly partway out, at 2012, and
+ * again at 2018 and 2024. Those are VIIRS satellites arriving rather than
+ * the Earth igniting: a sharper instrument, then more of them, counting
+ * fires the older one averaged away. Switch to "reconciled" and the steps
+ * disappear, because every ring is MODIS scaled by one coefficient, and
+ * no satellite enters that arithmetic.
+ *
+ * One seam stays in both modes, and the caption names it: the three
+ * innermost rings are Terra alone. Aqua joined in July 2002, and on the
+ * global daily level Terra by itself counted 4.1k-4.9k detections a day
+ * against 13.6k for the pair in 2003. That is the
+ * same defect one generation earlier. FIRMS does say which of the two
+ * took each detection, and they have flown together since 2002, so it
+ * could be measured — but the global levels keep the MODIS pair summed,
+ * and until they are rebuilt with the split the seam can only be named.
  *
  * Every other chart on this site argues that in words beside it. Here the
  * flaw is a literal ring, and the fix is the ring going away, which is a
  * better argument than any caption.
  */
 
+import { calibrate, comparable, dayOfYearIso, MIN_RATIO_SAMPLES, ratiosFromCounts } from '../core/harmonize'
 import { months } from '../i18n'
 import { heat, heatScale, MONO, rgba, varColor } from './paint'
 
@@ -102,43 +112,57 @@ export function mountFireYear(
    *
    * MODIS alone is comparable across the whole record; the trouble is only
    * that it counts fewer fires than VIIRS does. So the reconciled view is
-   * MODIS throughout, scaled by the ratio the two instruments actually
-   * show each other over the years they overlap. One number, measured from
-   * the record rather than assumed, and the same idea the rest of the site
-   * applies per place and per season.
+   * MODIS throughout, scaled by the ratio the two instruments show each
+   * other on the days they overlap.
+   *
+   * This used to be the ratio of the sums, while the planet's ribbon took
+   * the median of the daily ratios from the same file: two estimators, two
+   * levels for one planet. Both now go through `ratiosFromCounts` and
+   * `calibrate`, on the years S-NPP flew alone.
    */
   const lift = (() => {
-    let m = 0
-    let v = 0
+    const counts: Array<{ day: string; modis: number; viirs: number }> = []
     for (const year of years) {
       const both = data.years[String(year)]
-      const vTotal = both.viirs.reduce((s, n) => s + n, 0)
-      if (vTotal <= 0) continue
-      m += both.modis.reduce((s, n) => s + n, 0)
-      v += vTotal
+      // Padded to 366: the last slot of a common year is not a day.
+      both.modis.forEach((m, i) => {
+        if (i < (year % 4 === 0 && (year % 100 !== 0 || year % 400 === 0) ? 366 : 365)) {
+          counts.push({ day: dayOfYearIso(year, i), modis: m, viirs: both.viirs[i] ?? 0 })
+        }
+      })
     }
-    return m > 0 ? (m + v) / m : 1
+    const ratio = calibrate(ratiosFromCounts(counts))
+    return ratio.samples >= MIN_RATIO_SAMPLES ? ratio.k : null
   })()
 
   function series(year: number): number[] {
     const both = data.years[String(year)]
     if (!both) return []
-    if (mode === 'raw') return both.modis.map((n, i) => n + (both.viirs[i] ?? 0))
-    return both.modis.map((n) => n * lift)
+    const k = mode === 'raw' ? null : lift
+    return both.modis.map((m, i) => comparable(m, both.viirs[i] ?? 0, k))
   }
 
-  const ceiling = (() => {
+  /*
+   * One ceiling for both modes: the 99th percentile of what was recorded,
+   * so one freak day does not black out the rest.
+   *
+   * The ribbon scales each mode to itself, and tried here that turned the
+   * reconciled ring into a solid orange disc: lit against its own top
+   * percentile, a planet whose quietest month is half its busiest has no
+   * dark left in it. This object's argument is the switch — the rings that
+   * brighten in 2012, 2018 and 2024 going away — and that only reads if
+   * flipping it changes the data and not the scale under it.
+   */
+  const recordedTop = (() => {
     const all: number[] = []
     for (const year of years) {
       const both = data.years[String(year)]
-      for (let i = 0; i < both.modis.length; i++) {
-        all.push(both.modis[i] + (both.viirs[i] ?? 0))
-      }
+      for (let i = 0; i < both.modis.length; i++) all.push(both.modis[i] + (both.viirs[i] ?? 0))
     }
     all.sort((a, b) => a - b)
-    // The 99th percentile, so one freak day does not black out the rest.
     return all[Math.floor(all.length * 0.99)] || 1
   })()
+  const ceiling = () => recordedTop
 
   function resize(): void {
     const box = canvas.parentElement?.getBoundingClientRect()
@@ -158,7 +182,9 @@ export function mountFireYear(
     const side = width / dpr
     const cx = side / 2
     const cy = side / 2
-    const outer = side / 2 - 22 // room for the month labels outside
+    // Room for the month labels outside. At 22 the side labels, centred
+    // 9px from the edge, lost their first letter: "окт" read as "кт".
+    const outer = side / 2 - 32
     const inner = outer * CORE
     const ring = (outer - inner) / years.length
     return { cx, cy, outer, inner, ring }
@@ -178,6 +204,7 @@ export function mountFireYear(
     const dim = varColor('--ash-raised')
     const edge = varColor('--edge-soft')
     const limit = TWO_PI
+    const top = ceiling()
 
     years.forEach((year, yi) => {
       const days = series(year)
@@ -212,7 +239,7 @@ export function mountFireYear(
         // out bright orange and the object turned into a solid disc with
         // no season in it. Straight through, the quiet months go dark and
         // the burning arc appears.
-        ctx.fillStyle = rgba(heat(heatScale(value, ceiling, 1)))
+        ctx.fillStyle = rgba(heat(heatScale(value, top, 1)))
         ctx.fill()
       }
     })
@@ -244,7 +271,7 @@ export function mountFireYear(
     const short = months()
     QUARTERS.forEach((month, q) => {
       const a = (q / 4) * TWO_PI - Math.PI / 2
-      ctx.fillText(short[month], cx + Math.cos(a) * (outer + 13), cy + Math.sin(a) * (outer + 13))
+      ctx.fillText(short[month], cx + Math.cos(a) * (outer + 16), cy + Math.sin(a) * (outer + 16))
     })
 
     cacheMode = mode
@@ -302,7 +329,7 @@ export function mountFireYear(
       ctx.fillStyle = rgba(varColor('--ember'))
       ctx.fillText(count, cx, cy + 8)
     } else {
-      ctx.fillStyle = rgba(varColor('--ink-muted'))
+      ctx.fillStyle = rgba(varColor('--ink-tertiary'))
       ctx.fillText(`${years[0]}\u2013${years[years.length - 1]}`, cx, cy)
     }
   }

@@ -1,14 +1,26 @@
+import { readFileSync } from 'node:fs'
+
 import { describe, expect, it } from 'vitest'
 
-import { cellOf, dayOfYear, localSolarDay } from '../src/core/grid'
+import { readDays, type ArchiveCube } from '../src/core/cube'
+import { cellOf, dayFromIndex, dayOfYear, localSolarDay } from '../src/core/grid'
 import {
   applySensitivity,
+  calibrate,
   comparable,
   confidenceFromModis,
   confidenceFromViirs,
   harmonize,
+  leaveOneYearOut,
   measureSensitivity,
+  routeAgreement,
+  routeTrends,
+  twoRoutes,
+  viirsRouteByDay,
   quantileSorted,
+  ratiosFromDays,
+  sensitivityByEra,
+  summarizeSensitivity,
 } from '../src/core/harmonize'
 import type { Detection, SensorId } from '../src/core/types'
 
@@ -263,6 +275,145 @@ describe('sensitivity ratio', () => {
     const out = applySensitivity(days, ratio)
     expect(out[0].adjusted).toBe(false)
     expect(out[0].value).toBe(10)
+  })
+})
+
+describe('the ratio by fleet', () => {
+  const day = (d: string, modis: number, viirs: number) => ({
+    day: d, activeCells: viirs, modisOnly: 0, viirsOnly: viirs - modis, both: modis, frp: 0, raw: 0,
+  })
+
+  it('splits where the archive says each satellite begins, not where it launched', () => {
+    const days = [
+      ...Array.from({ length: 12 }, (_, i) => day(`2015-06-${String(i + 1).padStart(2, '0')}`, 10, 20)),
+      // S-NPP alone until NOAA-20's data starts on 1 April 2018
+      ...Array.from({ length: 12 }, (_, i) => day(`2018-03-${String(i + 10).padStart(2, '0')}`, 10, 20)),
+      ...Array.from({ length: 12 }, (_, i) => day(`2020-06-${String(i + 1).padStart(2, '0')}`, 10, 40)),
+      // 2023 is still two satellites: NOAA-21's data begins 17 January 2024
+      ...Array.from({ length: 12 }, (_, i) => day(`2023-06-${String(i + 1).padStart(2, '0')}`, 10, 40)),
+      ...Array.from({ length: 12 }, (_, i) => day(`2025-06-${String(i + 1).padStart(2, '0')}`, 10, 60)),
+    ]
+    const eras = sensitivityByEra(ratiosFromDays(days))
+    expect(eras.map((e) => e.fleet.length)).toEqual([1, 2, 3])
+    expect(eras.map((e) => e.k)).toEqual([2, 4, 6])
+    expect(eras.map((e) => e.samples)).toEqual([24, 24, 12])
+    expect(eras[0].to).toBe('2018-03-31')
+    expect(eras[1].to).toBe('2024-01-16')
+    expect(eras[2].to).toBeNull()
+  })
+
+  const cube = (aoi: string) => JSON.parse(readFileSync(`public/data/${aoi}.json`, 'utf8')) as ArchiveCube
+  const daysOf = (c: ArchiveCube) => readDays(c).map((d) => ({ ...d, day: dayFromIndex(d.dayIndex) }))
+
+  it('reproduces the coefficient each shipped archive publishes, from its daily sums alone', () => {
+    for (const aoi of ['punjab', 'sierra', 'cerrado', 'yakutia']) {
+      const c = cube(aoi)
+      const again = summarizeSensitivity(ratiosFromDays(daysOf(c)))
+      expect(again.k, aoi).toBeCloseTo(c.sensitivity.k, 9)
+      expect(again.samples, aoi).toBe(c.sensitivity.samples)
+    }
+  })
+
+  it('is expressed in one VIIRS: calibrated on the years S-NPP flew alone', () => {
+    const expected: Record<string, number> = { punjab: 4.6, sierra: 1.86, cerrado: 1.64, yakutia: 1.64 }
+    for (const [aoi, k] of Object.entries(expected)) {
+      const cal = calibrate(ratiosFromDays(daysOf(cube(aoi))))
+      expect(cal.basis, aoi).toBe('reference')
+      // The days measured, inside the era S-NPP flew alone.
+      expect(cal.from!.startsWith('2012') && cal.from! >= '2012-01-20', aoi).toBe(true)
+      expect(cal.to! >= '2017-01-01' && cal.to! <= '2018-03-31', aoi).toBe(true)
+      expect(Number(cal.k.toFixed(2)), aoi).toBe(k)
+      // the whole-overlap median is kept beside it, and it is what the archive shipped
+      expect(cal.overlap.k, aoi).toBeCloseTo(cube(aoi).sensitivity.k, 9)
+    }
+  })
+
+  it('leaves each year of the reference era out in turn and predicts it from the rest', () => {
+    for (const aoi of ['punjab', 'sierra', 'cerrado', 'yakutia']) {
+      const rows = leaveOneYearOut(daysOf(cube(aoi)))
+      expect(rows.map((r) => r.year), aoi).toEqual([2013, 2014, 2015, 2016, 2017])
+      // A regression guard, not a pass mark: the worst year on record is
+      // Yakutia 2015 at -33%, and a change to the method that doubled it
+      // should fail here rather than on the page.
+      for (const r of rows) expect(Math.abs(r.predicted / r.observed - 1), `${aoi} ${r.year}`).toBeLessThan(0.4)
+    }
+  })
+
+  it('knows the median to within a few per cent, resampling whole years', () => {
+    const cal = calibrate(ratiosFromDays(daysOf(cube('punjab'))))
+    expect(cal.ci).not.toBeNull()
+    expect(cal.ci!.lo).toBeLessThan(cal.k)
+    expect(cal.ci!.hi).toBeGreaterThan(cal.k)
+    expect(Number(cal.ci!.lo.toFixed(2))).toBe(4.29)
+    expect(Number(cal.ci!.hi.toFixed(2))).toBe(5)
+  })
+
+  it('falls back to the overlap it has when the record starts after S-NPP flew alone', () => {
+    const late = [
+      ...Array.from({ length: 12 }, (_, i) => day(`2020-06-${String(i + 1).padStart(2, '0')}`, 10, 30)),
+    ]
+    const cal = calibrate(ratiosFromDays(late))
+    expect(cal.basis).toBe('overlap')
+    expect(cal.k).toBe(3)
+  })
+
+  it('reaches every year since 2012 a second way, through VIIRS alone', () => {
+    const days = daysOf(cube('punjab'))
+    const routes = twoRoutes(days, calibrate(ratiosFromDays(days)))
+    expect(routes[0].year).toBe(2012)
+    expect(routes[routes.length - 1].year).toBe(2026)
+    // the same unit: in the reference era the VIIRS route is S-NPP's own count
+    const snpp2016 = days
+      .filter((d) => d.day.startsWith('2016'))
+      .reduce((s, d) => s + d.viirsOnly + d.both, 0)
+    expect(routes.find((r) => r.year === 2016)!.viirs).toBeCloseTo(snpp2016, 6)
+    // and the two routes move together: across the whole years the gap stays under a quarter
+    for (const r of routes.filter((r) => r.year >= 2013 && r.year <= 2025)) {
+      expect(Math.abs(r.modis / r.viirs - 1), String(r.year)).toBeLessThan(0.25)
+    }
+  })
+
+  it('gives the VIIRS route day by day, adding up to the yearly route', () => {
+    const days = daysOf(cube('punjab'))
+    const cal = calibrate(ratiosFromDays(days))
+    const byDay = viirsRouteByDay(days, cal)
+    // nothing before the first VIIRS
+    expect([...byDay.keys()].every((d) => d >= '2012-01-20')).toBe(true)
+    for (const r of twoRoutes(days, cal)) {
+      let sum = 0
+      for (const [day, v] of byDay) if (day.startsWith(String(r.year))) sum += v
+      expect(sum, String(r.year)).toBeCloseTo(r.viirs, 6)
+    }
+  })
+
+  it('has two routes that rise and fall together year to year, which nothing forces them to', () => {
+    for (const aoi of ['punjab', 'sierra', 'cerrado', 'yakutia']) {
+      const days = daysOf(cube(aoi))
+      const rows = twoRoutes(days, calibrate(ratiosFromDays(days))).filter((r) => r.year >= 2013 && r.year <= 2025)
+      const agree = routeAgreement(rows)!
+      expect(agree.n, aoi).toBe(12)
+      expect(agree.r, aoi).toBeGreaterThan(0.9)
+    }
+  })
+
+  it('shows the same trend by both routes, and a drift would part them where r would not notice', () => {
+    for (const aoi of ['punjab', 'sierra', 'cerrado', 'yakutia']) {
+      const days = daysOf(cube(aoi))
+      const rows = twoRoutes(days, calibrate(ratiosFromDays(days))).filter((r) => r.year >= 2013 && r.year <= 2025)
+      const trends = routeTrends(rows)!
+      expect(Math.abs(trends.modis - trends.viirs), aoi).toBeLessThan(0.015)
+
+      // Push the VIIRS route up 10% a year: the correlation of year-to-year
+      // changes does not move, the trends come apart by about ten points.
+      const drifted = rows.map((r, i) => ({ ...r, viirs: r.viirs * 1.1 ** i }))
+      expect(routeAgreement(drifted)!.r, aoi).toBeCloseTo(routeAgreement(rows)!.r, 3)
+      expect(routeTrends(drifted)!.drift, aoi).toBeCloseTo(trends.drift * 1.1 + 0.1, 2)
+    }
+  })
+
+  it('climbs with the fleet in Punjab, which is why k stays out of the shape', () => {
+    const eras = sensitivityByEra(ratiosFromDays(daysOf(cube('punjab'))))
+    expect(eras.map((e) => Number(e.k.toFixed(2)))).toEqual([4.6, 9.14, 12.57])
   })
 })
 

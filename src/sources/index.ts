@@ -10,10 +10,12 @@ import { readDays, type ArchiveCube } from '../core/cube'
 import { cellOf, dayFromIndex, dayIndex, yearOf } from '../core/grid'
 import {
   applySensitivity,
+  calibrate,
+  dailySensitivityRatios,
   harmonize,
-  measureSensitivity,
+  ratiosFromDays,
   type AdjustedDay,
-  type SensitivityRatio,
+  type Calibration,
 } from '../core/harmonize'
 import { MODIS_MASK, SENSOR_META, VIIRS_MASK, type Bounds, type DayRecord, type Detection, type SensorId } from '../core/types'
 import type { MapCell } from '../ui/map'
@@ -25,7 +27,7 @@ export interface Dataset {
   provenance: string
   days: DayRecord[]
   adjusted: AdjustedDay[]
-  sensitivity: SensitivityRatio
+  sensitivity: Calibration
   sensors: SensorId[]
   sensorsByYear: Map<number, number>
   range: { from: string; to: string }
@@ -71,13 +73,17 @@ export async function loadArchive(aoiId: string): Promise<Dataset> {
   }))
 
   const aoi = AOIS.find((a) => a.id === cube.aoi)
+  // Re-measured on the reference era from the same daily sums the archive
+  // ships. `cube.sensitivity` is the whole-overlap median it was built with,
+  // kept in the file and carried here as `overlap`; see `calibrate`.
+  const sensitivity = calibrate(ratiosFromDays(days))
   return {
     id: cube.aoi,
     bounds: cube.bounds ?? aoi!.bounds,
     provenance: cube.provenance,
     days,
-    adjusted: applySensitivity(days, cube.sensitivity),
-    sensitivity: cube.sensitivity,
+    adjusted: applySensitivity(days, sensitivity),
+    sensitivity,
     sensors: cube.sensors,
     sensorsByYear: sensorsByYearOf(days),
     range: cube.range,
@@ -113,7 +119,7 @@ export function datasetFromDetections(
   nonVegetation: number,
 ): Dataset {
   const record = harmonize(detections)
-  const sensitivity = measureSensitivity(record)
+  const sensitivity = calibrate(dailySensitivityRatios(record))
   const days = record.days
 
   const byYear = new Map<number, Map<string, MapCell>>()

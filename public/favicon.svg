@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <!-- The brand mark from the header: the heat ramp banked like a coal. -->
+  <defs>
+    <radialGradient id="coal" cx="30%" cy="108%" r="120%">
+      <stop offset="0" stop-color="hsl(44 96% 82%)" />
+      <stop offset="0.26" stop-color="hsl(31 88% 55%)" />
+      <stop offset="0.52" stop-color="hsl(12 78% 32%)" />
+      <stop offset="0.74" stop-color="hsl(20 30% 12%)" />
+    </radialGradient>
+  </defs>
+  <rect width="32" height="32" rx="11" fill="hsl(20 30% 12%)" />
+  <rect width="32" height="32" rx="11" fill="url(#coal)" />
+</svg>

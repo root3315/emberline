@@ -52,6 +52,7 @@ import json
 import os
 import pickle
 import sys
+from datetime import datetime, timezone
 
 import numpy as np
 from sklearn.isotonic import IsotonicRegression
@@ -67,6 +68,7 @@ TAG = "-dry" if DRY else ""
 FEATURES_NPZ = f"models/features-{HORIZON}d{TAG}.npz"
 MODEL = f"models/fire-{HORIZON}d{TAG}.pkl"
 META = f"models/fire-{HORIZON}d{TAG}.json"
+LOG = f"models/calibration-{HORIZON}d{TAG}.json"
 
 EPS = 1e-9
 
@@ -170,6 +172,26 @@ def main() -> None:
         if sc["brier"] < before["brier"]
         and sc["average_precision"] >= before["average_precision"] - 0.0005
     }
+
+    # Written whether or not anything passes. A rejection that only ever
+    # reached a terminal left the page quoting numbers nothing in the
+    # repository could produce; `export_model_log.py` carries this file
+    # into docs/model-log.json.
+    json.dump(
+        {
+            "horizon_days": HORIZON,
+            "fitted_on": "validate",
+            "scored_on": "test",
+            "rule": "brier must fall and average precision may drop by at most 0.0005",
+            "ships": before,
+            "candidates": scored,
+            "passed": sorted(ok),
+            "builtAt": datetime.now(timezone.utc).isoformat(),
+        },
+        open(LOG, "w", encoding="utf-8"),
+        indent=2,
+    )
+
     if not ok:
         print("\n  neither curve earns its place; leaving the model alone")
         return

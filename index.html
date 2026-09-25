@@ -2,6 +2,28 @@
 <html lang="en" data-theme="night">
   <head>
     <meta charset="utf-8" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <!--
+      Before the bundle: the saved theme, and no English flash for a reader
+      whose language is not English. The static text is written in English
+      and translated once the script runs, which on a slow connection meant
+      several seconds of English for a Russian reader. It is hidden until
+      then, and shown after four seconds whatever happens, so a failed
+      bundle leaves English rather than nothing.
+    -->
+    <script>
+      try {
+        var theme = localStorage.getItem('emberline.theme')
+        if (theme === 'night' || theme === 'day') document.documentElement.dataset.theme = theme
+        var lang = localStorage.getItem('emberline.lang') || (navigator.language.indexOf('ru') === 0 ? 'ru' : 'en')
+        if (lang !== 'en') {
+          document.documentElement.classList.add('i18n-pending')
+          setTimeout(function () {
+            document.documentElement.classList.remove('i18n-pending')
+          }, 4000)
+        }
+      } catch (e) {}
+    </script>
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <title>Emberline — when and where it burns</title>
     <meta
@@ -43,6 +65,7 @@
               <input
                 class="input picker__search"
                 id="picker-search"
+                data-i18n-label="pickerSearchLabel"
                 type="search"
                 autocomplete="off"
                 spellcheck="false"
@@ -75,20 +98,24 @@
             column three screens down. This takes its place, and only its
             place: on the record's own pages it is not there.
           -->
-          <a class="ghost-btn bar__about" id="bar-about" href="#/about" data-i18n="aboutLink">
-            About the project
-          </a>
+          <!-- Links and toggles travel together: on a phone they share the brand's row. -->
+          <div class="bar__tools">
+            <a class="ghost-btn bar__about" id="bar-about" href="#/about">
+              <span class="bar__about-long" data-i18n="aboutLink">About the project</span>
+              <span class="bar__about-short" data-i18n="aboutLinkShort">About</span>
+            </a>
 
-          <a class="ghost-btn bar__back" id="bar-back" href="#/" hidden>
-            <span aria-hidden="true">&#8249;</span>
-            <span data-i18n="futureBack">Back to the record</span>
-          </a>
+            <a class="ghost-btn bar__back" id="bar-back" href="#/" hidden>
+              <span aria-hidden="true">&#8249;</span>
+              <span data-i18n="futureBack">Back to the record</span>
+            </a>
 
-          <div class="bar__toggles">
-            <button type="button" class="ghost-btn" id="lang" data-i18n-label="ariaLang">RU</button>
-            <button type="button" class="ghost-btn" id="theme" data-i18n-label="ariaTheme">
-              <span data-theme-icon></span>
-            </button>
+            <div class="bar__toggles">
+              <button type="button" class="ghost-btn" id="lang">RU</button>
+              <button type="button" class="ghost-btn" id="theme" data-i18n-label="ariaTheme">
+                <span data-theme-icon></span>
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -101,12 +128,22 @@
         <h1 class="hero__answer" id="hero-answer"></h1>
         <p class="hero__aside" id="hero-aside"></p>
         <dl class="hero__stats" id="hero-stats"></dl>
+        <!--
+          The problem and its fix in one picture, on the first screen: the
+          record as recorded steps up with every VIIRS satellite, the
+          reconciled one does not. Everything below argues from this.
+        -->
+        <figure class="hero__seam" id="hero-seam" hidden>
+          <div class="legend" id="hero-seam-legend"></div>
+          <canvas id="hero-seam-canvas" role="img" data-i18n-label="ariaHeroSeam"></canvas>
+          <figcaption class="note note--tight" id="hero-seam-note"></figcaption>
+        </figure>
       </section>
 
       <section class="band" id="calendar">
         <header class="band__head">
           <div>
-            <h2 data-i18n="sectionCalendar">When does it burn here?</h2>
+            <h2 id="calendar-title" data-i18n="sectionCalendar">When does it burn here?</h2>
             <p class="note" id="calendar-note" data-i18n="sectionCalendarNote"></p>
           </div>
           <div class="legend" id="ribbon-legend"></div>
@@ -123,6 +160,7 @@
         <div class="blank" id="blank" hidden>
           <h3 id="blank-title"></h3>
           <p id="blank-body"></p>
+          <button type="button" class="ghost-btn" id="blank-retry" hidden data-i18n="retry">Try again</button>
         </div>
 
         <dl class="metrics" id="metrics"></dl>
@@ -141,7 +179,7 @@
               <button type="button" class="ghost-btn" id="year-next" data-i18n-label="ariaYearNext">&#8250;</button>
             </div>
           </header>
-          <div class="cycle"><canvas id="cycle-canvas"></canvas></div>
+          <div class="cycle"><canvas id="cycle-canvas" role="img" data-i18n-label="ariaCycle"></canvas></div>
           <p class="concentration" id="concentration"></p>
         </div>
 
@@ -162,7 +200,8 @@
             <p class="note" data-i18n="sectionTableNote"></p>
           </div>
         </header>
-        <div class="table-wrap">
+        <div class="table-box" id="years-box">
+        <div class="table-wrap" id="years-wrap">
           <table class="years">
             <thead>
               <tr id="years-head">
@@ -188,6 +227,8 @@
             <tbody id="years-body"></tbody>
           </table>
         </div>
+        </div>
+        <p class="note note--tight table-hint" data-i18n="tableScrollHint"></p>
       </section>
 
       <section class="band band--split">
@@ -200,7 +241,7 @@
           <ul class="sensors" id="sensors"></ul>
           <h3 class="subhead" id="split-title"></h3>
           <div class="split-bar" id="sensor-split"></div>
-          <p class="note note--tight" id="sensitivity-note"></p>
+          <div class="kcard" id="sensitivity-note"></div>
         </div>
 
         <div class="band__col">
@@ -211,7 +252,20 @@
             </div>
             <div class="legend" id="contrib-legend"></div>
           </header>
-          <div class="contrib"><canvas id="contrib-canvas"></canvas></div>
+          <div class="contrib"><canvas id="contrib-canvas" role="img" data-i18n-label="ariaContrib"></canvas></div>
+
+          <!--
+            The second estimate of the same years, from VIIRS alone. It is
+            the answer to "what does the finer sensor add", the size of any
+            year-to-year comparison, and how the series goes on after MODIS.
+            In this column rather than under the ratio: the left one ran a
+            screen and a half while this one ended under its bars.
+          -->
+          <h3 class="subhead routes__title" data-i18n="routesTitle">Two routes to the same years</h3>
+          <div class="legend" id="routes-legend"></div>
+          <div class="contrib"><canvas id="routes-canvas" role="img" data-i18n-label="ariaRoutes"></canvas></div>
+          <dl class="route-stats" id="routes-stats"></dl>
+          <p class="note note--tight" id="routes-note"></p>
         </div>
       </section>
 
@@ -227,7 +281,7 @@
               <p class="note" id="world-headline"></p>
             </div>
           </header>
-          <div class="cycle"><canvas id="world-season"></canvas></div>
+          <div class="cycle"><canvas id="world-season" role="img" data-i18n-label="ariaWorldSeason"></canvas></div>
           <p class="note note--tight" data-i18n="worldSeasonNote"></p>
         </div>
 
@@ -236,11 +290,12 @@
             <div>
               <h3 class="subhead subhead--plain" data-i18n="worldYearsTitle">Year by year</h3>
               <p class="note" id="world-years-headline" hidden></p>
-              <p class="note" data-i18n="worldYearsNote"></p>
+              <!-- Written by renderWorldPanels: it depends on the mode. -->
+              <p class="note" id="world-years-note"></p>
             </div>
             <div class="legend" id="world-legend"></div>
           </header>
-          <div class="contrib"><canvas id="world-years"></canvas></div>
+          <div class="contrib"><canvas id="world-years" role="img" data-i18n-label="ariaWorldYears"></canvas></div>
           <p class="note note--tight" id="world-temp-note" hidden></p>
         </div>
       </section>
@@ -440,7 +495,7 @@
             Drawn against each other, the same sentence needs no arithmetic.
           -->
           <figure class="impact__scale">
-            <canvas id="impact-bars"></canvas>
+            <canvas id="impact-bars" role="img" data-i18n-label="ariaImpact"></canvas>
             <figcaption class="note note--tight" id="impact-bars-note"></figcaption>
           </figure>
         </div>
@@ -513,7 +568,7 @@
           ring, and reconciling makes it go away.
         -->
         <figure class="fireyear">
-          <canvas id="about-year"></canvas>
+          <canvas id="about-year" role="img" data-i18n-label="ariaRing"></canvas>
           <figcaption class="fireyear__read" id="about-year-read"></figcaption>
           <fieldset class="segmented fireyear__modes" id="about-year-modes">
             <legend class="sr-only" data-i18n="modeLegend">Mode</legend>
@@ -546,8 +601,21 @@
             in one picture. Saying it in a paragraph never lands as hard.
           -->
           <h3 class="subhead" data-i18n="aboutSeamTitle">The seam, in the record</h3>
-          <div class="contrib"><canvas id="about-seam"></canvas></div>
+          <div class="contrib"><canvas id="about-seam" role="img" data-i18n-label="ariaSeam"></canvas></div>
           <p class="note note--tight" data-i18n="aboutSeamNote"></p>
+
+          <!--
+            The evidence for the fix, from the same files the charts draw:
+            whether the ratio holds still while the fleet does, and whether
+            one number fitted on some years predicts the others. Written by
+            script, never by hand, so a rebuild cannot leave them stale.
+          -->
+          <h3 class="subhead" data-i18n="aboutEvidenceTitle">Does the fix hold?</h3>
+          <p class="about__body" id="about-fleet"></p>
+          <p class="about__body" id="about-heldout"></p>
+          <div class="legend" id="about-routes-legend"></div>
+          <div class="contrib"><canvas id="about-routes" role="img" data-i18n-label="ariaRoutes"></canvas></div>
+          <p class="note note--tight" data-i18n="aboutRoutesNote"></p>
         </div>
       </section>
 
@@ -605,24 +673,32 @@
           lean on, what did the weather buy, and does a number it gives
           mean what it says.
         -->
+        <!--
+          The model's own evidence, one click down. This page is about the
+          reconciliation first; the three charts that test the forecast are
+          here for whoever wants them and no longer two thirds of the page.
+        -->
+        <details class="about__more" id="about-more">
+        <summary class="ghost-btn about__more-toggle" data-i18n="aboutMoreModel">How the model was tested</summary>
         <h3 class="subhead" data-i18n="aboutWeighsTitle">What it weighs</h3>
         <p class="note" data-i18n="aboutWeighsNote"></p>
-        <div class="about__chart about__chart--tall"><canvas id="about-importance"></canvas></div>
+        <div class="about__chart about__chart--tall"><canvas id="about-importance" role="img" data-i18n-label="ariaImportance"></canvas></div>
         <p class="legend about__legend" id="about-importance-legend"></p>
 
         <div class="band--split about__pair">
           <div class="band__col">
             <h3 class="subhead" data-i18n="aboutWeatherTitle">What the weather bought</h3>
             <p class="note" data-i18n="aboutWeatherNote"></p>
-            <div class="about__chart"><canvas id="about-weather"></canvas></div>
+            <div class="about__chart"><canvas id="about-weather" role="img" data-i18n-label="ariaWeather"></canvas></div>
             <p class="note note--tight" id="about-weather-raw"></p>
           </div>
           <div class="band__col">
             <h3 class="subhead" data-i18n="aboutCalibTitle">Does 85% mean 85%</h3>
             <p class="note" data-i18n="aboutCalibNote"></p>
-            <div class="calib"><canvas id="about-calib"></canvas></div>
+            <div class="calib"><canvas id="about-calib" role="img" data-i18n-label="ariaCalib"></canvas></div>
           </div>
         </div>
+        </details>
 
         <a class="btn cta__btn" href="#/future" data-i18n="ctaButton">What happens next week</a>
       </section>
@@ -694,6 +770,7 @@
             <div class="globe__disc">
               <canvas
                 id="look-globe"
+                role="img"
                 data-i18n-label="ariaGlobe"
               ></canvas>
             </div>
@@ -746,7 +823,7 @@
             height of figure-plus-card and burst out of the column.
           -->
           <div class="globe__disc">
-            <canvas id="globe-canvas" data-i18n-label="ariaGlobe"></canvas>
+            <canvas id="globe-canvas" role="img" data-i18n-label="ariaGlobe"></canvas>
           </div>
           <figcaption class="globe__call" data-i18n="globeCall">Press a fire to see the detail</figcaption>
           <div class="pick" id="pick" hidden>
@@ -789,7 +866,7 @@
           that made only the week behaves exactly as it did before.
         -->
         <div class="week" id="week" hidden>
-          <div class="week__days" id="week-days" role="tablist"></div>
+          <div class="week__days" id="week-days" role="group" data-i18n-label="ariaWeekDays"></div>
           <!--
             The play control sits on the readout line rather than beside
             the days, because the days are already down to thirty-eight
@@ -923,7 +1000,7 @@
               <p class="note" data-i18n="futureTrustNote"></p>
             </div>
           </header>
-          <div class="calib"><canvas id="calib-canvas"></canvas></div>
+          <div class="calib"><canvas id="calib-canvas" role="img" data-i18n-label="ariaCalib"></canvas></div>
           <p class="note note--tight" id="calib-caption"></p>
         </div>
         <div class="band__col">

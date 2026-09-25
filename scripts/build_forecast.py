@@ -61,8 +61,13 @@ DRY_MM = 1.0
 # by hand in three files, and the forecast is wrong in a quiet way if they
 # ever disagree: the window, the weather and the feature windows would each
 # be counting from a different day.
-from train_fire_model import EPOCH, LAST  # noqa: E402
-TRAIN_ERA = (2003, 2018)
+from train_fire_model import EPOCH, LAST, ERAS  # noqa: E402
+# The training years, taken from the training script. This was typed here
+# as 2003-2018 while the features were built on 2003-2013, so three of the
+# columns — the tile's usual month, the year-to-date norm and the cell's
+# yearly rate — meant one thing when the model learned them and another
+# when it was asked.
+TRAIN_ERA = ERAS[0]
 RECENT = 31
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -282,7 +287,11 @@ def main() -> None:
         f[:, 11] = np.cos(2 * np.pi * doy_of[today] / 365.25)
         f[:, 12] = clim[cells, doy0]
         f[:, 13] = clim_ring[cells, doy0]
-        f[:, 14] = np.log1p(grid[cells].sum(axis=1) / (TRAIN_ERA[1] - TRAIN_ERA[0] + 1))
+        t_lo = int(np.where(year_of >= TRAIN_ERA[0])[0][0])
+        t_hi = int(np.where(year_of <= TRAIN_ERA[1])[0][-1])
+        f[:, 14] = np.log1p(
+            grid[cells, t_lo : t_hi + 1].sum(axis=1, dtype=np.int64) / (TRAIN_ERA[1] - TRAIN_ERA[0] + 1)
+        )
         f[:, 15] = since[cells] / 365.0
         f[:, 16] = ((ty * step - 90) + (cells // side + 0.5) * deg) / 90.0
         f[:, 17] = (cum_active[cells, today] - cum_active[cells, max(today - 30, 0)]) / 30.0

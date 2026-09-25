@@ -38,7 +38,7 @@
   --edge: hsl(210 30% 88% / 0.15);
   --edge-soft: hsl(210 30% 88% / 0.12);
   --edge-strong: hsl(210 30% 88% / 0.18);
-  --edge-focus: hsl(31 92% 58% / 0.55);
+  --edge-focus: hsl(31 92% 58%);
 
   --heat-00: hsl(220 20% 9%);
   --heat-15: hsl(8 55% 22%);
@@ -80,7 +80,7 @@
   --edge: hsl(24 26% 12% / 0.24);
   --edge-soft: hsl(24 26% 12% / 0.18);
   --edge-strong: hsl(24 26% 12% / 0.28);
-  --edge-focus: hsl(12 82% 44% / 0.6);
+  --edge-focus: hsl(12 82% 44%);
 
   --heat-00: hsl(38 40% 95%);
   --heat-15: hsl(32 62% 80%);
@@ -123,7 +123,7 @@
   --edge: hsl(0 0% 100% / 0.15);
   --edge-soft: hsl(0 0% 100% / 0.12);
   --edge-strong: hsl(0 0% 100% / 0.2);
-  --edge-focus: hsl(16 96% 56% / 0.6);
+  --edge-focus: hsl(16 96% 56%);
 
   --heat-00: hsl(0 0% 9%);
   --heat-15: hsl(6 70% 20%);

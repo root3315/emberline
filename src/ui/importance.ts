@@ -40,7 +40,13 @@ const PAD = { top: 10, right: 54, bottom: 10, left: 0 }
 const LABEL_W = 0.52
 
 export function drawImportance(canvas: HTMLCanvasElement, weights: Weight[]): void {
-  const height = PAD.top + PAD.bottom + weights.length * ROW
+  /*
+   * On a phone the label goes above its bar. Beside it, half of 358 pixels
+   * held "Как часто здесь горит в это…" and every long name lost its end.
+   */
+  const stacked = (canvas.parentElement?.clientWidth ?? 600) < 560
+  const row = stacked ? 38 : ROW
+  const height = PAD.top + PAD.bottom + weights.length * row
   const surface = fitCanvas(canvas, height)
   if (!surface || weights.length === 0) return
   const { ctx, width } = surface
@@ -54,22 +60,22 @@ export function drawImportance(canvas: HTMLCanvasElement, weights: Weight[]): vo
   const ink = varColor('--ink-secondary')
   const strong = varColor('--ink-primary')
 
-  const labelW = Math.min(360, width * LABEL_W)
-  const plotX = labelW + 12
+  const labelW = stacked ? width - PAD.right : Math.min(360, width * LABEL_W)
+  const plotX = stacked ? 0 : labelW + 12
   const plotW = Math.max(40, width - plotX - PAD.right)
   const top = Math.max(...weights.map((w) => w.drop)) || 1
   const scale = (v: number) => Math.sqrt(Math.max(v, 0) / top)
 
   weights.forEach((w, i) => {
-    const y = PAD.top + i * ROW
-    const mid = y + ROW / 2
+    const y = PAD.top + i * row
+    const mid = stacked ? y + 27 : y + row / 2
     const colour = tone[w.kind] ?? tone.archive
 
     ctx.font = MONO
     ctx.textBaseline = 'middle'
-    ctx.textAlign = 'right'
+    ctx.textAlign = stacked ? 'left' : 'right'
     ctx.fillStyle = rgba(w.kind === 'archive' ? ink : strong)
-    ctx.fillText(clip(ctx, w.name, labelW), labelW, mid)
+    ctx.fillText(clip(ctx, w.name, labelW), stacked ? 0 : labelW, stacked ? y + 10 : mid)
 
     const h = 9
     ctx.fillStyle = rgba(track)

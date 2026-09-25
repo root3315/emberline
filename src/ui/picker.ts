@@ -74,6 +74,15 @@ export class Picker {
   }
 
   constructor(private readonly r: Refs) {
+    /*
+     * The combobox pattern, so a screen reader knows what the search box is
+     * and which option the arrows are on. It had no role, no name and no
+     * active descendant: typing worked, and nothing said what was offered.
+     */
+    r.search.setAttribute('role', 'combobox')
+    r.search.setAttribute('aria-autocomplete', 'list')
+    r.search.setAttribute('aria-controls', r.list.id)
+    r.search.setAttribute('aria-expanded', 'false')
     r.button.addEventListener('click', () => (this.open ? this.close() : this.show()))
     r.search.addEventListener('input', () => this.filter())
     r.search.addEventListener('keydown', (e) => this.onKey(e))
@@ -156,7 +165,19 @@ export class Picker {
 
   private paintCurrent(): void {
     const on = this.entries.find((e) => e.value === this.r.select.value)
-    this.r.current.textContent = on?.label ?? this.found?.label ?? ''
+    const label = on?.label ?? this.found?.label ?? ''
+    this.r.current.textContent = label
+    // The visible field label is hidden on a phone, and the button alone was
+    // announced as a place name with no hint of what it chooses.
+    if (this.nameFor) this.r.button.setAttribute('aria-label', this.nameFor(label))
+  }
+
+  private nameFor: ((current: string) => string) | null = null
+
+  /** How to announce the button, given the place it shows. */
+  setName(fn: (current: string) => string): void {
+    this.nameFor = fn
+    this.paintCurrent()
   }
 
   private show(): void {
@@ -164,6 +185,7 @@ export class Picker {
     this.state = 'empty'
     this.r.pop.hidden = false
     this.r.button.setAttribute('aria-expanded', 'true')
+    this.r.search.setAttribute('aria-expanded', 'true')
     this.r.search.value = ''
     this.filter()
     this.r.search.focus()
@@ -173,6 +195,8 @@ export class Picker {
     this.open = false
     this.r.pop.hidden = true
     this.r.button.setAttribute('aria-expanded', 'false')
+    this.r.search.setAttribute('aria-expanded', 'false')
+    this.r.search.removeAttribute('aria-activedescendant')
   }
 
   /**
@@ -267,7 +291,10 @@ export class Picker {
       if (i === this.active) el.dataset.active = '1'
       else delete el.dataset.active
     })
-    this.optionEls[this.active]?.scrollIntoView({ block: 'nearest' })
+    const on = this.optionEls[this.active]
+    on?.scrollIntoView({ block: 'nearest' })
+    if (on) this.r.search.setAttribute('aria-activedescendant', on.id)
+    else this.r.search.removeAttribute('aria-activedescendant')
   }
 
   private paintList(): void {
@@ -278,8 +305,11 @@ export class Picker {
 
     this.shown.forEach((e, i) => {
       const li = document.createElement('li')
+      li.setAttribute('role', 'presentation')
       const btn = document.createElement('button')
       btn.type = 'button'
+      btn.id = `picker-opt-${i}`
+      btn.tabIndex = -1
       btn.className = 'picker__opt' + (e.apart ? ' picker__opt--world' : '')
       btn.setAttribute('role', 'option')
       btn.setAttribute('aria-selected', String(e.value === this.r.select.value))

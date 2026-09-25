@@ -166,7 +166,14 @@ export class Ribbon {
     if (width <= 0) return
 
     const rowH = Math.max(MIN_ROW, Math.min(MAX_ROW, Math.round(460 / model.years.length) - ROW_GAP))
-    const height = HEAD + model.years.length * (rowH + ROW_GAP) + 18
+    // On a phone the two footer lines cannot share one: the span and the
+    // ceiling were drawn over each other at 390 pixels.
+    const narrow = width < 520
+    // Nor can the totals keep their 86 pixels: at 390 they took nearly half
+    // the width and left 365 days about 145 pixels to be drawn in.
+    const gutterRight = narrow ? 40 : GUTTER_RIGHT
+    const totalBarW = narrow ? 28 : TOTAL_BAR_W
+    const height = HEAD + model.years.length * (rowH + ROW_GAP) + (narrow ? 32 : 18)
 
     this.svg.setAttribute('viewBox', `0 0 ${width} ${height}`)
     this.svg.setAttribute('width', String(width))
@@ -174,12 +181,11 @@ export class Ribbon {
     this.svg.style.height = `${height}px`
 
     const x0 = GUTTER_LEFT
-    const plotW = width - GUTTER_LEFT - GUTTER_RIGHT
+    const plotW = width - GUTTER_LEFT - gutterRight
     const cellW = plotW / 366
     this.geom = { x0, y0: HEAD, cellW, rowH, rowStep: rowH + ROW_GAP }
 
     const inkTertiary = varColor('--ink-tertiary')
-    const inkSecondary = varColor('--ink-secondary')
     const inkPrimary = varColor('--ink-primary')
     const above = varColor('--signal-above')
     const modisColor = varColor('--sensor-modis')
@@ -193,21 +199,26 @@ export class Ribbon {
         `<text x="${x.toFixed(1)}" y="${y.toFixed(1)}" fill="${fill}" text-anchor="${anchor}" class="${cls}">${esc(s)}</text>`,
       )
 
-    // Month scale. Ticks only where a month starts; no boxed axis.
+    // Month scale. Ticks only where a month starts; no boxed axis. Every
+    // month is ticked, but a label needs about 26 pixels, and at 390 a month
+    // is 20 wide: all twelve ran together into "янвфевмарапр". So every
+    // second or third is named when there is no room for all of them.
     const monthNames = months()
     const tickPath: string[] = []
+    const monthW = (plotW / 12)
+    const every = monthW >= 28 ? 1 : monthW >= 14 ? 2 : 3
     let acc = 0
     for (let m = 0; m < 12; m++) {
       const x = x0 + acc * cellW
-      text(x + 2, 13, monthNames[m], rgba(inkTertiary, 0.9), 'start', 'rb-label')
+      if (m % every === 0) text(x + 2, 13, monthNames[m], rgba(inkTertiary, 1), 'start', 'rb-label')
       rect(tickPath, x, HEAD - 5, 1, 4, 0)
       acc += new Date(Date.UTC(2001, m + 1, 0)).getUTCDate()
     }
     add(`<path d="${tickPath.join('')}" fill="${rgba(inkTertiary, 0.35)}"/>`)
 
     // Header for the annual-total column, aligned with the month scale.
-    const barX = width - GUTTER_RIGHT + 12
-    text(barX, 13, t('yearTotal'), rgba(inkTertiary, 0.9), 'start', 'rb-label')
+    const barX = width - gutterRight + (narrow ? 6 : 12)
+    text(barX, 13, t('yearTotal'), rgba(inkTertiary, 1), 'start', 'rb-label')
 
     /**
      * Whether each instrument was up, per row — the rail's whole content.
@@ -332,9 +343,9 @@ export class Ribbon {
       const total = model.totals.get(year) ?? 0
       const barH = Math.max(2, rowH - 3)
       const barY = y + (rowH - barH) / 2
-      rect(barBg, barX, barY, TOTAL_BAR_W, barH, 2.5)
+      rect(barBg, barX, barY, totalBarW, barH, 2.5)
       if (total > 0) {
-        const bw = Math.max(2, (total / totalMax) * TOTAL_BAR_W)
+        const bw = Math.max(2, (total / totalMax) * totalBarW)
         const step = Math.round((0.55 + 0.4 * (total / totalMax)) * HEAT_STEPS)
         rect(isSelected ? barSelected : barFill[step], barX, barY, bw, barH, 2.5)
         if (isSelected) selectedStep = step
@@ -375,20 +386,29 @@ export class Ribbon {
       x0,
       footY,
       `${formatDate(model.observedFrom)} → ${formatDate(model.observedTo)}`,
-      rgba(inkSecondary, 0.6),
+      rgba(inkTertiary, 1),
       'start',
       'rb-mono',
     )
     text(
-      width - GUTTER_RIGHT,
-      footY,
+      narrow ? x0 : width - gutterRight,
+      narrow ? footY + 14 : footY,
       `${t('legendRamp')} ≤ ${formatNumber(Math.round(model.ceiling))}`,
-      rgba(inkTertiary, 0.75),
-      'end',
+      rgba(inkTertiary, 1),
+      narrow ? 'start' : 'end',
       'rb-mono',
     )
 
     this.svg.innerHTML = out.join('')
+    // It takes focus and answers the arrow keys, so it needs a name: without
+    // one a screen reader announced the month labels run together. The
+    // figures themselves are in the year table below, which is the
+    // accessible form of the same data.
+    this.svg.setAttribute('role', 'img')
+    this.svg.setAttribute(
+      'aria-label',
+      t('ribbonAria', { from: formatDate(model.observedFrom), to: formatDate(model.observedTo) }),
+    )
     // The host reserves a placeholder height until this point; from here the
     // element sizes itself to however many years there actually are.
     this.host.dataset.drawn = '1'

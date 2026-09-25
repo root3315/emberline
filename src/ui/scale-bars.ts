@@ -18,6 +18,7 @@
  * page repeating itself for the sake of having another chart.
  */
 
+import { formatNumber } from '../i18n'
 import { fitCanvas, MONO, rgba, varColor } from './paint'
 
 export interface ScaleBar {
@@ -55,7 +56,8 @@ export function drawScaleBars(canvas: HTMLCanvasElement, bars: ScaleBar[], unit:
 
     ctx.textAlign = 'right'
     ctx.fillStyle = rgba(bar.ours ? ember : ink)
-    ctx.fillText(`${bar.value.toFixed(1)} ${unit}`, width - PAD.right, top + 14)
+    // `toFixed` wrote "37.0 Гт" beside "3,3 Гт" in the sentence above it.
+    ctx.fillText(`${formatNumber(bar.value, 1)}${unit === '%' ? '' : ' '}${unit}`, width - PAD.right, top + 14)
 
     const y = top + 24
     const h = 10

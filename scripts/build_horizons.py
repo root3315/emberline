@@ -29,7 +29,12 @@ it. Everything else — the climatology, the neighbourhood sums — is the
 same arithmetic recomputed, which is wasteful and is the price of not
 rewriting the training script.
 
-    python scripts/build_horizons.py [longest]
+    python scripts/build_horizons.py [longest] [--release]
+
+`--release` promotes every `-v2` whatever the gate says, and prints what
+the gate would have said. It exists for one case: the features themselves
+changed, so the shipped model's score is not a number the new one can be
+held to (see `model_gate.py`).
 """
 
 from __future__ import annotations
@@ -45,9 +50,11 @@ from datetime import timedelta
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+from model_gate import read, verdict  # noqa: E402
 from train_fire_model import LAST  # noqa: E402
 
-LONGEST = int(sys.argv[1]) if len(sys.argv) > 1 else 7
+LONGEST = int(next((a for a in sys.argv[1:] if a.isdigit()), 7))
+RELEASE = "--release" in sys.argv[1:]
 PY = sys.executable
 META = Path("public/data/forecast.json")
 
@@ -93,9 +100,16 @@ def main() -> None:
         run(["scripts/fit_fire_model_v2.py", str(h)])
         # The forecast build reads the plain names; `-v2` is where the
         # fitter writes so that a losing model cannot take the place of a
-        # winning one by accident.
-        for ext in ("pkl", "json"):
-            shutil.copy(f"models/fire-{h}d-v2.{ext}", f"models/fire-{h}d.{ext}")
+        # winning one by accident. This used to copy it across regardless,
+        # which made the separate name decorative.
+        ok, why = verdict(read(f"models/fire-{h}d.json"), read(f"models/fire-{h}d-v2.json"))
+        print(f"    {'promoting -v2' if ok else 'keeping the shipped model'}: {why}")
+        if not ok and RELEASE:
+            print("    released by hand (--release)")
+            ok = True
+        if ok:
+            for ext in ("pkl", "json"):
+                shutil.copy(f"models/fire-{h}d-v2.{ext}", f"models/fire-{h}d.{ext}")
         run(["scripts/build_forecast.py", str(h), "secondary"])
 
     # ── make the week monotone ─────────────────────────────────────────

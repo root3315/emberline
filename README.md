@@ -22,19 +22,61 @@ A 375 m sensor resolves several hot pixels where a 1 km sensor resolves one. Plo
 
 Emberline reconciles the two records into a single comparable series, and shows its work.
 
+**Reading further.** [docs/guide.en.md](docs/guide.en.md) walks through every
+page and panel of the site in plain words. [docs/how-it-works.en.md](docs/how-it-works.en.md)
+is the full method, from one detection to one pixel on the screen. Both have
+Russian originals beside them ([guide.md](docs/guide.md),
+[how-it-works.md](docs/how-it-works.md)).
+
 ## How harmonization works
 
 Seven steps, in `src/core/`:
 
-1. **One shared grid.** Every detection is snapped to a ~1 km equal-area cell (`grid.ts`). The unit of measure becomes *active cells per day*, which does not depend on pixel size, instead of *detections*, which does.
+1. **One shared grid.** Every detection is snapped to a ~1 km equal-area cell (`grid.ts`). The unit of measure becomes *active cells per day* instead of *detections*: several detections of one fire in one cell count once. It still depends on pixel size — a 375 m sensor lights more cells than a 1 km one — and that dependence is what step 5 measures.
 2. **Local solar days.** A day is defined by the sun at that longitude, not by UTC (`grid.ts`). A UTC date cuts the night in half for most of the world, pushing evening fires onto the following day.
 3. **Deduplication.** A cell seen by several sensors on one day is one burning cell, tagged with which instruments saw it (`harmonize.ts`).
-4. **One confidence scale.** MODIS percentages collapse onto low/nominal/high at FIRMS' own break points of 30 and 80.
-5. **A measured sensitivity ratio.** Over the overlap era (2012 onward) Emberline measures, *for this specific area*, how many active cells VIIRS resolves per MODIS cell. The median becomes the scaling factor and the interquartile range its stated uncertainty. How much more a fine sensor resolves depends on how fragmented the fires are — 7.07 over Punjab's stubble, 1.88 over Yakutian taiga — so this is never a global constant.
-6. **One instrument carries the whole series.** The comparable series is MODIS cell-days throughout, scaled once by that ratio — not “lift the old part up to meet the modern count”. VIIRS is not one arrival but three: S-NPP in 2012, NOAA-20 in 2018, NOAA-21 in 2024, and a combined count steps at every one of them. Measured on this repository's own archives, the old rule left Punjab's reconciled series 55% above its 2012–2017 level while MODIS alone sat 9% below it. MODIS has flown the same sensor since 2002, so a series driven by it moves only when fire moves. The raw combined count survives beside it, and that is what the “as recorded” toggle draws.
+4. **One confidence scale.** MODIS percentages collapse onto low/nominal/high at FIRMS' own break points of 30 and 80, so both families carry the same three classes. No threshold is applied to the shipped archives: every detection counts, and how the ratio and the trends respond to dropping low-confidence rows has not been measured yet (`docs/roadmap.md`).
+5. **A measured sensitivity ratio.** On the days both families saw the area, Emberline measures, *for this specific area*, how many active cells VIIRS resolves per MODIS cell — on the years S-NPP flew alone (2012-01-20 to 2018-03-31), so the reconciled series is in the units of one VIIRS and the coefficient cannot drift as later satellites add days. The median becomes the scaling factor; the interquartile range of the daily ratios is printed beside it and carried to reconciled totals as a spread, not as a confidence interval. How much more a fine sensor resolves depends on how fragmented the fires are — 4.60 over Punjab's stubble, 1.64 over Yakutian taiga — so this is never a global constant. With each year of 2013–2017 left out in turn and the rest fitted, it predicts what S-NPP counted in the missing year typically within 3–10% and at worst by a third (Yakutia 2015); for the planet, within 2%. A second estimate of every year from VIIRS alone moves with it year to year at r = 0.94–1.00. Each page prints its own tests, and `npx tsx scripts/compare-transfer.ts` reruns them.
+6. **One instrument carries the whole series.** The comparable series is MODIS cell-days throughout, scaled once by that ratio — not “lift the old part up to meet the modern count”. VIIRS is not one arrival but three: S-NPP in 2012, NOAA-20 in 2018, NOAA-21 in 2024, and a combined count steps at every one of them. Measured on this repository's own archives, the old rule left Punjab's reconciled series 52% above its 2012–2017 level while MODIS alone sat 10% below it. MODIS has flown the same sensor since 2002, so a series driven by it has no satellite steps. It is not perfect: before July 2002 only Terra flew, so those years are kept out of every baseline, and since 2024 the VIIRS-to-MODIS ratio has crept up with the fleet unchanged, which the about page shows and names. The raw combined count survives beside it, and that is what the “as recorded” toggle draws.
 7. **FRP without double counting.** Within a cell-day, radiative power is the maximum across sensors, never the sum.
 
 Then, in `stats.ts`: a per-day-of-year climatology pooled over a ±7 day window, season onset/peak/end at 10 %, smoothed max and 90 % of the annual total, runs above the 90th percentile as *critical periods*, and a Theil–Sen trend over annual totals.
+
+## Does the reconciliation hold?
+
+The tests the method can fail, each rerun by `npx tsx scripts/compare-transfer.ts`
+and each printed on the pages from the data rather than typed:
+
+- **Leave one year out.** Inside the S-NPP-only era the target does not move,
+  so each of 2013–2017 is left out in turn, `k` is fitted on the rest, and
+  the missing year's S-NPP count is predicted from MODIS alone. Errors run
+  3–10% in a typical year; the worst are Punjab 2013 (+19%) and Yakutia 2015
+  (−33%). For the whole planet every year is within 2%.
+- **How well `k` is known.** Resampling whole years puts Punjab's 4.60 at
+  4.29–5.00 (95%), the Sierra's 1.86 at 1.75–1.93, the Cerrado's 1.64 at
+  1.55–1.68, Yakutia's 1.64 at 1.52–1.73, the planet's 4.47 at 4.42–4.51.
+  The headline totals carry that interval, not the far wider day-to-day
+  spread of the ratio.
+- **Two routes to the same years.** Every year since 2012 is estimated a
+  second time from VIIRS alone, divided by its own fleet's ratio. The level
+  of the two routes is matched by construction; their trends are not, and
+  over 2013–2025 they agree: Punjab −5.0% and −4.8% a year, Sierra −2.3% and
+  −2.8%, Cerrado −0.3% and −1.1%, Yakutia −5.8% and −4.9%. A drift of MODIS
+  against VIIRS would pull those apart.
+- **Alternatives tried.** A power law V = a·M^b is worse in Punjab (+47% at
+  worst against +19%) and only marginally better for the planet; the ratio
+  of the sums beats the median of daily ratios in the Cerrado and loses in
+  the other three areas.
+- **Trends are tested.** Theil–Sen with Mann–Kendall over whole years from
+  2003. Of the four areas only the Cerrado's decline is significant
+  (−4.4% a year, p = 0.007); Yakutia's apparent +4.3% is p = 0.49 and the
+  page says there is no trend it can support.
+
+What it cannot do yet, said on the pages as well: 2000–2002 had only Terra
+and are left out of every baseline rather than corrected; the MODIS pair has
+been drifting off its overpass times since the early 2020s, most visibly from
+2024; there is no independent check before 2012; and the maps are not
+reconciled. `docs/roadmap.md` has the rest.
 
 ## How the page reads
 
@@ -55,9 +97,9 @@ Language is plain throughout: "fires" rather than "active cell-days", "busier th
 - A **Raw counts / Harmonized** toggle. The adjustment is always one click from being turned off.
 - The **sensor rail** beside every year in the calendar shows which instrument families were actually in orbit — the thinness of the early record is visible, not asserted.
 - **Who saw it** charts active cells per year split by detecting instrument, so the moment VIIRS joins shows up as a seam rather than disappearing into a total.
-- The measured ratio, its range, and the number of paired days it rests on are printed in the sidebar.
+- The measured ratio, its 95% interval, the number of paired days it rests on, the ratio for each VIIRS fleet and a leave-one-year-out test are printed under “Who saw it”, beside a second estimate of every year made from VIIRS alone.
 - Grey cells mean *nothing was watching*, which is not the same as *nothing was burning*.
-- FIRMS `type` 1–3 rows (volcanoes, other static land sources such as gas flares, offshore) are dropped, and the count of dropped rows is shown. Gas flares burn 365 days a year and would forge a fire season out of industry.
+- FIRMS `type` 1–3 rows (volcanoes, other static land sources such as gas flares, offshore) are dropped, and the count of dropped rows is shown. Gas flares burn 365 days a year and would forge a fire season out of industry. The column exists only in the standard (SP) products: the near-real-time ones — the last weeks of the record, and all of NOAA-21 — do not carry it, so static sources can reach those days unfiltered.
 
 ## The forecast
 
@@ -65,7 +107,7 @@ The archive answers "when does this place burn". The second half of the
 project answers "where will it burn next week", and it is the same
 argument applied to a different question.
 
-A gradient-boosting classifier reads 25 features about every 25 km cell of
+A gradient-boosting classifier reads 25 features about every 28 km cell of
 the planet — how often it burns at this time of year, how recently it
 burned, what its neighbours are doing, how far the year is from its own
 normal, where El Nino stands — and the **forecast weather of the week
@@ -132,6 +174,14 @@ are about a gigabyte of generated binaries:
 So a clone runs the site and shows the archive, and the Python block
 below needs the world data built first. That is the step that used to be
 missing from this file.
+
+What `models/` measured does travel: `docs/model-log.json` holds every
+shipped horizon's scores, the tree curve, the tuning grid and the three
+rejected experiments (calibration curves, population, more trees) with
+the numbers that rejected them. `python scripts/export_model_log.py`
+rewrites it from `models/` after a rebuild, and `scripts/model_gate.py`
+is the rule that decides whether a refitted model may replace the
+shipped one.
 
 ```bash
 pip install -r requirements.txt
@@ -200,7 +250,7 @@ never holds more than a tile of it at once.
 ```bash
 npm install
 npm run dev        # http://localhost:5178
-npm test           # 69 unit tests over the harmonization and statistics core
+npm test           # unit tests over the harmonization and statistics core, several of them on the shipped archives
 npm run build      # static output in dist/
 ```
 
@@ -254,7 +304,7 @@ The live and upload paths call `harmonize()` in the browser, so what you see is 
 
 ## Areas
 
-Four areas whose burning calendars disagree with each other: **Punjab & Haryana** (post-harvest stubble, two sharp pulses set by the cropping calendar), **Sierra Nevada** (lightning and drought, one long late-summer season, strong trend), **Mato Grosso Cerrado** (dry-season savanna and deforestation fire), **Central Yakutia** (boreal fire over permafrost, and the extreme years of 2020–21).
+Four areas whose burning calendars disagree with each other: **the Punjab plain**, India and Pakistan (post-harvest stubble, two sharp pulses set by the cropping calendar), **Sierra Nevada** (lightning and drought, one long late-summer season; its apparent rise is not significant, p = 0.20), **Mato Grosso Cerrado** (dry-season savanna and deforestation fire), **Central Yakutia** (boreal fire over permafrost, and the extreme years of 2020–21).
 
 ## Going global
 
@@ -263,9 +313,9 @@ The plan for a worldwide map — measured download costs, the resolution pyramid
 ## Limits
 
 - Active fire hotspots are **not burned area**. They mark burning at the moment of overpass; a fire under cloud or between overpasses is invisible.
-- The reconciled series is an estimate with a stated range for its **whole** length, not only before 2012 — it is MODIS scaled by a measured ratio. Read it against “as recorded”, which is the observation.
+- The reconciled series is an estimate for its **whole** length, not only before 2012 — it is MODIS scaled by a measured ratio, in the units of one VIIRS. Read it against “as recorded”, which is the observation.
 - The reconciled series does not carry the cell-days only VIIRS saw, and there are a great many of them: 38% of the record in Central Yakutia, 78% in Punjab, and 50–86% within the VIIRS era itself. MODIS could not see those fires, and could not have seen them in 2005 either, so a series meant for comparison across the record must not contain them one by one — the coefficient is how the total is put back.
-- Putting it back is an estimate and it comes out low. Measured over each area's own overlap era, the reconciled totals are 0.97 of the observed combined count in Punjab, 0.94 in the Sierra Nevada, 0.94 in Central Yakutia and 0.73 in the Cerrado. The same factor applies to every year, so comparisons across the record hold; the absolute level does not claim to match what the instruments counted.
+- In those units it sits well below what was recorded, by design: over each area's overlap era the reconciled total is 0.63 of the observed combined count in Punjab, 0.68 in the Sierra Nevada, 0.83 in Central Yakutia and 0.56 in the Cerrado, because the observed count is up to three VIIRS and MODIS together and the unit is one VIIRS. The same factor applies to every year, so comparisons across the record hold; within a year, MODIS × k and VIIRS can differ by 20% and in the later fleets by more, which the “two routes” chart shows year by year.
 - A day on which MODIS saw nothing at all reads as exactly zero. That is 5.5% of days in the Cerrado and 52% in Central Yakutia, carrying between 0.3% and 3.1% of the era's cell-days — the quiet days, which is why the shape of a season survives it.
 - Cloud cover, overpass timing and viewing geometry all bias detection in ways this does not correct.
 - The map uses a coarser 5 km grid than the 1 km harmonization grid, for legibility and file size.
@@ -279,7 +329,7 @@ src/sources/   FIRMS CSV parsing, archive loading, live queries
 src/ui/        ribbon, annual cycle, globe, satellite frame, Leaflet map, charts
 scripts/*.py   weather, model, forecast, horizons, reasons, verification
 scripts/*.mjs  archive builder, asset vendoring, screenshot + contrast audit
-tests/         69 tests over core
+tests/         tests over core, run against the shipped archives
 models/        fitted model, weather archive, feature rows  (gitignored)
 public/data/   everything the page reads: archives, world pyramid, forecast
 ```

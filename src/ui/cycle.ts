@@ -10,13 +10,19 @@
 
 import { formatNumber, months, t } from '../i18n'
 import type { Climatology } from '../core/stats'
-import { fitCanvas, LABEL, MONO, rgba, varColor } from './paint'
+import { fitCanvas, LABEL, MONO, niceCeil, rgba, varColor } from './paint'
 
 export interface CycleModel {
   year: number
   row: Float64Array
   clim: Climatology
   span: number
+  /**
+   * The days of this year the record actually covers. Outside them the row
+   * holds zeros that are not observations: the running year drew a line
+   * along the floor from the last day of data to 31 December.
+   */
+  observed?: { from: number; to: number }
 }
 
 const PAD = { top: 14, right: 10, bottom: 24, left: 46 }
@@ -30,16 +36,17 @@ export function drawCycle(canvas: HTMLCanvasElement, model: CycleModel | null): 
   const plotW = width - PAD.left - PAD.right
   const plotH = HEIGHT - PAD.top - PAD.bottom
   const { row, clim, span } = model
+  const first = model.observed?.from ?? 1
+  const last = model.observed?.to ?? span
 
   let peak = 0
   for (let d = 1; d <= span; d++) peak = Math.max(peak, row[d], clim.p90[d])
-  if (peak <= 0) peak = 1
+  peak = niceCeil(peak)
 
   const x = (doy: number) => PAD.left + ((doy - 1) / (span - 1)) * plotW
   const y = (v: number) => PAD.top + plotH - (Math.min(v, peak) / peak) * plotH
 
   const inkTertiary = varColor('--ink-tertiary')
-  const inkMuted = varColor('--ink-muted')
   const edgeSoft = varColor('--edge-soft')
   const normal = varColor('--signal-normal')
   const ember = varColor('--ember')
@@ -58,7 +65,7 @@ export function drawCycle(canvas: HTMLCanvasElement, model: CycleModel | null): 
     ctx.moveTo(PAD.left, yy)
     ctx.lineTo(width - PAD.right, yy)
     ctx.stroke()
-    ctx.fillStyle = rgba(inkMuted, 0.9)
+    ctx.fillStyle = rgba(inkTertiary, 1)
     ctx.fillText(formatNumber(Math.round(v)), PAD.left - 8, yy)
   }
 
@@ -70,7 +77,7 @@ export function drawCycle(canvas: HTMLCanvasElement, model: CycleModel | null): 
   let acc = 0
   for (let m = 0; m < 12; m++) {
     const xx = x(acc + 1)
-    ctx.fillStyle = rgba(inkTertiary, 0.75)
+    ctx.fillStyle = rgba(inkTertiary, 1)
     if (m % 2 === 0) ctx.fillText(names[m], xx + 2, HEIGHT - 7)
     acc += new Date(Date.UTC(2001, m + 1, 0)).getUTCDate()
   }
@@ -96,7 +103,7 @@ export function drawCycle(canvas: HTMLCanvasElement, model: CycleModel | null): 
   ctx.save()
   ctx.beginPath()
   let open = false
-  for (let d = 1; d <= span; d++) {
+  for (let d = first; d <= last; d++) {
     const over = row[d] > clim.p90[d] && row[d] > 0
     if (over && !open) {
       ctx.moveTo(x(d), y(clim.p90[d]))
@@ -114,13 +121,26 @@ export function drawCycle(canvas: HTMLCanvasElement, model: CycleModel | null): 
   ctx.fill()
   ctx.restore()
 
-  // The year itself.
+  // The year itself, only where it was watched.
   ctx.beginPath()
-  for (let d = 1; d <= span; d++) ctx.lineTo(x(d), y(row[d]))
+  for (let d = first; d <= last; d++) ctx.lineTo(x(d), y(row[d]))
   ctx.strokeStyle = rgba(ember, 1)
   ctx.lineWidth = 1.75
   ctx.lineJoin = 'round'
   ctx.stroke()
+
+  // Where the record stops, said on the chart rather than implied by a gap.
+  if (last < span) {
+    ctx.save()
+    ctx.setLineDash([3, 3])
+    ctx.strokeStyle = rgba(ember, 0.55)
+    ctx.lineWidth = 1
+    ctx.beginPath()
+    ctx.moveTo(Math.round(x(last)) + 0.5, PAD.top)
+    ctx.lineTo(Math.round(x(last)) + 0.5, PAD.top + plotH)
+    ctx.stroke()
+    ctx.restore()
+  }
 
   // Legend, inline rather than in a box.
   ctx.font = LABEL
@@ -133,7 +153,7 @@ export function drawCycle(canvas: HTMLCanvasElement, model: CycleModel | null): 
   for (const [color, label] of entries) {
     ctx.fillStyle = color
     ctx.fillRect(lx, PAD.top - 9, 10, 3)
-    ctx.fillStyle = rgba(inkTertiary, 0.95)
+    ctx.fillStyle = rgba(inkTertiary, 1)
     ctx.fillText(label, lx + 15, PAD.top - 5)
     lx += ctx.measureText(label).width + 34
   }

@@ -10,8 +10,6 @@
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",
-    "demo:build": "node scripts/build-demo-cube.mjs",
-    "firms:fetch": "node scripts/fetch-firms.mjs",
     "archive:fetch": "tsx scripts/build-archive.ts",
     "shots": "node scripts/shots.mjs",
     "audit": "node scripts/audit.mjs",

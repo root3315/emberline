@@ -43,7 +43,7 @@
   --edge: hsl(34 20% 88% / 0.14);
   --edge-soft: hsl(34 20% 88% / 0.12);
   --edge-strong: hsl(34 20% 88% / 0.16);
-  --edge-focus: hsl(31 92% 58% / 0.55);
+  --edge-focus: hsl(31 92% 58%);
 
   /* ---- blackbody ramp: the one accent family ---- */
   --heat-00: hsl(20 30% 12%);
@@ -80,13 +80,23 @@
 
   /* 14px base, 1.25 ratio, rounded to whole pixels */
   --t-caption: 11px;
-  --t-small: 12px;
+  /* 13, not 12: notes and legends carry most of this site's words, and
+     at 12 the page read as a wall of fine print. */
+  --t-small: 13px;
   --t-body: 14px;
   --t-h4: 16px;
   --t-h3: 18px;
   --t-h2: 22px;
   --t-h1: 28px;
   --t-display: 42px;
+  /*
+   * A section heading, which has to outrank the figures inside it. It was
+   * --t-h2, the same 22px as a hero stat, and the calendar's was 18px:
+   * "When does it burn here?" sat smaller than the number under it.
+   */
+  --t-section: clamp(23px, 18px + 1vw, 26px);
+  /* Small caps labels inside a section: one step above a tile's label. */
+  --t-subhead: 13px;
 
   /* ---- spacing: base 4 ---- */
   --s-1: 4px;
@@ -142,10 +152,16 @@
   --heat-90: hsl(6 74% 32%);
   --heat-100: hsl(2 68% 24%);
 
-  --ember: hsl(14 80% 45%);
+  /* 40% lightness, not 45: the accent carries figures in 14-18px type, and
+     at 45 it measured 4.1:1 on the page and 4.45:1 under white text. Now at
+     least 4.98:1 on every day surface and 5.4:1 as a button. */
+  --ember: hsl(14 80% 40%);
   --on-ember: hsl(36 40% 97%);
+  /* Night's orange ring measured 1.94:1 on this paper; the day ember clears
+     4.9:1 on every surface, well past the 3:1 a focus indicator needs. */
+  --edge-focus: hsl(14 80% 40%);
   --ember-dim: hsl(18 48% 58%);
-  --ember-glow: hsl(14 80% 45% / 0.14);
+  --ember-glow: hsl(14 80% 40% / 0.14);
 
   --signal-above: hsl(4 72% 46%);
   --signal-normal: hsl(28 10% 48%);

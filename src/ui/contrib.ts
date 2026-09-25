@@ -20,7 +20,7 @@ export interface ContribYear {
 const PAD = { top: 16, right: 10, bottom: 26, left: 52 }
 const HEIGHT = 188
 
-export function drawContrib(canvas: HTMLCanvasElement, data: ContribYear[]): void {
+export function drawContrib(canvas: HTMLCanvasElement, data: ContribYear[], partialYear: number | null = null): void {
   const surface = fitCanvas(canvas, HEIGHT)
   if (!surface || data.length === 0) return
   const { ctx, width } = surface
@@ -47,7 +47,6 @@ export function drawContrib(canvas: HTMLCanvasElement, data: ContribYear[]): voi
   const step = plotWidth / data.length
   const barW = Math.max(3, Math.min(26, step - 4))
 
-  const inkMuted = varColor('--ink-muted')
   const inkTertiary = varColor('--ink-tertiary')
   const edgeSoft = varColor('--edge-soft')
   const cModis = varColor('--sensor-modis')
@@ -65,7 +64,7 @@ export function drawContrib(canvas: HTMLCanvasElement, data: ContribYear[]): voi
     ctx.moveTo(gutter, yy)
     ctx.lineTo(width - PAD.right, yy)
     ctx.stroke()
-    ctx.fillStyle = rgba(inkMuted, 0.9)
+    ctx.fillStyle = rgba(inkTertiary, 1)
     ctx.fillText(mark.text, gutter - 8, yy)
   }
 
@@ -90,7 +89,8 @@ export function drawContrib(canvas: HTMLCanvasElement, data: ContribYear[]): voi
     for (const [value, color] of segments) {
       if (value <= 0) continue
       const h = (value / peak) * plotH
-      ctx.fillStyle = rgba(color, 0.92)
+      // The running year is only part of one: faint, so it is not read as a fall.
+      ctx.fillStyle = rgba(color, d.year === partialYear ? 0.38 : 0.92)
       ctx.fillRect(x, cursor - h, barW, h)
       cursor -= h
     }
@@ -116,7 +116,7 @@ export function drawContrib(canvas: HTMLCanvasElement, data: ContribYear[]): voi
   data.forEach((d, i) => {
     const x = at(i)
     if (i !== last && (i % every !== 0 || at(last) - x < 30)) return
-    ctx.fillStyle = rgba(inkTertiary, 0.8)
+    ctx.fillStyle = rgba(inkTertiary, 1)
     ctx.fillText(String(d.year), x, HEIGHT - 8)
   })
 }

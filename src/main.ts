@@ -55,9 +55,18 @@ import {
   MIN_RATIO_SAMPLES,
   comparable,
   quantileSorted,
-  summarizeSensitivity,
+  calibrate,
+  dayOfYearIso,
+  leaveOneYearOut,
+  routeAgreement,
+  routeTrends,
+  twoRoutes,
+  viirsRouteByDay,
+  type RouteYear,
+  ratiosFromCounts,
+  ratiosFromDays,
+  sensitivityByEra,
   type AdjustedDay,
-  type DailyRatio,
   type SensitivityRatio,
 } from './core/harmonize'
 import {
@@ -65,7 +74,10 @@ import {
   annualTotals,
   annualTrend,
   climatology,
+  comparableYears,
   concentrationDays,
+  MODIS_PAIR_FROM,
+  TREND_ALPHA,
   monthlyShare,
   burningDays,
   summarizeYears,
@@ -79,13 +91,18 @@ import {
   cellsAtRiskUnit,
   cellsLitUnit,
   cellsUnit,
+  counted,
   daysUnit,
+  detectionsUnit,
+  rowsUnit,
   formatCompact,
+  formatBox,
   formatDate,
   formatDoy,
   formatDoyLong,
   formatNumber,
   formatPercent,
+  formatPoint,
   formatDays,
   formatYears,
   getLang,
@@ -105,9 +122,12 @@ import {
 } from './sources'
 import { contribLegend, drawContrib, type ContribYear } from './ui/contrib'
 import { drawCycle } from './ui/cycle'
+import { drawRoutes } from './ui/routes'
+import { drawSeam as drawHeroSeam } from './ui/seam'
 import {
   ensureMap,
   invalidateMapSize,
+  localizeMapControls,
   mapZoom,
   mapBox,
   onMoveSettled,
@@ -145,7 +165,9 @@ interface State {
 
 const state: State = {
   dataset: null,
-  year: new Date().getUTCFullYear(),
+  // The last whole year, for the planet opened directly; a region sets its
+  // own from its record (`lastWholeYear`).
+  year: new Date().getUTCFullYear() - 1,
   mode: 'harmonized',
   grid: new Map(),
   clim: null,
@@ -269,6 +291,7 @@ const els = {
   worldYears: $('world-years') as HTMLCanvasElement,
   worldHeadline: $('world-headline'),
   worldLegend: $('world-legend'),
+  worldYearsNote: $('world-years-note'),
   ribbonTip: $('ribbon-tip'),
   ribbonLegend: $('ribbon-legend'),
   cycleCanvas: $<HTMLCanvasElement>('cycle-canvas'),
@@ -294,6 +317,8 @@ const els = {
   worstNote: $('worst-note'),
   sensorSplit: $('sensor-split'),
   yearsBody: $<HTMLTableSectionElement>('years-body'),
+  yearsBox: $('years-box'),
+  yearsWrap: $('years-wrap'),
   concentration: $('concentration'),
   export: $<HTMLButtonElement>('export'),
   blank: $('blank'),
@@ -301,6 +326,20 @@ const els = {
   modeExplain: $('mode-explain'),
   ribbonLegendWrap: $('ribbon-legend'),
   blankTitle: $('blank-title'),
+  heroSeam: $('hero-seam'),
+  heroSeamCanvas: $<HTMLCanvasElement>('hero-seam-canvas'),
+  heroSeamLegend: $('hero-seam-legend'),
+  heroSeamNote: $('hero-seam-note'),
+  routesCanvas: $<HTMLCanvasElement>('routes-canvas'),
+  aboutRoutes: $<HTMLCanvasElement>('about-routes'),
+  aboutRoutesLegend: $('about-routes-legend'),
+  routesLegend: $('routes-legend'),
+  routesNote: $('routes-note'),
+  routesStats: $<HTMLDListElement>('routes-stats'),
+  aboutFleet: $('about-fleet'),
+  aboutHeldout: $('about-heldout'),
+  calendarTitle: $('calendar-title'),
+  blankRetry: $<HTMLButtonElement>('blank-retry'),
   blankBody: $('blank-body'),
   ribbonWrap: $('ribbon-canvas-wrap'),
   paneArchive: $('pane-archive'),
@@ -543,7 +582,7 @@ function renderMapForecast(box: Bounds | null, name: string | null, fitKey: stri
   // How well it scores belongs under the map, not in front of it.
   setMapCaveat(
     t('forecastSkill', {
-      tested: meta.tested,
+      tested: yearSpan(meta.tested),
       model: formatNumber(meta.skill.model, 2),
       clim: formatNumber(meta.skill.climatology, 2),
       persist: formatNumber(meta.skill.persistence, 2),
@@ -652,9 +691,7 @@ function showMapProbe(hit: MapProbe | null): void {
   els.mapProbe.innerHTML = ''
 
   const coords = document.createElement('div')
-  coords.textContent =
-    `${Math.abs(hit.lat).toFixed(2)}°${hit.lat < 0 ? 'S' : 'N'} ` +
-    `${Math.abs(hit.lon).toFixed(2)}°${hit.lon < 0 ? 'W' : 'E'}`
+  coords.textContent = formatPoint(hit.lat, hit.lon, 2)
 
   const value = document.createElement('div')
   if (worldForecast && forecast) {
@@ -991,15 +1028,19 @@ async function renderAbout(): Promise<void> {
     )
     statInto(els.aboutStats, t('aboutStatDetections'), compact(detections), '')
   }
-  if (meta) {
-    statInto(els.aboutStats, t('aboutStatModel'), features, '')
-    statInto(
-      els.aboutStats,
-      t('aboutStatCells'),
-      formatNumber(meta.cells),
-      t('unitCellSize'),
-    )
-  }
+  /*
+   * The page's headline figures are about the reconciliation, which is the
+   * challenge; the model's feature count and forecast cells were two of the
+   * four, and they are in the model's own section. The agreement of the two
+   * routes joins these once the planet's daily file has loaded.
+   */
+  const viirs = SENSORS.filter((s) => SENSOR_META[s].platform === 'viirs')
+  statInto(
+    els.aboutStats,
+    t('aboutStatSteps'),
+    String(viirs.length),
+    viirs.map((s) => SENSOR_META[s].since.slice(0, 4)).join(' · '),
+  )
 
   fillAboutList(els.aboutBuiltList, 'aboutBuiltList')
   fillAboutList(els.aboutCheckList, 'aboutCheckList')
@@ -1020,7 +1061,7 @@ async function renderAbout(): Promise<void> {
       // The model card writes its span with a hyphen and the two typed
       // above use an en dash; three date ranges in one sentence should not
       // be punctuated three different ways.
-      test: meta.tested.replace('-', '–'),
+      test: yearSpan(meta.tested),
     })
     els.aboutModelStats.innerHTML = ''
     aboutStat(t('skillModel'), formatNumber(meta.skill.model, 3))
@@ -1065,6 +1106,55 @@ function drawSeam(): void {
   const totals = worldIndex?.totals
   if (!totals?.length) return
   drawWorldYears(els.aboutSeam, totals, totals[totals.length - 1].year)
+  els.aboutFleet.textContent = fleetDiagnosis(totals)
+}
+
+/** The planet's two routes, kept so a resize or a theme change can redraw them. */
+let aboutRoutes: RouteYear[] = []
+
+function drawAboutRoutes(): void {
+  if (aboutRoutes.length < 2) return
+  const last = aboutRoutes[aboutRoutes.length - 1].year
+  // The running year is left off, as on the region pages.
+  const whole = last >= new Date().getUTCFullYear() ? aboutRoutes.slice(0, -1) : aboutRoutes
+  drawRoutes(els.aboutRoutes, whole, null)
+  els.aboutRoutesLegend.replaceChildren(
+    swatch('var(--sensor-modis)', t('routesModis')),
+    swatch('var(--sensor-viirs)', t('routesViirs')),
+  )
+}
+
+/**
+ * VIIRS per MODIS, year by year, grouped by the fleet that flew.
+ *
+ * The case for building the series from MODIS is that this ratio is a
+ * property of the fleet: flat while the fleet holds, a step when it grows.
+ * The planet's own totals show both, and since 2024 they also show a climb
+ * with the fleet unchanged, which the page names rather than hides.
+ */
+function fleetDiagnosis(totals: readonly WorldTotal[]): string {
+  const ratio = new Map(totals.filter((d) => d.modis > 0 && d.viirs > 0).map((d) => [d.year, d.viirs / d.modis]))
+  const eras = sensitivityByEra([])
+  const parts = eras.map((era, i) => {
+    // A year belongs to an era the era covers from February to December.
+    const years = [...ratio.keys()].filter((y) => era.from <= `${y}-02-01` && (era.to === null || era.to >= `${y}-12-31`))
+    if (!years.length) return ''
+    const values = years.map((y) => ratio.get(y)!)
+    const span = `${years[0]}–${years[years.length - 1]}`
+    const fleet = t(i === 0 ? 'fleetOne' : i === 1 ? 'fleetTwo' : 'fleetThree')
+    return era.to === null
+      ? t('fleetLast', {
+          fleet,
+          list: years.map((y) => t('fleetYear', { year: String(y), r: formatNumber(ratio.get(y)!, 2) })).join(', '),
+        })
+      : t('fleetClosed', {
+          fleet,
+          span,
+          lo: formatNumber(Math.min(...values), 2),
+          hi: formatNumber(Math.max(...values), 2),
+        })
+  })
+  return t('aboutFleet', { eras: parts.filter(Boolean).join(' · ') })
 }
 
 /** The three questions about the model, each answered with its measurement. */
@@ -1090,6 +1180,12 @@ async function drawModelCharts(): Promise<void> {
     item.append(dot, document.createTextNode(t(key)))
     els.aboutImportanceLegend.append(item)
   }
+  // The bars are drawn on a square-root scale so the small effects stay
+  // visible; without saying so, 0.061 looked like 40% of 0.390, not 16%.
+  const scaleNote = document.createElement('span')
+  scaleNote.className = 'legend__item'
+  scaleNote.textContent = t('aboutImportanceScale')
+  els.aboutImportanceLegend.append(scaleNote)
 
   if (model.edge) {
     /*
@@ -1138,11 +1234,55 @@ async function drawModelCharts(): Promise<void> {
 async function aboutRing(): Promise<void> {
   if (fireYear) return
   const res = await fetch('/data/world/l0-daily.json').catch(() => null)
-  if (!res?.ok) return
+  if (!res?.ok) {
+    // The ring, the fleet diagnosis and the planet's two routes all come
+    // from this file; without it they were empty with nothing said.
+    els.aboutYearRead.textContent = t('aboutDataFailed')
+    els.aboutHeldout.textContent = t('aboutDataFailed')
+    return
+  }
   const data = (await res.json()) as FireYear
   fireYear = mountFireYear(els.aboutYear, data, (text) => {
     els.aboutYearRead.textContent = text ?? ''
   })
+  // The test the reconciliation never had, on the planet's own daily file.
+  // Rows are padded to 366 days; in a common year the last slot would be
+  // dated 1 January of the next and invent a year of zeros.
+  const days = Object.entries(data.years).flatMap(([year, row]) =>
+    row.modis.slice(0, daysInYear(Number(year))).map((m, i) => ({
+      day: dayOfYearIso(Number(year), i),
+      activeCells: 0,
+      modisOnly: m,
+      viirsOnly: row.viirs[i] ?? 0,
+      both: 0,
+      frp: 0,
+      raw: 0,
+    })),
+  )
+  aboutRoutes = twoRoutes(days, calibrate(ratiosFromDays(days)))
+  drawAboutRoutes()
+  const loyo = leaveOneYearOut(days)
+  const agree = routeAgreement(aboutRoutes.filter((r) => r.year < new Date().getUTCFullYear()))
+  const whole = aboutRoutes.filter((r) => r.year >= 2013 && r.year < new Date().getUTCFullYear())
+  const trends = routeTrends(whole)
+  if (trends && !els.aboutStats.querySelector('[data-stat="agree"]')) {
+    statInto(
+      els.aboutStats,
+      t('aboutStatAgree'),
+      `${formatPercent(trends.modis * 100, 1, true)} / ${formatPercent(trends.viirs * 100, 1, true)}`,
+      t('aboutStatAgreeNote', { from: String(whole[0].year), to: String(whole[whole.length - 1].year) }),
+    )
+    els.aboutStats.lastElementChild?.setAttribute('data-stat', 'agree')
+  }
+  if (loyo.length) {
+    els.aboutHeldout.textContent = t('aboutHeldout', {
+      ...loyoSummary(loyo),
+      r: agree ? formatNumber(agree.r, 2) : '—',
+      tm: trends ? formatPercent(trends.modis * 100, 1, true) : '—',
+      tv: trends ? formatPercent(trends.viirs * 100, 1, true) : '—',
+      d: trends ? formatPercent(trends.drift * 100, 1, true) : '—',
+    })
+  }
   fireYear.setMode(state.mode === 'raw' ? 'raw' : 'harmonized')
 }
 
@@ -1248,11 +1388,35 @@ async function renderFuture(): Promise<void> {
     if (token !== loadToken) return
     const got = forecast
     if (!got) {
-      status(t('forecastMissing'), 'error')
-      showFutureLayout(false)
+      /*
+       * Say it on the page that was asked for, with a way to ask again.
+       * Going back to the record left the address on #/future over the
+       * archive's layout, and the status line was the only sign of why.
+       */
+      status('')
+      for (const section of futureSections) section.hidden = section.id !== 'future-hero'
+      els.futureHero.hidden = false
+      els.futureWhere.textContent = ''
+      els.futureStats.innerHTML = ''
+      els.futureAnswer.textContent = t('forecastFailedTitle')
+      const retry = document.createElement('button')
+      retry.type = 'button'
+      retry.className = 'ghost-btn future__retry'
+      retry.textContent = t('retry')
+      retry.addEventListener('click', () => void renderFuture())
+      const body = document.createElement('span')
+      body.textContent = t('forecastFailedBody')
+      els.futureAside.replaceChildren(body)
+      els.futureAside.after(retry)
+      // An empty globe with "press a fire" under it asks for something
+      // that cannot be done; it goes until the forecast comes.
+      els.futureHero.querySelector<HTMLElement>('.globe')?.setAttribute('hidden', '')
       return
     }
     const { meta } = got
+    // Put back what a failed attempt took away.
+    els.futureHero.querySelector<HTMLElement>('.globe')?.removeAttribute('hidden')
+    document.querySelectorAll('.future__retry').forEach((el) => el.remove())
 
     /*
      * The dates, and then where the reader's own today falls among them.
@@ -1278,19 +1442,21 @@ async function renderFuture(): Promise<void> {
     els.futureStats.innerHTML = ''
     statInto(els.futureStats, t('futureStatCells'), formatNumber(meta.cells), t('unitCellSize'))
     const spread = [...(meta.hotspots ?? [])].sort((a, b) => b.near - a.near)[0]
+    // Each figure says what it counts: "Widest front 218" and "0.56 / 0.53"
+    // were numbers a reader had no way to read.
     if (spread)
       statInto(
         els.futureStats,
         t('futureStatTop'),
-        String(spread.near),
-        spread.name[getLang()] ?? '',
+        formatNumber(spread.near),
+        t('futureStatTopNote', { place: spread.name[getLang()] ?? '' }),
       )
-    statInto(els.futureStats, t('futureStatTested'), meta.tested, '')
+    statInto(els.futureStats, t('futureStatTested'), yearSpan(meta.tested), t('futureStatTestedNote'))
     statInto(
       els.futureStats,
       t('futureStatSkill'),
-      `${formatNumber(meta.skill.model, 2)} / ${formatNumber(meta.skill.climatology, 2)}`,
-      '',
+      formatNumber(meta.skill.model, 2),
+      t('futureStatSkillNote', { clim: formatNumber(meta.skill.climatology, 2) }),
     )
 
     void showGlobe()
@@ -1324,6 +1490,7 @@ async function showGlobe(): Promise<void> {
     const land = await loadLand()
     if (!land) return
     globe = mountGlobe(els.globeCanvas, land, { onPick: (p) => void openPick(p) })
+    addPauseButton(els.globeCanvas, globe)
   }
   globe.setFires(globeFires())
 }
@@ -1343,7 +1510,7 @@ async function openPick(pick: GlobePick | null): Promise<void> {
   if (!pick || !forecast) return
   const meta = forecast.meta
 
-  els.pickWhere.textContent = `${pick.lat.toFixed(2)}, ${pick.lon.toFixed(2)}`
+  els.pickWhere.textContent = formatPoint(pick.lat, pick.lon, 2)
 
   // The snapshot is a separate file and most readers never press a fire,
   // so it is fetched on the first click rather than with the page.
@@ -1481,6 +1648,7 @@ async function showLook(): Promise<void> {
     const land = await loadLand()
     if (!land) return
     lookGlobe = mountGlobe(els.lookGlobe, land, { onPick: (p) => void openLook(p) })
+    addPauseButton(els.lookGlobe, lookGlobe)
   }
   lookGlobe.setFires(globeFires())
   if (lookAt) return
@@ -1524,7 +1692,7 @@ async function openLook(pick: GlobePick | null): Promise<void> {
    * always true, so they move up and the line under them goes away rather
    * than repeating them.
    */
-  const where = `${degree(pick.lat, 'NS')}, ${degree(pick.lon, 'EW')}`
+  const where = formatPoint(pick.lat, pick.lon, 2)
   const named = nameNear(pick.lat, pick.lon)
   els.lookPlace.textContent = named ?? where
   els.lookPlace.dataset.kind = named ? 'name' : 'coords'
@@ -1550,12 +1718,6 @@ async function openLook(pick: GlobePick | null): Promise<void> {
   els.lookFrame.dataset.state = shot.tiles ? 'ready' : 'fail'
   els.lookScale.textContent = t('lookScale', { km: formatNumber(shot.km) })
   els.lookBy.textContent = shot.tiles ? t('lookBy') : t('lookFail')
-}
-
-/** 12.25, 'NS' → 12.25° N. Degrees with a hemisphere read better than a sign. */
-function degree(value: number, axis: 'NS' | 'EW'): string {
-  const side = value >= 0 ? axis[0] : axis[1]
-  return `${Math.abs(value).toFixed(2)}\u00b0 ${side}`
 }
 
 /**
@@ -1606,14 +1768,14 @@ function fillWeek(): void {
     const btn = document.createElement('button')
     btn.type = 'button'
     btn.className = 'week__day'
-    btn.setAttribute('role', 'tab')
+    btn.setAttribute('aria-label', day.toLocaleDateString(getLang() === 'ru' ? 'ru-RU' : 'en-GB', { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'UTC' }))
     // The last horizon is the whole week, which is what `weekDay = 0`
     // means, so both spellings of "everything" select the same thing.
     const isAll = h.days === forecast!.meta.horizonDays
     const mine = isAll ? weekDay === 0 || weekDay === h.days : weekDay === h.days
     btn.dataset.on = h.days <= (weekDay || forecast!.meta.horizonDays) ? 'yes' : 'no'
     btn.dataset.end = mine ? 'yes' : 'no'
-    btn.setAttribute('aria-selected', mine ? 'true' : 'false')
+    btn.setAttribute('aria-pressed', mine ? 'true' : 'false')
 
     const name = document.createElement('span')
     name.className = 'week__name'
@@ -1901,11 +2063,38 @@ async function renderProof(): Promise<void> {
 
   const recall = got.burnedCells ? got.caught / got.burnedCells : 0
   els.proofStats.innerHTML = ''
+  /*
+   * The strongest result first.
+   *
+   * The ladder below leads with the top thousand, where "it burned last
+   * week" comes within a point of the model, and the part of the map that
+   * free method cannot see was a paragraph further down. On the cells that
+   * had not burned, its score is zero everywhere and the model's thousand
+   * best burned at several times the rate of the rest — that is what a
+   * forecast adds, so it is the first figure in the band.
+   */
+  if (quiet && quietTop && quiet.burned > 0) {
+    statInto(
+      els.proofStats,
+      t('proofQuietStat'),
+      `${formatNumber(quietTop.burned / quiet.burned, 1)}×`,
+      t('proofQuietStatNote', {
+        top: formatPercent(quietTop.burned * 100),
+        burned: formatPercent(quiet.burned * 100),
+      }),
+    )
+  }
   statInto(
     els.proofStats,
     t('proofRecall'),
     formatPercent(recall * 100),
-    t('proofRecallNote', { flagged: formatNumber(got.flagged) }),
+    // "Flagged" is every cell given at least the map's threshold, which is
+    // most of the ground that can burn at all; the note says so, so 97% is
+    // read as the width of the net and not as the skill.
+    t('proofRecallNote', {
+      flagged: counted(got.flagged, cellsUnit),
+      pct: formatPercent((forecast?.meta.threshold ?? 0.01) * 100, 0),
+    }),
   )
   statInto(els.proofStats, t('proofCaught'), formatNumber(got.caught), cellsUnit(got.caught))
   statInto(els.proofStats, t('proofMissed'), formatNumber(got.missed), cellsUnit(got.missed))
@@ -1972,6 +2161,7 @@ async function showDoor(): Promise<void> {
     const land = await loadLand()
     if (!land) return
     doorGlobe = mountGlobe(els.ctaGlobe, land)
+    addPauseButton(els.ctaGlobe, doorGlobe)
   }
   doorGlobe.setFires(globeFires())
 }
@@ -2041,12 +2231,12 @@ function renderRisk(): void {
 
     const name = document.createElement('span')
     name.className = 'risk__name'
-    const label = spot.name[lang] || `${spot.lat.toFixed(1)}, ${spot.lon.toFixed(1)}`
+    const label = spot.name[lang] || formatPoint(spot.lat, spot.lon)
     name.textContent = label
     const where = document.createElement('span')
     where.className = 'risk__where'
     // A byte of probability cannot really say "certain", so it does not.
-    where.textContent = `${Math.min(99, Math.round(spot.p * 100))}% · ${spot.lat.toFixed(1)}, ${spot.lon.toFixed(1)}`
+    where.textContent = `${Math.min(99, Math.round(spot.p * 100))}% · ${formatPoint(spot.lat, spot.lon)}`
     name.append(where)
 
     const bar = document.createElement('span')
@@ -2060,6 +2250,24 @@ function renderRisk(): void {
     value.textContent = String(spot.near)
 
     row.append(rank, name, bar, value)
+    /*
+     * A row is a way into the same card a press on the globe opens. The
+     * globe answers only a pointer, so without this a keyboard had no path
+     * to what a place's forecast rests on.
+     */
+    row.tabIndex = 0
+    row.setAttribute('role', 'button')
+    const open = () => {
+      globe?.flyTo(spot.lat, spot.lon)
+      void openPick({ lat: spot.lat, lon: spot.lon, p: spot.p })
+    }
+    row.addEventListener('click', open)
+    row.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault()
+        open()
+      }
+    })
     els.futureRiskList.append(row)
   })
 }
@@ -2097,7 +2305,7 @@ function renderTrust(): void {
     row.append(dt, dd, bar)
     els.futureSkill.append(row)
   }
-  els.futureSkillNote.textContent = t('futureSkillNote', { tested: meta.tested })
+  els.futureSkillNote.textContent = t('futureSkillNote', { tested: yearSpan(meta.tested) })
 }
 
 function showDataSections(visible: boolean): void {
@@ -2127,7 +2335,7 @@ function rebuild(): void {
 
   state.grid = toYearGrid(ds.adjusted, state.mode === 'harmonized')
   state.years = [...state.grid.keys()].sort((a, b) => a - b)
-  state.clim = climatology(state.grid, 7)
+  state.clim = climatology(state.grid, 7, notComparable(state.years, ds.range))
 
   // Clip the ramp just below the extreme so an outlier day cannot black out
   // every ordinary one; the footer states the ceiling so nothing is hidden.
@@ -2199,12 +2407,13 @@ function render(): void {
     row: state.grid.get(state.year) ?? new Float64Array(367),
     clim: state.clim,
     span: daysInYear(state.year),
+    observed: observedDays(ds, state.year),
   })
   els.yearTitle.textContent = t('sectionYear', { year: state.year })
   els.splitTitle.textContent = t('splitTitle', { year: state.year })
   renderConcentration()
 
-  drawContrib(els.contribCanvas, contribData(ds))
+  drawContrib(els.contribCanvas, contribData(ds), ds.range.to.endsWith('-12-31') ? null : Number(ds.range.to.slice(0, 4)))
   renderMap(ds)
   renderWorst(ds)
   renderImpact()
@@ -2213,6 +2422,8 @@ function render(): void {
   renderModeExplain()
   renderLegends()
   renderSensors(ds)
+  renderRoutes(ds)
+  renderHeroSeam(ds)
   renderReading()
   renderProvenance(ds)
   renderMetrics(ds, totals)
@@ -2231,7 +2442,7 @@ function render(): void {
   els.worst.hidden = worldScope || worldNow || worldForecast
   if (!worldScope && !worldNow && !worldForecast) {
     const cells = ds.mapCells(state.year).length
-    els.mapNote.textContent = t('mapNoteArchive', { cells: formatNumber(cells), km: ds.mapCellKm, years: state.year })
+    els.mapNote.textContent = t('mapNoteArchive', { cells: counted(cells, cellsUnit), km: ds.mapCellKm, years: state.year })
   }
 }
 
@@ -2243,6 +2454,78 @@ function render(): void {
  * looking at is out of the ordinary.
  */
 /** True when the selected year is the last one and the record stops mid-year. */
+/**
+ * Where a page opens when no year is asked for.
+ *
+ * It opened on the running year, which in September is a verdict that
+ * cannot be given ("not comparable yet"), an empty list of stretches, and
+ * — in Punjab — a season whose main half, October and November, has not
+ * happened. The last whole year shows everything the page can say; the
+ * running one is a click away.
+ */
+function lastWholeYear(range: { from: string; to: string }): number {
+  const last = Number(range.to.slice(0, 4))
+  return range.to.endsWith('-12-31') ? last : last - 1
+}
+
+/** "2018-2021" as a span is written with a dash: "2018–2021". */
+function yearSpan(s: string): string {
+  return s.replace(/(\d{4})-(\d{4})/g, '$1–$2')
+}
+
+/** The days of `year` the record covers, as days of the year. */
+function observedDays(ds: Dataset, year: number): { from: number; to: number } | undefined {
+  const from = ds.range.from.startsWith(String(year)) ? dayOfYear(ds.range.from) : 1
+  const to = ds.range.to.startsWith(String(year)) ? dayOfYear(ds.range.to) : daysInYear(year)
+  return from === 1 && to === daysInYear(year) ? undefined : { from, to }
+}
+
+/**
+ * A pause for a globe that turns and flickers on its own.
+ *
+ * Anything that moves for more than five seconds by itself needs a way to
+ * stop it (WCAG 2.2.2). Reduced motion stops it already; this is for
+ * everyone else who would rather read than watch.
+ */
+function addPauseButton(canvas: HTMLCanvasElement, handle: { setPaused(on: boolean): void }): void {
+  const host = canvas.parentElement
+  if (!host || host.querySelector('.globe__pause')) return
+  const btn = document.createElement('button')
+  btn.type = 'button'
+  btn.className = 'ghost-btn globe__pause'
+  let paused = false
+  const paint = () => {
+    btn.textContent = paused ? '▶' : '❚❚'
+    btn.setAttribute('aria-label', t(paused ? 'globePlay' : 'globePause'))
+    btn.setAttribute('aria-pressed', String(paused))
+  }
+  btn.addEventListener('click', () => {
+    paused = !paused
+    handle.setPaused(paused)
+    paint()
+  })
+  paint()
+  host.append(btn)
+}
+
+/** The years a "usual" must not be built from: see `comparableYears`. */
+function notComparable(years: readonly number[], range: { from: string; to: string }): number[] {
+  const keep = new Set(comparableYears(years, range))
+  return years.filter((y) => !keep.has(y))
+}
+
+/**
+ * From here the VIIRS-to-MODIS ratio climbs with the fleet unchanged
+ * (13.2 in 2024, 14.8 in 2025, 15.6 in 2026 over the planet), so the
+ * years a MODIS-driven series reports are the ones to read with care.
+ */
+const DRIFT_FROM = 2024
+
+/** Before the MODIS pair, one satellite: the count is not the same measurement. */
+function terraOnly(year: number): boolean {
+  return year < MODIS_PAIR_FROM
+}
+
 function isPartialYear(ds: Dataset): boolean {
   const last = state.years[state.years.length - 1]
   return state.year === last && !ds.range.to.endsWith('-12-31')
@@ -2250,10 +2533,7 @@ function isPartialYear(ds: Dataset): boolean {
 
 /** A frame, written the way this page writes one. Both heroes use it. */
 function boundsLabel(b: Bounds): string {
-  return (
-    `${Math.abs(b.south).toFixed(1)}°${b.south < 0 ? 'S' : 'N'}–${Math.abs(b.north).toFixed(1)}°${b.north < 0 ? 'S' : 'N'}, ` +
-    `${Math.abs(b.west).toFixed(1)}°${b.west < 0 ? 'W' : 'E'}–${Math.abs(b.east).toFixed(1)}°${b.east < 0 ? 'W' : 'E'}`
-  )
+  return formatBox(b.south, b.north, b.west, b.east)
 }
 
 function renderHero(ds: Dataset): void {
@@ -2283,14 +2563,14 @@ function renderHero(ds: Dataset): void {
      */
     const sentence = typical.gap
       ? t('heroSeasonTwice', {
-          start: formatDoyLong(typical.start, state.year),
+          start: rangeStart(typical.start, typical.gap.from - 1, state.year),
           end: formatDoyLong(typical.gap.from - 1, state.year),
-          start2: formatDoyLong(typical.gap.to + 1, state.year),
+          start2: rangeStart(typical.gap.to + 1, typical.end, state.year),
           end2: formatDoyLong(typical.end, state.year),
           peak: formatDoyLong(typical.peak, state.year),
         })
       : t('heroSeason', {
-          start: formatDoyLong(typical.start, state.year),
+          start: rangeStart(typical.start, typical.end, state.year),
           end: formatDoyLong(typical.end, state.year),
           peak: formatDoyLong(typical.peak, state.year),
         })
@@ -2304,10 +2584,14 @@ function renderHero(ds: Dataset): void {
   } else if (a?.shape && baselineYears >= MIN_BASELINE_YEARS) {
     const ratio = a.totalRatio
     const ratioText = `${formatNumber(ratio, ratio < 10 ? 1 : 0)}×`
-    const key = ratio > 1.15 ? 'heroYearBusy' : ratio < 0.85 ? 'heroYearQuiet' : 'heroYearPlain'
+    // "at 0.0× the normal total" is arithmetic, not a sentence.
+    const key = ratio < 0.05 ? 'heroYearNearNone' : ratio > 1.15 ? 'heroYearBusy' : ratio < 0.85 ? 'heroYearQuiet' : 'heroYearPlain'
     const line = document.createElement('span')
     line.textContent = t(key, { year: state.year, ratio: ratioText })
     els.heroAside.append(line)
+    // The newest years stand on a MODIS pair whose overpass times are
+    // drifting; say so where those years are read.
+    if (state.year >= DRIFT_FROM) els.heroAside.append(document.createTextNode(' '), document.createTextNode(t('driftCaveat')))
 
     const row = state.grid.get(state.year)
     const half = row ? concentrationDays(row, daysInYear(state.year), 0.5) : 0
@@ -2356,15 +2640,53 @@ function renderHero(ds: Dataset): void {
     heroStat(t('statThisYear'), `${formatDoy(a.shape.start, state.year)} – ${formatDoy(a.shape.end, state.year)}`, String(state.year))
   }
   heroStat(t('statWatching'), ds.range.from.slice(0, 4), formatYears(state.years.length))
-  heroStat(t('statFires'), compact(totalFires), '')
+  heroStat(t('statFires'), compact(totalFires), reconciledRange(ds, totalFires))
+}
+
+/**
+ * The spread a reconciled total carries, for the note under it.
+ *
+ * Every reconciled number is MODIS times one coefficient, so the
+ * coefficient's interquartile range carries straight through: Punjab's
+ * 2.3M is 499,158 MODIS cell-days at 4.60, and the same cell-days at 2.66
+ * and 8.00 give 1.3M and 4.0M. The ratio printed its range from the
+ * start; the total it multiplies into did not, and a threefold spread is
+ * not a detail to leave off the largest number on the page. It is the
+ * spread of the daily ratio, not a confidence interval on its median.
+ *
+ * Empty as recorded, where the count is what the instruments saw and has
+ * no coefficient in it.
+ */
+function reconciledRange(ds: Dataset, total: number): string {
+  const s = ds.sensitivity
+  if (state.mode !== 'harmonized' || s.samples < MIN_RATIO_SAMPLES || s.k <= 0 || !s.ci) return ''
+  // The interval on k from resampling years, not the spread of daily
+  // ratios: that spread was a threefold range with no probability in it.
+  return t('reconciledRange', { lo: compact((total * s.ci.lo) / s.k), hi: compact((total * s.ci.hi) / s.k) })
+}
+
+/**
+ * The start of a range, without its month when the end shares it.
+ *
+ * "с 6 мая по 22 мая" is not how a date range is written in either
+ * language; "с 6 по 22 мая" and "6 to 22 May" are.
+ */
+function rangeStart(startDoy: number, endDoy: number, year: number): string {
+  const month = (doy: number) => new Date(Date.UTC(year, 0, doy)).getUTCMonth()
+  return month(startDoy) === month(endDoy)
+    ? String(new Date(Date.UTC(year, 0, startDoy)).getUTCDate())
+    : formatDoyLong(startDoy, year)
 }
 
 /** Put the accent on the dates, which is what the sentence is actually about. */
 function emphasiseDates(sentence: string): DocumentFragment {
   const frag = document.createDocumentFragment()
-  const parts = sentence.split(/(\d{1,2}\s+\p{L}+)/gu)
-  for (const part of parts) {
-    if (/^\d{1,2}\s+\p{L}+$/u.test(part)) {
+  // A bare day counts too: it is the first half of "6 to 22 May".
+  const date = /(\d{1,2}\s+(?!(?:по|to)\s)\p{L}+|\d{1,2}(?=\s+(?:по|to)\s))/u
+  // Split on a capturing group puts every match at an odd index.
+  const parts = sentence.split(new RegExp(date.source, 'gu'))
+  for (const [i, part] of parts.entries()) {
+    if (i % 2 === 1) {
       const em = document.createElement('em')
       em.textContent = part
       frag.append(em)
@@ -2413,6 +2735,14 @@ function renderModeExplain(): void {
 
 /** Canvas-only repaint: safe to call on resize, because it changes no layout. */
 function redrawCanvases(): void {
+  // The project's page has canvases of its own, and a resize left them
+  // stretched to the old width until something else redrew them.
+  if (aboutScope) {
+    drawSeam()
+    drawAboutRoutes()
+    void drawModelCharts()
+    return
+  }
   /**
    * The planet and a place have no region dataset, so they come first.
    *
@@ -2432,13 +2762,18 @@ function redrawCanvases(): void {
   if (!ds || !state.clim) return
 
   ribbon.draw()
+  if (state.dataset && !worldScope) {
+    renderRoutes(state.dataset)
+    renderHeroSeam(state.dataset)
+  }
   drawCycle(els.cycleCanvas, {
     year: state.year,
     row: state.grid.get(state.year) ?? new Float64Array(367),
     clim: state.clim,
     span: daysInYear(state.year),
+    observed: observedDays(ds, state.year),
   })
-  drawContrib(els.contribCanvas, contribData(ds))
+  drawContrib(els.contribCanvas, contribData(ds), ds.range.to.endsWith('-12-31') ? null : Number(ds.range.to.slice(0, 4)))
   // The map owns its own sizing; it only needs to be told the box changed.
   invalidateMapSize()
 }
@@ -2462,12 +2797,14 @@ function renderMetrics(ds: Dataset, totals: Map<number, number>): void {
   const biggest = [...totals.entries()].sort((a, b) => b[1] - a[1])[0]
   const trend = annualTrend(state.grid, ds.range)
 
-  metric(t('metricYears'), String(state.years.length), `${ds.range.from.slice(0, 4)}–${ds.range.to.slice(0, 4)}`)
-  metric(t('metricActive'), compact(activeCellDays), '')
-  metric(t('metricDetections'), compact(ds.totals.rawDetections), '')
+  // The years watched and the cell-days are the hero's own figures, a
+  // screen above; repeated here they made seven thin columns of which two
+  // said nothing new. What is left is what the hero does not say.
+  void activeCellDays
+  metric(t('metricDetections'), compact(ds.totals.rawDetections), t('detectionsNote', { years: String(state.years.length) }))
   metric(t('metricMerged'), `${mergedPct.toFixed(0)}%`, t('mergedNote'))
 
-  if (trend && Math.abs(trend.slopePct) >= 0.01) {
+  if (trend && trend.p < TREND_ALPHA) {
     const pct = trend.slopePct * 100
     /*
      * The note has to say which series the slope was taken over.
@@ -2481,24 +2818,42 @@ function renderMetrics(ds: Dataset, totals: Map<number, number>): void {
     metric(
       t('metricTrend'),
       formatPercent(pct, 1, true),
-      t(state.mode === 'harmonized' ? 'trendOnModis' : 'trendOnRaw'),
+      `${t(state.mode === 'harmonized' ? 'trendOnModis' : 'trendOnRaw')} · ${trendRange(trend)}`,
       pct > 0 ? 'up' : 'down',
     )
+  } else if (trend) {
+    // A slope whose interval spans no change is not a trend, whatever its
+    // middle says: the figure says so in one word, and the interval under
+    // it shows why.
+    metric(t('metricTrend'), t('trendNone'), trendRange(trend), 'none', t('trendNotSignificant', { range: trendRange(trend) }))
   } else {
     metric(t('metricTrend'), '—', t('trendFlat'))
   }
 
-  if (biggest) metric(t('metricPeakYear'), String(biggest[0]), compact(Math.round(biggest[1])))
-  if (peakDay && peakDay.frp > 0) metric(t('metricPower'), compact(Math.round(peakDay.frp)), t('unitMw'))
+  if (biggest) metric(t('metricPeakYear'), String(biggest[0]), t('peakYearNote', { n: compact(Math.round(biggest[1])) }))
+  // Summed over both instruments on the day: a fleet-dependent figure,
+  // labelled as recorded whatever the switch says.
+  if (peakDay && peakDay.frp > 0) metric(t('metricPower'), `${compact(Math.round(peakDay.frp))} ${t('unitMw')}`, t('metricPowerNote'))
 }
 
-function metric(label: string, value: string, note: string, tone?: 'up' | 'down'): void {
+/** "95%: −4.2% to +23%, p = 0.49", from the trend's own interval. */
+function trendRange(trend: NonNullable<ReturnType<typeof annualTrend>>): string {
+  return t('trendRange', {
+    lo: formatPercent(trend.loPct * 100, 1, true),
+    hi: formatPercent(trend.hiPct * 100, 1, true),
+    // "p < 0.001", not "p = < 0.001".
+    p: trend.p < 0.001 ? `< ${formatNumber(0.001, 3)}` : `= ${formatNumber(trend.p, trend.p < 0.01 ? 3 : 2)}`,
+  })
+}
+
+function metric(label: string, value: string, note: string, tone?: 'up' | 'down' | 'none', title?: string): void {
   const wrap = document.createElement('div')
   const dt = document.createElement('dt')
   dt.textContent = label
   const dd = document.createElement('dd')
   dd.textContent = value
   if (tone) dd.dataset.tone = tone
+  if (title) wrap.title = title
   wrap.append(dt, dd)
   /*
    * The note is a sibling of the figure, not a child of it.
@@ -2565,27 +2920,41 @@ function renderYearTable(): void {
   for (const r of rows) {
     const tr = document.createElement('tr')
     tr.setAttribute('aria-selected', String(r.year === state.year))
-    tr.tabIndex = 0
+    // One tab stop for the whole table, on the selected year; the arrows
+    // move between rows. Twenty-seven stops made the table a wall to tab
+    // through.
+    tr.tabIndex = r.year === state.year ? 0 : -1
     tr.addEventListener('click', () => pickYear(r.year))
     tr.addEventListener('keydown', (e) => {
       if (e.key === 'Enter' || e.key === ' ') {
         e.preventDefault()
         pickYear(r.year)
+      } else if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+        e.preventDefault()
+        const next = (e.key === 'ArrowDown' ? tr.nextElementSibling : tr.previousElementSibling) as HTMLElement | null
+        if (next) {
+          tr.tabIndex = -1
+          next.tabIndex = 0
+          next.focus()
+        }
       }
     })
 
     const total = r.shape?.total ?? 0
+    // Compared with the usual only if it is one of the years the usual is
+    // made of: whole, and flown by both MODIS satellites.
+    const comparable = trustworthy && state.clim.years.includes(r.year)
     const cells: Array<{ text: string; cls?: string; bar?: number; hot?: boolean }> = [
       { text: String(r.year), cls: 'year-cell' },
       { text: r.shape ? `${formatDoy(r.shape.start, r.year)} → ${formatDoy(r.shape.end, r.year)}` : '—' },
       { text: r.shape ? formatDoy(r.shape.peak, r.year) : '—' },
       { text: r.shape ? String(r.shape.length) : '—', cls: 'num' },
       { text: compact(Math.round(total)), cls: 'num bar-cell', bar: (total / maxTotal) * 100 },
-      { text: trustworthy && r.ratio > 0 ? `${formatNumber(r.ratio, 1)}×` : '—', cls: 'num' },
+      { text: comparable && r.ratio > 0 ? `${formatNumber(r.ratio, 1)}×` : '—', cls: 'num' },
       {
-        text: trustworthy ? String(r.daysAboveP90) : '—',
+        text: comparable ? String(r.daysAboveP90) : '—',
         cls: 'num above-cell',
-        hot: trustworthy && r.daysAboveP90 > 14,
+        hot: comparable && r.daysAboveP90 > 14,
       },
     ]
 
@@ -2605,6 +2974,32 @@ function renderYearTable(): void {
     }
     els.yearsBody.append(tr)
   }
+  showChosenRow()
+}
+
+/**
+ * The box shows about ten of the years, so the chosen one is brought into
+ * view inside it — only inside it: `scrollIntoView` would move the page too.
+ */
+function showChosenRow(): void {
+  const wrap = els.yearsWrap
+  const row = els.yearsBody.querySelector<HTMLElement>('tr[aria-selected="true"]')
+  if (row) {
+    const head = els.yearsBody.parentElement!.querySelector('thead')?.getBoundingClientRect().height ?? 0
+    const r = row.getBoundingClientRect()
+    const w = wrap.getBoundingClientRect()
+    // Left alone while it is clear of the head and of the fade at the foot;
+    // otherwise brought to the middle, so a click never lands under the fade.
+    const top = r.top - w.top - head
+    const bottom = w.bottom - r.bottom
+    if (top < 4 || bottom < 44) wrap.scrollTop += r.top - w.top - head - (wrap.clientHeight - head - r.height) / 2
+  }
+  markTableEnd()
+}
+
+function markTableEnd(): void {
+  const wrap = els.yearsWrap
+  els.yearsBox.dataset.end = String(wrap.scrollTop + wrap.clientHeight >= wrap.scrollHeight - 2)
 }
 
 /** How the selected year's cells divide between the instrument families. */
@@ -2715,6 +3110,13 @@ function renderConcentration(): void {
  * inherits the scaling without knowing it is there.
  */
 function exportSeries(): void {
+  // The planet and a searched place have no dataset of their own; the old
+  // guard fell through to whatever region was loaded last, so "Download"
+  // on #/world handed over Punjab.
+  if (worldScope) {
+    exportScopeSeries()
+    return
+  }
   const ds = state.dataset
   if (!ds) return
 
@@ -2730,9 +3132,11 @@ function exportSeries(): void {
     'viirs_only_cells',
     'frp_mw',
     'raw_detections',
+    'viirs_route',
   ].join(',')
 
   const byDay = new Map(ds.days.map((d) => [d.day, d]))
+  const route = viirsRouteByDay(ds.days, ds.sensitivity)
   const lines = ds.adjusted.map((a) => {
     const d = byDay.get(a.day)
     return [
@@ -2747,6 +3151,7 @@ function exportSeries(): void {
       d?.viirsOnly ?? 0,
       d?.frp ?? 0,
       d?.raw ?? 0,
+      route.has(a.day) ? route.get(a.day)!.toFixed(2) : '',
     ].join(',')
   })
 
@@ -2756,7 +3161,17 @@ function exportSeries(): void {
     `# Harmonized on a 1 km grid, local solar days.\n` +
     `# Sensitivity factor ${ds.sensitivity.k.toFixed(3)} ` +
     `[${ds.sensitivity.lo.toFixed(3)}-${ds.sensitivity.hi.toFixed(3)}] ` +
-    `from ${ds.sensitivity.samples} paired days.\n`
+    `from ${ds.sensitivity.samples} paired days` +
+    (ds.sensitivity.basis === 'reference'
+      ? ` while S-NPP was the only VIIRS (${ds.sensitivity.from} to ${ds.sensitivity.to}); harmonized values are in one-VIIRS units.\n`
+      : ` over the whole overlap in this record.\n`) +
+    `# The bracket above and harmonized_lo/hi are the interquartile range of the daily ratios: how much one day differs from another, not a confidence interval.\n` +
+    (ds.sensitivity.ci
+      ? `# 95% interval on the factor itself, resampling whole years: ${ds.sensitivity.ci.lo.toFixed(3)}-${ds.sensitivity.ci.hi.toFixed(3)}.\n`
+      : '') +
+    (route.size
+      ? `# viirs_route: the same day from VIIRS alone, in the same unit (its count times the factor, divided by its own fleet's ratio). It shares no detection with the harmonized column, and it is how the series can go on after MODIS. Empty before VIIRS.\n`
+      : '')
 
   const blob = new Blob([note, header, '\n', lines.join('\n'), '\n'], { type: 'text/csv;charset=utf-8' })
   const url = URL.createObjectURL(blob)
@@ -2768,11 +3183,19 @@ function exportSeries(): void {
 }
 
 function miniFact(label: string, value: string): void {
+  const wrap = document.createElement('div')
   const dt = document.createElement('dt')
   dt.textContent = label
   const dd = document.createElement('dd')
   dd.textContent = value
-  els.mapFacts.append(dt, dd)
+  wrap.append(dt, dd)
+  els.mapFacts.append(wrap)
+}
+
+/** 1 for 1 January. */
+function doyOf(iso: string): number {
+  const d = Date.UTC(Number(iso.slice(0, 4)), Number(iso.slice(5, 7)) - 1, Number(iso.slice(8, 10)))
+  return Math.round((d - Date.UTC(Number(iso.slice(0, 4)), 0, 1)) / 86400000) + 1
 }
 
 function contribData(ds: Dataset): ContribYear[] {
@@ -2796,6 +3219,13 @@ function renderLegends(): void {
   bar.className = 'legend__ramp'
   ramp.append(bar, document.createTextNode(t('legendRamp')))
   els.ribbonLegend.append(ramp, swatch('transparent', t('legendAbove'), true))
+  // The rail beside each year and the grey of days before the record began
+  // were drawn from the start and never named.
+  els.ribbonLegend.append(
+    swatch('var(--sensor-modis)', t('legendRailModis')),
+    swatch('var(--sensor-viirs)', t('legendRailViirs')),
+    swatch('color-mix(in srgb, var(--ink-tertiary) 16%, transparent)', t('legendUnobserved')),
+  )
 
   els.contribLegend.innerHTML = ''
   for (const entry of contribLegend()) {
@@ -2832,35 +3262,286 @@ function renderSensors(ds: Dataset): void {
 
     const name = document.createElement('span')
     name.className = 'sensor__name'
-    name.textContent = `${meta.label} · ${meta.pixelM} m`
+    name.textContent = `${meta.label} · ${formatNumber(meta.pixelM)} ${t('unitM')}`
     if (!present) name.style.color = 'var(--ink-muted)'
 
     const span = document.createElement('span')
     span.className = 'sensor__span'
-    span.textContent = present ? t('sensorFrom', { date: meta.since.slice(0, 7) }) : t('sensorAbsent')
+    // The day the archive's data begins, in words: "с 2000-11" was the last
+    // ISO fragment on the page.
+    span.textContent = present ? t('sensorFrom', { date: formatDate(meta.since) }) : t('sensorAbsent')
 
     li.append(dot, name, span)
     els.sensors.append(li)
   }
 
   const s = ds.sensitivity
-  els.sensitivityNote.textContent =
-    s.samples >= 10
-      ? t('sensitivity', {
-          k: formatNumber(s.k, 2),
-          lo: formatNumber(s.lo, 2),
-          hi: formatNumber(s.hi, 2),
-          n: formatNumber(s.samples),
-        })
-      : t('sensitivityUnknown')
+  if (s.samples < MIN_RATIO_SAMPLES) {
+    els.sensitivityNote.textContent = t('sensitivityUnknown')
+    return
+  }
+  /*
+   * The same ratio, per fleet. The single figure is a median over years
+   * flown by one, two and three VIIRS satellites, and saying only that it
+   * "climbs as satellites join" was wrong for Yakutia, where it does not.
+   * The eras say what each fleet measured here and leave the reader to see
+   * which way it went.
+   */
+  const eras = sensitivityByEra(ratiosFromDays(ds.days)).filter((e) => e.samples >= MIN_RATIO_SAMPLES)
+  const values = {
+    k: formatNumber(s.k, 2),
+    lo: formatNumber(s.lo, 2),
+    hi: formatNumber(s.hi, 2),
+    n: formatNumber(s.samples),
+  }
+  if (s.basis !== 'reference') {
+    els.sensitivityNote.textContent = t('sensitivityOneFleet', values)
+    return
+  }
+  const text = t('kBody', {
+    ...values,
+    from: formatDate(s.from ?? ''),
+    to: formatDate(s.to ?? ''),
+    eras: eras
+      .map((e, i) => t('sensitivityEra', { fleet: fleetName(e.fleet, i === 0), k: formatNumber(e.k, 2) }))
+      .join(' · '),
+  })
+  /*
+   * The test the reconciliation never had: each year of the reference era
+   * left out in turn, does MODIS times the rest's number give what S-NPP
+   * counted in it? The worst year is named, so a miss reads as a miss.
+   */
+  const loyo = leaveOneYearOut(ds.days)
+  /*
+   * A card, not a paragraph. The same facts ran as twelve lines of small
+   * grey type, and the one number the whole page is multiplied by sat in
+   * the middle of the second line.
+   */
+  const line = (cls: string, text: string) => {
+    const p = document.createElement('p')
+    p.className = cls
+    p.textContent = text
+    return p
+  }
+  els.sensitivityNote.replaceChildren(
+    line('kcard__label', t('kLabel')),
+    line('kcard__value', `${formatNumber(s.k, 2)}×`),
+    line('kcard__ci', s.ci
+      ? t('kCi', { lo: formatNumber(s.ci.lo, 2), hi: formatNumber(s.ci.hi, 2), n: formatNumber(s.samples) })
+      : t('kDays', { n: formatNumber(s.samples) })),
+    line('kcard__body', text),
+    ...(loyo.length ? [line('kcard__check', t('kCheck', loyoSummary(loyo)))] : []),
+  )
+}
+
+/**
+ * The record as recorded and as reconciled, year by year, on one axis.
+ *
+ * Both in the same unit would not be one axis — recorded is up to four
+ * instruments, reconciled is one VIIRS — so each is drawn as a share of its
+ * own 2003–2011 mean. That is the comparison the challenge is about: the
+ * years before VIIRS set the level, and the question is what happens after.
+ */
+function renderHeroSeam(ds: Dataset): void {
+  const byYear = new Map<number, { raw: number; rec: number }>()
+  for (const a of ds.adjusted) {
+    const y = yearOf(a.day)
+    const row = byYear.get(y) ?? { raw: 0, rec: 0 }
+    row.raw += a.raw
+    row.rec += a.value
+    byYear.set(y, row)
+  }
+  const first = Math.max(MODIS_PAIR_FROM, Number(ds.range.from.slice(0, 4)) + (ds.range.from.endsWith('-01-01') ? 0 : 1))
+  const years = [...byYear.keys()].filter((y) => y >= first).sort((a, b) => a - b)
+  const base = years.filter((y) => y < 2012)
+  const shown = ds.sensitivity.basis === 'reference' && years.length >= 6 && base.length >= 3
+  els.heroSeam.hidden = !shown
+  if (!shown) return
+
+  const mean = (key: 'raw' | 'rec') => base.reduce((s, y) => s + byYear.get(y)![key], 0) / base.length
+  const rawBase = mean('raw')
+  const recBase = mean('rec')
+  // Whole years only: a running year is a few months set against twelve,
+  // and in Punjab it dragged both lines to the floor at the right-hand end.
+  const running = ds.range.to.endsWith('-12-31') ? null : Number(ds.range.to.slice(0, 4))
+  const whole = years.filter((y) => y !== running)
+  const rawLine = whole.map((y) => byYear.get(y)!.raw / rawBase)
+  const recLine = whole.map((y) => byYear.get(y)!.rec / recBase)
+  drawHeroSeam(els.heroSeamCanvas, {
+    years: whole,
+    recorded: rawLine,
+    reconciled: recLine,
+    base: { from: base[0], to: base[base.length - 1], label: t('seamBase', { from: String(base[0]), to: String(base[base.length - 1]) }) },
+    arrivals: [
+      { year: 2012, label: 'S-NPP' },
+      { year: 2018, label: 'NOAA-20' },
+      { year: 2024, label: 'NOAA-21' },
+    ],
+    names: { recorded: t('seamRecorded'), reconciled: t('seamReconciled') },
+  })
+  // The lines are named at their ends now.
+  els.heroSeamLegend.replaceChildren()
+  els.heroSeamLegend.hidden = true
+  // The two figures a judge will look for: how far the recorded count rose
+  // against its own pre-VIIRS years, and how far the reconciled one did.
+  const late = whole.filter((y) => y >= 2019)
+  const avg = (xs: number[]) => xs.reduce((s, v) => s + v, 0) / xs.length
+  const lateIdx = late.map((y) => whole.indexOf(y))
+  els.heroSeamNote.textContent = t('seamNote', {
+    from: String(late[0] ?? ''),
+    to: String(late[late.length - 1] ?? ''),
+    raw: `${formatNumber(avg(lateIdx.map((i) => rawLine[i])), 1)}×`,
+    rec: `${formatNumber(avg(lateIdx.map((i) => recLine[i])), 1)}×`,
+  })
+}
+
+/**
+ * The same picture for the planet, from its yearly totals.
+ *
+ * The planet's hero had half a screen of nothing beside it, where a region
+ * has this chart. Recorded is both families added; reconciled is MODIS
+ * alone, since one constant multiplier changes no ratio to its own mean.
+ * The planet only: a searched place can be a few hundred detections a
+ * year, and a ratio of those to their 2003-2011 mean is mostly noise.
+ */
+function renderWorldSeam(totals: readonly WorldTotal[]): void {
+  const now = new Date().getUTCFullYear()
+  const rows = totals.filter((r) => r.year >= MODIS_PAIR_FROM && r.year < now && r.modis > 0)
+  const base = rows.filter((r) => r.year < 2012)
+  const shown = !worldPlace && rows.length >= 6 && base.length >= 3
+  els.heroSeam.hidden = !shown
+  if (!shown) return
+  const avg = (xs: number[]) => xs.reduce((s, v) => s + v, 0) / xs.length
+  const rawBase = avg(base.map((r) => r.modis + r.viirs))
+  const modBase = avg(base.map((r) => r.modis))
+  const recorded = rows.map((r) => (r.modis + r.viirs) / rawBase)
+  const reconciled = rows.map((r) => r.modis / modBase)
+  drawHeroSeam(els.heroSeamCanvas, {
+    years: rows.map((r) => r.year),
+    recorded,
+    reconciled,
+    base: { from: base[0].year, to: base[base.length - 1].year, label: t('seamBase', { from: String(base[0].year), to: String(base[base.length - 1].year) }) },
+    arrivals: [
+      { year: 2012, label: 'S-NPP' },
+      { year: 2018, label: 'NOAA-20' },
+      { year: 2024, label: 'NOAA-21' },
+    ],
+    names: { recorded: t('seamRecorded'), reconciled: t('seamReconciled') },
+  })
+  els.heroSeamLegend.replaceChildren()
+  els.heroSeamLegend.hidden = true
+  const late = rows.map((r, i) => ({ r, i })).filter(({ r }) => r.year >= 2019)
+  els.heroSeamNote.textContent = t('seamNoteWorld', {
+    from: String(late[0]?.r.year ?? ''),
+    to: String(late[late.length - 1]?.r.year ?? ''),
+    raw: `${formatNumber(avg(late.map(({ i }) => recorded[i])), 1)}×`,
+    rec: `${formatNumber(avg(late.map(({ i }) => reconciled[i])), 1)}×`,
+  })
+}
+
+/** The leave-one-year-out errors, as the sentence needs them. */
+function loyoSummary(rows: readonly { year: number; predicted: number; observed: number }[]): Record<string, string> {
+  const errs = rows.map((r) => ({ year: r.year, err: r.predicted / r.observed - 1 }))
+  const worst = errs.reduce((a, b) => (Math.abs(b.err) > Math.abs(a.err) ? b : a))
+  const typical = quantileSorted(errs.map((e) => Math.abs(e.err)).sort((a, b) => a - b), 0.5)
+  return {
+    from: String(errs[0].year),
+    to: String(errs[errs.length - 1].year),
+    typical: formatPercent(typical * 100, 0),
+    worst: formatPercent(worst.err * 100, 0, true),
+    year: String(worst.year),
+  }
+}
+
+/**
+ * MODIS × k beside VIIRS brought to the same unit, year by year.
+ *
+ * The note gives the size of the disagreement over whole years, because
+ * that is what a reader needs from it: a difference between two years
+ * smaller than this is inside what the two instruments disagree about.
+ */
+function renderRoutes(ds: Dataset): void {
+  const rows = twoRoutes(ds.days, ds.sensitivity)
+  const shown = rows.length >= 2
+  els.routesCanvas.parentElement!.hidden = !shown
+  els.routesLegend.hidden = !shown
+  els.routesNote.hidden = !shown
+  els.routesStats.hidden = !shown
+  els.routesCanvas.parentElement!.previousElementSibling?.previousElementSibling?.toggleAttribute('hidden', !shown)
+  if (!shown) return
+
+  // Whole years on the chart too: a running year is a few months against
+  // twelve, and it sent both lines to the floor at the right-hand end.
+  const running = ds.range.to.endsWith('-12-31') ? null : Number(ds.range.to.slice(0, 4))
+  drawRoutes(els.routesCanvas, rows.filter((r) => r.year !== running), null)
+
+  els.routesLegend.replaceChildren(
+    swatch('var(--sensor-modis)', t('routesModis')),
+    swatch('var(--sensor-viirs)', t('routesViirs')),
+  )
+
+  // Whole years only: the first year of VIIRS and the running one are parts.
+  const whole = rows.filter((r) => r.year !== running && r.year !== rows[0].year)
+  if (!whole.length) {
+    els.routesNote.textContent = t('routesNoteShort')
+    return
+  }
+  /*
+   * How far the two routes wander apart, not how far apart they sit. They
+   * are matched on the median day rather than the whole year, so one runs
+   * a steady few per cent above the other, and a steady offset changes no
+   * comparison between years. What does is the ratio moving from year to
+   * year, so that is what is measured: each year's ratio against the usual.
+   */
+  const ratios = whole.map((r) => r.modis / r.viirs)
+  const usual = quantileSorted([...ratios].sort((a, b) => a - b), 0.5)
+  const gaps = whole.map((r, i) => ({ year: r.year, gap: Math.abs(ratios[i] / usual - 1) }))
+  const typical = quantileSorted(gaps.map((g) => g.gap).sort((a, b) => a - b), 0.5)
+  const worst = gaps.reduce((a, b) => (b.gap > a.gap ? b : a))
+  const agree = routeAgreement(whole)
+  const trends = routeTrends(whole)
+  els.routesStats.replaceChildren()
+  if (trends) {
+    const stat = (label: string, value: string, tone: string) => {
+      const wrap = document.createElement('div')
+      wrap.dataset.tone = tone
+      const dt = document.createElement('dt')
+      dt.textContent = label
+      const dd = document.createElement('dd')
+      dd.textContent = value
+      wrap.append(dt, dd)
+      els.routesStats.append(wrap)
+    }
+    const perYear = (v: number) => t('perYear', { v: formatPercent(v * 100, 1, true) })
+    stat(t('routeStatModis'), perYear(trends.modis), 'modis')
+    stat(t('routeStatViirs'), perYear(trends.viirs), 'viirs')
+    stat(t('routeStatDrift'), perYear(trends.drift), 'drift')
+  }
+  els.routesNote.textContent = t('routesNote', {
+    r: agree ? formatNumber(agree.r, 2) : '—',
+    tm: trends ? formatPercent(trends.modis * 100, 1, true) : '—',
+    tv: trends ? formatPercent(trends.viirs * 100, 1, true) : '—',
+    d: trends ? formatPercent(trends.drift * 100, 1, true) : '—',
+    from: String(whole[0].year),
+    to: String(whole[whole.length - 1].year),
+    typical: formatPercent(typical * 100, 0),
+    worst: formatPercent(worst.gap * 100, 0),
+    year: String(worst.year),
+  })
+}
+
+/** "S-NPP", then "+ NOAA-20": each era is the one before it plus a satellite. */
+function fleetName(fleet: readonly SensorId[], first: boolean): string {
+  const short = (id: SensorId) => SENSOR_META[id].label.replace(/^VIIRS\s+/, '')
+  return first ? fleet.map(short).join(' + ') : `+ ${short(fleet[fleet.length - 1])}`
 }
 
 function renderProvenance(ds: Dataset): void {
   els.provenance.textContent = t('provenanceLine', {
     provenance: sourceName(ds.provenance),
-    days: formatNumber(ds.days.length),
-    detections: formatNumber(ds.totals.rawDetections),
-    dropped: formatNumber(ds.totals.nonVegetation),
+    days: formatDays(ds.days.length),
+    detections: counted(ds.totals.rawDetections, detectionsUnit),
+    dropped: counted(ds.totals.nonVegetation, rowsUnit),
   })
   els.colophon.textContent = t('colophon')
 }
@@ -2893,6 +3574,9 @@ function renderReading(): void {
     els.verdict.append(document.createTextNode(t('shortBaseline', { n: formatYears(baselineYears) })))
   } else if (runningYear) {
     els.verdict.append(document.createTextNode(t('partialYearShort', { year: state.year })))
+  } else if (terraOnly(state.year)) {
+    // "2001 was quieter than usual, at 0.3×" was one satellite against two.
+    els.verdict.append(document.createTextNode(t('terraOnlyYear', { year: state.year })))
   } else {
     const shift = a.startShiftDays
     const shiftText =
@@ -2910,11 +3594,11 @@ function renderReading(): void {
           ? t('peakEarlier', { n: formatDays(Math.abs(peakShift)) })
           : t('peakLater', { n: formatDays(peakShift) })
 
-    els.verdict.append(highlight(sentence), document.createTextNode(` ${shiftText}, ${peakText}.`))
+    els.verdict.append(highlight(sentence), document.createTextNode(` ${shiftText} ${peakText}.`))
   }
 
   const partial = state.dataset ? isPartialYear(state.dataset) : false
-  const trustworthy = baselineYears >= MIN_BASELINE_YEARS && !partial
+  const trustworthy = baselineYears >= MIN_BASELINE_YEARS && !partial && !terraOnly(state.year)
 
   /*
    * The busiest day, rather than the top of the smoothed curve.
@@ -2940,32 +3624,37 @@ function renderReading(): void {
     t('factLength'),
     `${a.shape.length}`,
     trustworthy && a.lengthShiftDays !== null
-      ? `${daysUnit(a.shape.length)} · ${signed(a.lengthShiftDays)}`
+      ? `${daysUnit(a.shape.length)} · ${t('vsUsual', { n: signed(a.lengthShiftDays) })}`
       : daysUnit(a.shape.length),
   )
 
   const row = state.grid.get(state.year)
   if (row) {
     const half = concentrationDays(row, daysInYear(state.year), 0.5)
-    if (half > 0) fact(t('factConcentration'), String(half), t('daysUnit'))
+    if (half > 0) fact(t('factConcentration'), String(half), daysUnit(half))
   }
 
   // Both of these are statements about a baseline, so they need one.
   if (trustworthy) {
-    fact(t('factAbove'), String(a.daysAboveP90), t('daysUnit'))
-    fact(t('factTotal'), ratioText, t('ofNormal'))
+    fact(t('factAbove'), String(a.daysAboveP90), daysUnit(a.daysAboveP90))
+    // The note says what is being compared; "of a usual year" under
+    // "vs a usual year" said the label twice.
+    fact(t('factTotal'), ratioText, t('factTotalNote'))
   }
 
   if (!trustworthy || a.critical.length === 0) {
     const empty = document.createElement('p')
     empty.className = 'empty'
-    // The hero already carries the long version of the caveat; repeating it
-    // word for word three times down one screen reads like a stuck record.
+    // The verdict above already says why the year cannot be compared; this
+    // says what that means for the list. It used to print the verdict's own
+    // sentence a second time in the same column.
     empty.textContent = trustworthy
       ? t('noPeriods')
       : partial
-        ? t('partialYearShort', { year: state.year })
-        : t('shortBaseline', { n: formatYears(baselineYears) })
+        ? t('periodsWaitYear', { year: state.year })
+        : terraOnly(state.year)
+          ? t('periodsTerraOnly')
+          : t('periodsWaitBaseline')
     els.periods.append(empty)
     return
   }
@@ -2982,7 +3671,13 @@ function renderReading(): void {
     meta.className = 'period__meta'
     // A period against a year with no usual level to compare to has no
     // ratio, and was printing the separator anyway: "4 дня ·".
-    const ratioLabel = Number.isFinite(p.ratio) ? t('periodRatio', { n: formatNumber(p.ratio, 1) }) : ''
+    // Against a usual of nearly nothing the ratio is arithmetic, not a
+    // reading: Yakutia 2021 printed "1,184.5× the usual".
+    const ratioLabel = !Number.isFinite(p.ratio)
+      ? ''
+      : p.ratio >= 20
+        ? t('periodRatioHuge')
+        : t('periodRatio', { n: formatNumber(p.ratio, 1) })
     meta.textContent = ratioLabel ? `${formatDays(p.days)} · ${ratioLabel}` : formatDays(p.days)
 
     li.append(span, meta)
@@ -3009,7 +3704,7 @@ function highlight(sentence: string): DocumentFragment {
 }
 
 function signed(n: number): string {
-  return n > 0 ? `+${n}` : String(n)
+  return n > 0 ? `+${n}` : n < 0 ? `−${-n}` : String(n)
 }
 
 function fact(label: string, value: string, note: string): void {
@@ -3075,7 +3770,11 @@ function showTip(hit: RibbonHit | null, x: number, y: number): void {
 
   const value = document.createElement('div')
   value.className = 'tip__value'
-  value.textContent = `${formatNumber(Math.round(hit.value))} ${t('legendRamp')}`
+  // A count needs its unit, not the legend's caption: this read
+  // "170 more burning". A region counts cells alight, the planet and a
+  // searched place count detections.
+  const n = Math.round(hit.value)
+  value.textContent = `${formatNumber(n)} ${worldScope ? detectionsUnit(n) : cellsLitUnit(n)}`
 
   const rows = document.createElement('div')
   rows.className = 'tip__rows'
@@ -3095,7 +3794,7 @@ function showTip(hit: RibbonHit | null, x: number, y: number): void {
       tipRow(t('legendBoth'), formatNumber(day.both)),
       tipRow(t('legendViirs'), formatNumber(day.viirsOnly)),
     )
-    if (day.frp > 0) rows.append(tipRow('FRP', `${formatNumber(Math.round(day.frp))} MW`))
+    if (day.frp > 0) rows.append(tipRow(t('tipPower'), `${formatNumber(Math.round(day.frp))} ${t('unitMw')}`))
     if (day.raw > day.activeCells) {
       rows.append(tipRow(t('metricMerged'), `${formatNumber(day.raw)} → ${formatNumber(day.activeCells)}`))
     }
@@ -3177,7 +3876,16 @@ function pickYear(year: number): void {
 }
 
 /** Nothing to draw: say why, and leave no stale numbers from the last area. */
-function showBlank(): void {
+/**
+ * The empty card, for the two different reasons it appears.
+ *
+ * It said "nothing bundled for this area" whenever loading failed, so a
+ * dropped connection read as a missing dataset, with the real error in raw
+ * text at the foot of the page and no way to ask again. A failed request
+ * now says so and offers to retry; only a genuinely absent archive says
+ * there is none.
+ */
+function showBlank(reason: 'missing' | 'failed' = 'missing', retry?: () => void): void {
   state.dataset = null
   state.years = []
   state.clim = null
@@ -3188,8 +3896,10 @@ function showBlank(): void {
   els.ribbonLegendWrap.hidden = true
   els.modeExplain.hidden = true
   showDataSections(false)
-  els.blankTitle.textContent = t('emptyArchiveTitle')
-  els.blankBody.textContent = t('emptyArchiveBody')
+  els.blankTitle.textContent = t(reason === 'failed' ? 'loadFailedTitle' : 'emptyArchiveTitle')
+  els.blankBody.textContent = t(reason === 'failed' ? 'loadFailedBody' : 'emptyArchiveBody')
+  els.blankRetry.hidden = !retry
+  els.blankRetry.onclick = retry ?? null
 
   els.verdict.textContent = ''
   els.facts.innerHTML = ''
@@ -3338,18 +4048,14 @@ function worldSeries(byInstrument: Map<number, { modis: Float64Array; viirs: Flo
   sensorsByYear: Map<number, number>
   ratio: SensitivityRatio
 } {
-  const ratios: DailyRatio[] = []
-
+  const counts: Array<{ day: string; modis: number; viirs: number }> = []
   for (const [year, row] of [...byInstrument].sort((a, b) => a[0] - b[0])) {
-    for (let d = 1; d <= 366; d++) {
-      const m = row.modis[d]
-      const v = row.viirs[d]
-      if (m >= 3 && v > 0) ratios.push({ day: isoDay(year, d), ratio: v / m })
-    }
+    for (let d = 1; d <= 366; d++) counts.push({ day: isoDay(year, d), modis: row.modis[d], viirs: row.viirs[d] })
   }
-
-  const ratio = summarizeSensitivity(ratios)
-  const usable = state.mode === 'harmonized' && ratio.samples >= MIN_RATIO_SAMPLES
+  // The same rule the ring on the about page uses, on the same file, and
+  // the same reference fleet a region is calibrated on.
+  const ratio = calibrate(ratiosFromCounts(counts))
+  const usable = state.mode === 'harmonized' && enoughToReconcile(ratio)
 
   const grid = new Map<number, Float64Array>()
   const sensorsByYear = new Map<number, number>()
@@ -3368,6 +4074,53 @@ function worldSeries(byInstrument: Map<number, { modis: Float64Array; viirs: Flo
     sensorsByYear.set(year, mask)
   }
   return { grid, sensorsByYear, ratio }
+}
+
+/**
+ * The series behind the ribbon in world scope, kept for the download.
+ *
+ * Detections rather than cells, and UTC days rather than local solar days:
+ * that is what the global levels hold, and the file says so in its header
+ * instead of borrowing the region export's description.
+ */
+let scopeSeries: {
+  name: string
+  from: string
+  to: string
+  byInstrument: Map<number, { modis: Float64Array; viirs: Float64Array }>
+  ratio: SensitivityRatio
+} | null = null
+
+function exportScopeSeries(): void {
+  const got = scopeSeries
+  if (!got) return
+  const usable = got.ratio.samples >= MIN_RATIO_SAMPLES
+  const lines: string[] = []
+  for (const [year, row] of [...got.byInstrument].sort((a, b) => a[0] - b[0])) {
+    for (let d = 1; d <= daysInYear(year); d++) {
+      const day = isoDay(year, d)
+      if (day < got.from || day > got.to) continue
+      const m = row.modis[d]
+      const v = row.viirs[d]
+      lines.push(
+        [day, m, v, m + v, usable ? comparable(m, v, got.ratio.k).toFixed(2) : '', usable ? (m * got.ratio.lo).toFixed(2) : '', usable ? (m * got.ratio.hi).toFixed(2) : ''].join(','),
+      )
+    }
+  }
+  const note =
+    `# Emberline burning activity - ${got.name}\n` +
+    `# NASA FIRMS MODIS C6.1 and VIIRS C2 detections, summed per UTC day on a 0.25-degree grid (no cell deduplication at this level).\n` +
+    (usable
+      ? `# reconciled = MODIS detections x ${got.ratio.k.toFixed(3)} [${got.ratio.lo.toFixed(3)}-${got.ratio.hi.toFixed(3)}], the median daily VIIRS/MODIS ratio over ${got.ratio.samples} paired days.\n`
+      : `# Too few paired days to measure a ratio; no reconciled column.\n`)
+  const header = 'utc_day,modis_detections,viirs_detections,as_recorded,reconciled,reconciled_lo,reconciled_hi'
+  const blob = new Blob([note, header, '\n', lines.join('\n'), '\n'], { type: 'text/csv;charset=utf-8' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = `emberline-${got.name.toLowerCase().replace(/[^a-z0-9а-яё]+/gi, '-')}-${got.from}-${got.to}.csv`
+  a.click()
+  URL.revokeObjectURL(url)
 }
 
 /** A day-of-year back into a date, for comparing against the VIIRS onset. */
@@ -3396,9 +4149,10 @@ function ribbonFromGrid(
   observedFrom: string,
   observedTo: string,
 ): void {
-  const { grid, sensorsByYear } = worldSeries(byInstrument)
+  const { grid, sensorsByYear, ratio } = worldSeries(byInstrument)
+  scopeSeries = { name: worldPlace?.name ?? 'world', from: observedFrom, to: observedTo, byInstrument, ratio }
   const years = [...grid.keys()].sort((a, b) => a - b)
-  const clim = climatology(grid, 7)
+  const clim = climatology(grid, 7, notComparable(years, { from: observedFrom, to: observedTo }))
   // Keep it: the hover panel needs the same "usual for this date" numbers the
   // ribbon was drawn against, and in world scope there is no region to ask.
   worldClim = clim
@@ -3891,11 +4645,12 @@ function renderMapWorld(): void {
     els.mapNote.textContent = sum
       ? t(isTiled(drawnLevel) ? 'placeNoteFine' : 'placeNote', {
           place: place.name,
-          fires: formatNumber(sum),
+          fires: counted(sum, detectionsUnit),
           year: String(state.year),
           cell: t(cellName(drawnLevel)),
         })
       : t('placeQuiet', { place: place.name, year: String(state.year) })
+    setMapCaveat(t('worldScaleCaveat', { year: String(state.year) }))
     return
   }
 
@@ -3912,10 +4667,18 @@ function renderMapWorld(): void {
   )
   const tot = worldIndex?.totals.find((d) => d.year === state.year)
   els.mapNote.textContent = t(isTiled(drawnLevel) ? 'worldNoteFine' : 'worldNote', {
-    fires: formatNumber(tot ? tot.modis + tot.viirs : 0),
+    fires: counted(tot ? tot.modis + tot.viirs : 0, detectionsUnit),
     year: String(state.year),
     cell: t(cellName(drawnLevel)),
   })
+  /*
+   * The ceiling is the planet's 99th percentile for this year alone
+   * (docs/how-it-works.md §6), which is what keeps the years before 2012
+   * from washing out under VIIRS. The price is that a shade means a
+   * different count in every year, and a reader stepping through years
+   * would otherwise take the colours as comparable.
+   */
+  setMapCaveat(t('worldScaleCaveat', { year: String(state.year) }))
 }
 
 function renderMap(ds: Dataset): void {
@@ -4041,6 +4804,30 @@ function placeTotals(days: PlaceDays): WorldTotal[] {
  * Adding the whole record up month by month would instead have let the
  * post-2012 years outvote the rest on volume alone.
  */
+/** The searched place's busiest month, voted by its whole years. */
+function placePeakMonth(): { month: number; years: number; of: number } | null {
+  const series = scopeSeries
+  if (!series || !worldPlace) return null
+  const tally = new Array<number>(12).fill(0)
+  let of = 0
+  for (const [year, row] of series.byInstrument) {
+    // Whole years of the MODIS pair only: a part year votes for its months.
+    if (year < MODIS_PAIR_FROM || series.to < `${year}-12-31`) continue
+    const months = new Array<number>(12).fill(0)
+    for (let d = 1; d <= daysInYear(year); d++) {
+      const m = new Date(Date.UTC(year, 0, d)).getUTCMonth()
+      months[m] += row.modis[d]
+    }
+    const best = months.indexOf(Math.max(...months))
+    if (months[best] <= 0) continue
+    tally[best] += 1
+    of += 1
+  }
+  if (of < 3) return null
+  const month = tally.indexOf(Math.max(...tally))
+  return { month, years: tally[month], of }
+}
+
 function peakMonth(seasons: readonly WorldSeason[]): { month: number; years: number } | null {
   const tally = new Array<number>(12).fill(0)
   for (const season of seasons) {
@@ -4076,7 +4863,32 @@ function peakMonth(seasons: readonly WorldSeason[]): { month: number; years: num
  * it peaks in most often and how often that was, a place names itself,
  * and both carry the figures for the year on screen.
  */
-function renderWorldHero(totals: readonly WorldTotal[]): void {
+/**
+ * Whether the scope's ratio rests on enough to be used.
+ *
+ * Ten paired days is the floor for a region's archive. A searched place is
+ * often a city: Lisbon gave a ratio of 1.00 from a handful of days, and the
+ * hero printed "1 reconciled detection" over a map of four hundred. A place
+ * needs sixty days on which both families saw fire, or it is shown as
+ * recorded and says why.
+ */
+const PLACE_MIN_SAMPLES = 60
+
+function enoughToReconcile(r: SensitivityRatio): boolean {
+  return r.samples >= (worldPlace ? PLACE_MIN_SAMPLES : MIN_RATIO_SAMPLES)
+}
+
+/** The scope's reconciliation ratio, or null when showing what was recorded. */
+function scopeRatio(): number | null {
+  const r = scopeSeries?.ratio
+  return state.mode === 'harmonized' && r && enoughToReconcile(r) ? r.k : null
+}
+
+function scopeTotal(d: WorldTotal | undefined, k: number | null): number {
+  return d ? comparable(d.modis, d.viirs, k) : 0
+}
+
+function renderWorldHero(totals: readonly WorldTotal[], k: number | null = null): void {
   const idx = worldIndex
   if (!idx) return
   const place = worldPlace
@@ -4088,8 +4900,26 @@ function renderWorldHero(totals: readonly WorldTotal[]): void {
   els.heroAnswer.innerHTML = ''
   els.heroAside.innerHTML = ''
 
+  if (place && state.mode === 'harmonized' && scopeSeries && !enoughToReconcile(scopeSeries.ratio)) {
+    els.heroAside.textContent = t('placeTooThin', { n: String(scopeSeries.ratio.samples) })
+  }
   if (place) {
-    els.heroAnswer.textContent = place.name
+    /*
+     * A sentence, as a region gets, rather than the bare name: when this
+     * place burns, counted from its own daily series. The month that is
+     * busiest in the most whole years, so one freak season cannot claim it.
+     */
+    const peak = placePeakMonth()
+    if (!peak) {
+      els.heroAnswer.textContent = place.name
+    } else {
+      const month = monthOn(peak.month)
+      const sentence = t('placeHeroPeak', { place: place.name, month, n: String(peak.years), all: String(peak.of) })
+      const at = sentence.indexOf(month)
+      const em = document.createElement('em')
+      em.textContent = month
+      els.heroAnswer.append(sentence.slice(0, at), em, sentence.slice(at + month.length))
+    }
   } else {
     const peak = peakMonth(idx.seasons)
     if (!peak) {
@@ -4111,12 +4941,23 @@ function renderWorldHero(totals: readonly WorldTotal[]): void {
         els.heroAnswer.append(sentence.slice(0, at), em, sentence.slice(at + month.length))
       }
     }
-    els.heroAside.textContent = t('worldHeroAside')
+    // Said per mode: "the two instruments are counted apart" sat under a
+    // page that had just been switched to one reconciled series.
+    els.heroAside.textContent = t(k === null ? 'worldHeroAside' : 'worldHeroAsideReconciled')
+    // The two ends of the record carry their own caveat, said where they are read.
+    if (terraOnly(state.year)) els.heroAside.textContent += ` ${t('worldTerraOnly', { year: String(state.year) })}`
+    else if (state.year >= DRIFT_FROM) els.heroAside.textContent += ` ${t('driftCaveat')}`
   }
 
   els.heroStats.innerHTML = ''
   const pick = totals.find((d) => d.year === state.year)
-  if (pick) heroStat(t('metricDetections'), compact(pick.modis + pick.viirs), String(state.year))
+  if (pick) {
+    heroStat(
+      t(k === null ? 'metricDetections' : 'metricDetectionsReconciled'),
+      compact(scopeTotal(pick, k)),
+      String(state.year),
+    )
+  }
   if (totals.length) {
     heroStat(t('statWatching'), String(totals[0].year), formatYears(totals.length))
   }
@@ -4136,8 +4977,15 @@ function renderWorldPanels(): void {
    */
   const days = worldPlace && placeDays ? placeDays : null
   const totals = days ? placeTotals(days) : idx.totals
+  // The ratio the ribbon above was drawn with, so the band and the charts
+  // under it are one reconciliation rather than two.
+  const k = scopeRatio()
+  // "When does it burn here?" reads oddly over the whole planet.
+  els.calendarTitle.textContent = t(days ? 'sectionCalendar' : 'sectionCalendarWorld')
   els.worldSeasonCol.hidden = days !== null
-  if (!days) drawWorldSeason(els.worldSeason, idx.seasons, state.year)
+  if (!days) {
+    drawWorldSeason(els.worldSeason, idx.seasons, state.year, k, worldDaily ? { from: '2000-11-01', to: worldLastDay(worldDaily) } : undefined)
+  }
   // The headline lives in the monthly column, which a place hides, so a place
   // gets its own copy beside the chart it does keep.
   const headline = days && worldPlace ? els.worldYearsHeadline : els.worldHeadline
@@ -4146,17 +4994,15 @@ function renderWorldPanels(): void {
     days && worldPlace
       ? t('placeHeadline', {
           place: worldPlace.name,
-          fires: formatNumber(
-            (totals.find((d) => d.year === state.year)?.modis ?? 0) +
-              (totals.find((d) => d.year === state.year)?.viirs ?? 0),
-          ),
+          fires: counted(Math.round(scopeTotal(totals.find((d) => d.year === state.year), k)), detectionsUnit),
           year: String(state.year),
-          all: formatNumber(totals.reduce((sum, d) => sum + d.modis + d.viirs, 0)),
+          all: formatNumber(Math.round(totals.reduce((sum, d) => sum + scopeTotal(d, k), 0))),
           from: String(totals[0]?.year ?? ''),
           to: String(totals[totals.length - 1]?.year ?? ''),
-        })
-      : worldHeadline(idx.totals, state.year)
-  renderWorldHero(totals)
+        }) + (k === null ? '' : ` ${t('placeHeadlineReconciled')}`)
+      : worldHeadline(idx.totals, state.year, k)
+  renderWorldHero(totals, k)
+  renderWorldSeam(totals)
   /**
    * The temperature only against the planet's own bars.
    *
@@ -4180,21 +5026,32 @@ function renderWorldPanels(): void {
     place: days && worldPlace ? worldPlace.name : t('scopeWorld'),
   })
 
-  const temps = days ? undefined : (climate ?? undefined)
-  drawWorldYears(els.worldYears, totals, state.year, temps)
+  // The temperature only over the reconciled bars: against the recorded
+  // ones, whose steps are satellites, a warming line invites the one
+  // reading the caption spends three lines forbidding.
+  const temps = days || k === null ? undefined : (climate ?? undefined)
+  drawWorldYears(els.worldYears, totals, state.year, temps, k)
   els.worldTempNote.hidden = !temps
   if (temps) els.worldTempNote.textContent = t('tempNote')
+  els.worldYearsNote.textContent = k === null ? t('worldYearsNote') : t('worldYearsNoteReconciled', { k: formatNumber(k, 2) })
 
   els.worldLegend.innerHTML = ''
-  for (const [key, colour] of [
-    ['worldModis', '--sensor-modis'],
-    ['worldViirs', '--sensor-viirs'],
-  ] as const) {
+  const legend: ReadonlyArray<readonly [string, string]> =
+    k === null
+      ? [
+          ['worldModis', '--sensor-modis'],
+          ['worldViirs', '--sensor-viirs'],
+        ]
+      : [['worldReconciled', '--ember']]
+  for (const [key, colour] of legend) {
     const item = document.createElement('span')
     item.className = 'legend__item'
     const dot = document.createElement('i')
+    // Without the class the swatch has no size, and the legend was two
+    // words with no colour to match them to.
+    dot.className = 'legend__swatch'
     dot.style.background = `var(${colour})`
-    item.append(dot, document.createTextNode(t(key)))
+    item.append(dot, document.createTextNode(t(key as Parameters<typeof t>[0])))
     els.worldLegend.append(item)
   }
 
@@ -4273,7 +5130,9 @@ function renderWorst(ds: Dataset): void {
 
     const when = document.createElement('span')
     when.className = 'worst__when'
-    when.textContent = formatDate(day.day)
+    // The year is in the note under the list; with it the date wrapped
+    // onto two lines in its column.
+    when.textContent = formatDoy(doyOf(day.day), Number(day.day.slice(0, 4)))
 
     const bar = document.createElement('span')
     bar.className = 'worst__bar'
@@ -4290,11 +5149,12 @@ function renderWorst(ds: Dataset): void {
   }
 
   const share = top.reduce((sum, d) => sum + shown(d), 0) / Math.max(total, 1)
-  els.worstNote.textContent = t('worstNote', {
-    pct: `${Math.round(share * 100)}%`,
-    year: String(year),
-    days: String(days.length),
-  })
+  // The second sentence is a claim about this year, so it is made only when
+  // the five days really carry a large share: it sat under Cerrado 2024,
+  // where they held 12%.
+  els.worstNote.textContent =
+    t('worstNote', { pct: `${Math.round(share * 100)}%`, year: String(year), days: formatDays(days.length) }) +
+    (share >= 0.25 ? ` ${t('worstNoteSharp')}` : '')
 }
 
 function renderImpact(): void {
@@ -4328,7 +5188,13 @@ function renderImpact(): void {
         ],
         t('unitGt'),
       )
-      els.impactBarsNote.textContent = t('barNote')
+      // The "only part of the year" clause is true of a running year only;
+      // it sat under a finished 2025 as well.
+      els.impactBarsNote.textContent =
+        t(est.partial?.includes(state.year) ? 'barNote' : 'barNoteWhole') +
+        // The estimate is MODIS power; from 2024 MODIS is drifting and its
+        // count falling, so 2025's low figure is partly the instrument.
+        (state.year >= DRIFT_FROM ? ` ${t('driftCaveat')}` : '')
       els.impactBars.hidden = false
     } else {
       els.impactLead.textContent = t('impactLeadNone', { year: String(state.year) })
@@ -4401,6 +5267,12 @@ function showWorldLayout(on: boolean): void {
    */
   els.mapFacts.hidden = on
   if (on) els.mapFacts.innerHTML = ''
+  // Same reason: "the days that made the year" are a region's days, and
+  // after #/punjab/2025 -> #/world they stayed under the planet's heading.
+  if (on) els.worst.hidden = true
+  // The seam picture is drawn from a region's cell-days; the planet has its
+  // own charts below.
+  if (on) els.heroSeam.hidden = true
   for (const section of dataSections) {
     if (section.id === 'world-band') section.hidden = !on
     else if (section.id === 'map-band') section.hidden = false
@@ -4488,7 +5360,10 @@ async function selectPlace(bounds: Bounds, name: string, wantYear?: number): Pro
     // the drawing reaches this catch as readily as a dropped request does,
     // and silence here once cost an afternoon of looking at the network tab.
     console.error('[emberline] world view failed', err)
-    status(t('worldFailed'), 'error')
+    // Said at the top, with a way to ask again: it used to be one line of
+    // status halfway down the page, under empty panels.
+    showBlank('failed', () => void selectPlace(bounds, name, wantYear))
+    status('')
   }
 }
 
@@ -4525,18 +5400,35 @@ async function selectWorld(wantYear?: number): Promise<void> {
     // the drawing reaches this catch as readily as a dropped request does,
     // and silence here once cost an afternoon of looking at the network tab.
     console.error('[emberline] world view failed', err)
-    status(t('worldFailed'), 'error')
+    showBlank('failed', () => void selectWorld(wantYear))
+    status('')
   }
 }
 
 async function selectAoi(id: string, wantYear?: number): Promise<void> {
   const token = ++loadToken
   status(t('statusLoading'), 'busy')
+  /*
+   * A region's archive is a megabyte or more, and until it arrived the page
+   * showed an empty heading, an empty amber note and a year of "—". The
+   * heading now says what is happening and the page says it is busy.
+   */
+  const aoi = aoiById(id)
+  const main = document.querySelector('main')
+  main?.setAttribute('aria-busy', 'true')
+  if (!state.dataset || state.dataset.id !== id) {
+    els.heroWhere.textContent = aoi ? aoi.name[getLang()] : ''
+    els.heroAnswer.textContent = t('loadingArchive')
+    els.heroAnswer.classList.add('is-loading')
+    els.heroAside.textContent = ''
+    els.heroStats.innerHTML = ''
+    els.modeExplain.hidden = true
+  }
   try {
     const ds = await loadArchive(id)
     if (token !== loadToken) return
     state.dataset = ds
-    state.year = ds.days.length ? yearOf(ds.days[ds.days.length - 1].day) : state.year
+    state.year = ds.days.length ? lastWholeYear(ds.range) : state.year
     if (wantYear) state.year = wantYear
     // Coming back from the planet: put the region's panels back before they
     // are asked to render into hidden sections, and forget where the planet
@@ -4548,6 +5440,7 @@ async function selectAoi(id: string, wantYear?: number): Promise<void> {
     worldPlace = null
     placeDays = null
     showWorldLayout(false)
+    els.calendarTitle.textContent = t('sectionCalendar')
     els.blank.hidden = true
     els.ribbonWrap.hidden = false
     els.calendarNote.hidden = false
@@ -4557,10 +5450,23 @@ async function selectAoi(id: string, wantYear?: number): Promise<void> {
     rebuild()
     render()
     status('')
+    els.heroAnswer.classList.remove('is-loading')
+    main?.removeAttribute('aria-busy')
   } catch (e) {
     if (token !== loadToken) return
-    showBlank()
-    status(e instanceof ArchiveMissing ? t('statusNoArchive') : t('statusFailed', { err: String(e) }), 'error')
+    els.heroAnswer.classList.remove('is-loading')
+    els.heroAnswer.textContent = ''
+    main?.removeAttribute('aria-busy')
+    if (e instanceof ArchiveMissing) {
+      showBlank('missing')
+      status(t('statusNoArchive'), 'error')
+    } else {
+      // The detail goes to the console for whoever is debugging; the reader
+      // gets a sentence and a button.
+      console.error('[emberline] archive load failed', e)
+      showBlank('failed', () => void selectAoi(id, wantYear))
+      status('')
+    }
   }
 }
 
@@ -4657,9 +5563,13 @@ function applyTheme(theme: 'night' | 'day'): void {
   document.documentElement.dataset.theme = theme
   localStorage.setItem('emberline.theme', theme)
   els.theme.querySelector('[data-theme-icon]')!.textContent = theme === 'night' ? '☾' : '☀'
+  els.theme.setAttribute('aria-pressed', String(theme === 'day'))
   invalidateRamp()
   refreshBasemapTheme()
-  render()
+  // `rerender`, not `render`: on the planet or a searched place `render`
+  // redrew the page as the last region loaded, so a theme switch on
+  // "The planet, day by day" swapped the whole calendar for Punjab's.
+  rerender()
 }
 
 /**
@@ -4686,6 +5596,8 @@ function setTheme(theme: 'night' | 'day'): void {
     lookGlobe?.retheme()
     fireYear?.retheme()
     if (aboutScope) {
+      drawSeam()
+      drawAboutRoutes()
       void drawModelCharts()
       // The squares over the photograph are painted from the fire ramp,
       // which is a different ramp in each theme; the photograph itself is
@@ -4695,11 +5607,23 @@ function setTheme(theme: 'night' | 'day'): void {
   }, theme)
 }
 
+/**
+ * "EN — switch language": the name has to begin with what the button shows,
+ * or someone driving the page by voice says "EN" and nothing answers.
+ */
+function labelLang(): void {
+  els.lang.setAttribute('aria-label', `${els.lang.textContent} — ${t('ariaLang')}`)
+}
+
 function switchLang(lang: Lang): void {
   setLang(lang)
   localStorage.setItem('emberline.lang', lang)
   els.lang.textContent = lang === 'en' ? 'RU' : 'EN'
+  labelLang()
   applyStaticStrings()
+  localizeMapControls()
+  picker.setName((current) => `${t('areaOfInterest')}: ${current}`)
+  pageFrame(aboutScope ? 'about' : futureScope ? 'future' : 'record')
   // The weekday names in the strip come from the locale, not from the
   // dictionary, so `applyStaticStrings` cannot reach them.
   if (futureScope) fillWeek()
@@ -4726,6 +5650,9 @@ function showSourcePane(kind: string): void {
   els.paneArchive.hidden = kind !== 'archive'
   els.paneLive.hidden = kind !== 'live'
   els.paneFile.hidden = kind !== 'file'
+  // A message about one source does not follow the reader to another:
+  // "paste a FIRMS key first" stayed on screen under "My file".
+  status('')
   if (kind !== 'archive') return
   void goTo(els.aoi.value)
 }
@@ -4810,6 +5737,7 @@ function wire(): void {
 
   els.export.addEventListener('click', exportSeries)
 
+  els.yearsWrap.addEventListener('scroll', markTableEnd, { passive: true })
   $('years-head').addEventListener('click', (e) => {
     const th = (e.target as HTMLElement).closest('th')
     const key = th?.dataset.sort as SortKey | undefined
@@ -4949,7 +5877,8 @@ function readUrl(): UrlState {
     aoi: aoi === 'world-now' ? 'world' : aoi === 'world' || (aoi && aoiById(aoi)) ? aoi : undefined,
     year: year && /^\d{4}$/.test(year) ? Number(year) : undefined,
     now: year === 'now' || aoi === 'world-now',
-    mode: mode === 'raw' || mode === 'harmonized' ? mode : undefined,
+    // `#/punjab/raw` put the mode where the year goes and opened reconciled.
+    mode: mode === 'raw' || mode === 'harmonized' ? mode : year === 'raw' || year === 'harmonized' ? year : undefined,
   }
 }
 
@@ -4980,6 +5909,30 @@ function currentArea(): string | undefined {
 }
 
 /** Replace rather than push: the back button should leave the page, not undo a click. */
+/**
+ * What the tab and the skip link say, per page.
+ *
+ * The title was the same on every route, so three tabs of this site were
+ * three identical labels; and the skip link pointed at the calendar on the
+ * two pages that hide it, where it moved focus to nowhere.
+ */
+function pageFrame(page: 'record' | 'future' | 'about'): void {
+  const skip = document.querySelector<HTMLAnchorElement>('.skip-link')
+  const target = page === 'future' ? '#future-hero' : page === 'about' ? '#about-hero' : '#calendar'
+  if (skip) {
+    skip.href = target
+    skip.dataset.i18n = page === 'record' ? 'skip' : 'skipContent'
+    skip.textContent = t(skip.dataset.i18n)
+  }
+  const name = page === 'future' ? t('titleFuture') : page === 'about' ? t('titleAbout') : t('titleRecord')
+  document.title = `${name} — Emberline`
+  // Decided here as well as in `applyUrl`: a page opened directly never went
+  // through it, and its footer linked to itself with an empty colophon.
+  els.footAbout.hidden = page === 'about'
+  els.footFuture.hidden = page === 'future'
+  els.colophon.textContent = t('colophon')
+}
+
 function writeUrl(): void {
   if (aboutScope) {
     if (location.hash !== '#/about') history.replaceState(null, '', '#/about')
@@ -5072,6 +6025,7 @@ function applyUrl(): void {
    */
   els.footAbout.hidden = there === 'about'
   els.footFuture.hidden = there === 'future'
+  pageFrame(there)
 
   /*
    * Raw or reconciled, decided before anything can return without it.
@@ -5195,8 +6149,11 @@ async function boot(): Promise<void> {
 
   setLang(savedLang)
   els.lang.textContent = savedLang === 'en' ? 'RU' : 'EN'
+  labelLang()
+  picker.setName((current) => `${t('areaOfInterest')}: ${current}`)
   document.documentElement.dataset.theme = savedTheme
   els.theme.querySelector('[data-theme-icon]')!.textContent = savedTheme === 'night' ? '☾' : '☀'
+  els.theme.setAttribute('aria-pressed', String(savedTheme === 'day'))
 
   applyStaticStrings()
   fillAoiOptions()
@@ -5216,6 +6173,9 @@ async function boot(): Promise<void> {
   })
 
   window.addEventListener('hashchange', applyUrl)
+  // The model's charts sit in a <details>; closed, they have no width to be
+  // drawn at, so they are drawn when it opens.
+  document.getElementById('about-more')?.addEventListener('toggle', () => void drawModelCharts())
 
   ensureMap(els.mapEl, showMapProbe)
   // Crossing a pyramid boundary means different data, not a rescale, so the
@@ -5278,6 +6238,8 @@ async function boot(): Promise<void> {
    */
   const startId = wanted.place ? placeValueOf(wanted.place) : (wanted.aoi ?? AOIS[0].id)
   picker.setValue(startId, wanted.place?.name)
+  // The first page is not reached through `applyUrl`, so it names itself here.
+  pageFrame(wanted.about ? 'about' : wanted.future ? 'future' : 'record')
   if (wanted.about) {
     await renderAbout()
     return

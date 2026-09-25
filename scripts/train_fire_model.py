@@ -94,6 +94,19 @@ ONI_FILE = "models/oni.json"
 EPOCH = date(2003, 1, 1)
 LAST = date(2026, 9, 19)
 
+#
+# What a row is allowed to know, as a name the fitted model carries.
+#
+# Until 23 September 2026 two things were computed from the whole record,
+# 2003 to 2026, and so saw the test years: `cell_rate`, a cell's yearly
+# average, and the choice of which cells to sample at all ("has it ever
+# burned"). Both now use only what was on file before the split began —
+# the rate from the training years, the population from the years before
+# the split's first day — and `model_gate.py` refuses to compare a model
+# built one way with a model built the other.
+#
+FEATURE_RULES = "2026-09-23: nothing from the split's own years or later"
+
 NEG_PER_POS = 3
 CAP = {0: 7000, 1: 2200, 2: 5000}
 DAY_STRIDE = 4
@@ -143,7 +156,12 @@ if WITH_WEATHER:
 # changes, and habits are the part that changes.
 #
 PEOPLE = ["pop", "pop_ring"]
-if Path("models/population.npz").exists():
+# Asked for, not assumed. The columns used to join whenever the file was on
+# disk, which meant any rebuild could put them in front of the gate, and a
+# release by hand past the gate would carry them onto a page that says the
+# model knows nothing about people. `... train_fire_model.py 7 people`.
+WITH_PEOPLE = "people" in sys.argv[2:] and Path("models/population.npz").exists()
+if WITH_PEOPLE:
     FEATURES = FEATURES + PEOPLE
 
 
@@ -302,12 +320,12 @@ def tile_rows(grid, tx, ty, idx, n_days, doy_of, year_of, oni_by_day, weather=No
               people=None):
     side, deg, step = idx["tileCells"], idx["degrees"], idx["tileDegrees"]
 
-    ever = grid.max(axis=1) > 0
     rows_ix = np.arange(side * side) // side
     cols_ix = np.arange(side * side) % side
     inner = (rows_ix > 0) & (rows_ix < side - 1) & (cols_ix > 0) & (cols_ix < side - 1)
-    usable = np.where(ever & inner)[0]
-    if usable.size == 0:
+    # Only a shortcut past empty tiles. Which cells are sampled is decided
+    # per split below, from what was known before that split began.
+    if not (inner & (grid.max(axis=1) > 0)).any():
         return None
 
     clim = climatology(grid, doy_of, year_of)
@@ -353,14 +371,31 @@ def tile_rows(grid, tx, ty, idx, n_days, doy_of, year_of, oni_by_day, weather=No
         np.minimum(d - last, 365, out=since[:, d], casting="unsafe")
         last = np.where(grid[:, d] > 0, d, last)
 
-    train_years = ERAS[0][1] - ERAS[0][0] + 1
-    cell_rate = np.log1p(grid.sum(axis=1, dtype=np.int64) / train_years).astype(np.float32)
+    # A cell's yearly average, from the training years only. It was the sum
+    # of the whole record over eleven years, test years and all, which is
+    # also a different number from the one the forecast builds (sixteen
+    # years in its denominator): a leak and a mismatch in one line.
+    lo0, hi0 = ERAS[0]
+    train_days = np.where((year_of >= lo0) & (year_of <= hi0))[0]
+    train_sum = grid[:, train_days[0] : train_days[-1] + 1].sum(axis=1, dtype=np.int64)
+    cell_rate = np.log1p(train_sum / (hi0 - lo0 + 1)).astype(np.float32)
 
     chunks = []
     for split, (lo, hi) in ERAS.items():
         days = np.where((year_of >= lo) & (year_of <= hi) & (np.arange(n_days) < n_days - HORIZON))[0]
         days = days[::DAY_STRIDE]
         if days.size == 0:
+            continue
+
+        # The cells a forecaster standing at the start of this split would
+        # have known to watch: burned at least once before it. For the
+        # training years that is the training years themselves, which is
+        # in-sample by definition. The live map does the same thing — every
+        # cell that has burned up to the day it is built.
+        first = int(np.where(year_of >= lo)[0][0])
+        seen_by = train_days[-1] if split == 0 else first - 1
+        usable = np.where(inner & (cum[:, seen_by] > 0))[0]
+        if usable.size == 0:
             continue
 
         cells = np.repeat(usable, days.size)
@@ -463,7 +498,7 @@ def main() -> None:
         weather = Weather(HORIZON)
         print(f"weather: {weather.days:,} days from {weather.first} at {weather.degrees} deg")
 
-    people = load_people()
+    people = load_people() if WITH_PEOPLE else None
     if people is not None:
         lived = (people["pop"] > 0).mean()
         print(f"people: {lived * 100:.1f}% of the grid has somebody on it")
@@ -500,7 +535,9 @@ def main() -> None:
         m = S == s
         print(f"  {name:6s} {int(m.sum()):>10,}   positives {Y[m].mean():.3%}")
 
-    np.savez_compressed(OUT, X=X, Y=Y, S=S, features=np.array(FEATURES))
+    np.savez_compressed(
+        OUT, X=X, Y=Y, S=S, features=np.array(FEATURES), rules=np.array(FEATURE_RULES)
+    )
     print(f"\n{OUT}  ({os.path.getsize(OUT) / 1048576:.0f} MB)")
 
 

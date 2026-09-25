@@ -133,3 +133,18 @@ export function roundRect(
 export const MONO = "500 11px 'IBM Plex Mono', ui-monospace, monospace"
 export const LABEL = "500 11px 'IBM Plex Sans', system-ui, sans-serif"
 export const DISPLAY = "700 13px 'Manrope', system-ui, sans-serif"
+
+/**
+ * The top of a value axis, rounded up to a figure a reader can read.
+ *
+ * The axes were labelled at the data's own maximum and half of it, so the
+ * gridlines said "8 479" and "4 239". Rounded up to 1, 2, 3, 4, 5, 6 or 8
+ * times a power of ten, the half-way line is a round number too.
+ */
+export function niceCeil(v: number): number {
+  if (!(v > 0)) return 1
+  const p = 10 ** Math.floor(Math.log10(v))
+  // Steps whose halves are round as well: 2.5 made the midline "13M".
+  for (const m of [1, 2, 3, 4, 5, 6, 8, 10]) if (v <= m * p) return m * p
+  return 10 * p
+}

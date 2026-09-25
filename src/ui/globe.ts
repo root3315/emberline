@@ -59,6 +59,8 @@ export interface GlobeHandle {
   /** Back to the whole sphere, turning by itself again. */
   reset(): void
   retheme(): void
+  /** Stop the turning and the flicker, or let them go on. */
+  setPaused(on: boolean): void
   destroy(): void
 }
 
@@ -157,6 +159,8 @@ export function mountGlobe(
   let lat0 = TILT
   let spinning = true
   let dragging = false
+  // Paused by the reader's button; `still` is the system's reduced motion.
+  let paused = false
   let lastX = 0
   let lastY = 0
 
@@ -384,7 +388,7 @@ export function mountGlobe(
       lat0 = flight.lat0 + (flight.lat - flight.lat0) * e
       zoom = flight.zoom0 + (flight.zoom - flight.zoom0) * e
       if (t >= 1) flight = null
-    } else if (spinning && !dragging && !still.matches && zoom <= 1.01) {
+    } else if (spinning && !dragging && !still.matches && !paused && zoom <= 1.01) {
       lon0 += SPIN * dt
     }
 
@@ -441,7 +445,9 @@ export function mountGlobe(
     }
 
     // ---- and the fires, which flicker ------------------------------------
-    const beat = now / 1000
+    // Frozen when motion is unwanted: reduced motion stopped the turning and
+    // left every dot pulsing, which is motion all the same.
+    const beat = still.matches || paused ? 0 : now / 1000
     for (const f of fires) {
       const { cosC, x, y } = project(f, sinLat0, cosLat0, sinLon0, cosLon0)
       if (cosC <= 0.02) continue
@@ -797,6 +803,9 @@ export function mountGlobe(
     },
     retheme(): void {
       readTheme()
+    },
+    setPaused(on: boolean): void {
+      paused = on
     },
     destroy(): void {
       cancelAnimationFrame(raf)

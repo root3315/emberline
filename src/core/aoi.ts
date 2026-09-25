@@ -9,10 +9,14 @@ import type { Aoi } from './types'
 export const AOIS: readonly Aoi[] = [
   {
     id: 'punjab',
-    name: { en: 'Punjab & Haryana, India', ru: 'Пенджаб и Харьяна, Индия' },
+    // The frame, 73.5-77.5°E, takes in the rice belt of Pakistani Punjab
+    // (Lahore, Gujranwala, Sialkot) and leaves out southern Haryana, so a
+    // real share of what burns in it is west of the border. The name says so
+    // rather than claiming one country.
+    name: { en: 'Punjab plain, India and Pakistan', ru: 'Пенджабская равнина, Индия и Пакистан' },
     blurb: {
-      en: 'Post-harvest stubble burning. Two sharp pulses a year, set by the cropping calendar rather than the weather.',
-      ru: 'Послеуборочные палы стерни. Два резких всплеска в год — по календарю урожая, а не погоды.',
+      en: 'Post-harvest stubble burning on both sides of the border. Two sharp pulses a year, set by the cropping calendar rather than the weather.',
+      ru: 'Послеуборочные палы стерни по обе стороны границы. Два резких всплеска в год — по календарю урожая, а не погоды.',
     },
     bounds: { west: 73.5, south: 29.0, east: 77.5, north: 32.5 },
   },

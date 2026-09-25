@@ -37,8 +37,10 @@ ones. Whatever survives that is real.
 ── Nothing is replaced until it has won ───────────────────────────────────
 
 Output goes to `-v2` names. The shipped model stays exactly where it is,
-and the last thing printed is the comparison that decides whether the new
-one deserves to take its place.
+and the last thing printed is the verdict of `model_gate.py`, which is
+also what `build_horizons.py` asks before it copies anything: judged on
+the tuning years, and a new column has to be worth 0.002 of average
+precision there to get in.
 
     python scripts/fit_fire_model_v2.py [horizon]
 """
@@ -57,6 +59,7 @@ from sklearn.ensemble import HistGradientBoostingClassifier
 from sklearn.metrics import average_precision_score, brier_score_loss, roc_auc_score
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from model_gate import verdict  # noqa: E402
 from train_fire_model import ERAS as _ERAS  # noqa: E402
 
 HORIZON = int(sys.argv[1]) if len(sys.argv) > 1 else 7
@@ -152,6 +155,7 @@ def main() -> None:
     d = np.load(FEATURES_NPZ, allow_pickle=True)
     X, Y, S = d["X"], d["Y"].astype(np.int8), d["S"]
     names = [str(n) for n in d["features"]]
+    rules = str(d["rules"]) if "rules" in d.files else None
     tr, va, te = S == 0, S == 1, S == 2
 
     Xtr, Ytr = X[tr], Y[tr]
@@ -256,6 +260,7 @@ def main() -> None:
     }
 
     old = json.load(open(OLD_META, encoding="utf-8")) if os.path.exists(OLD_META) else None
+    splits = {k: f"{lo}-{hi}" for k, (lo, hi) in zip(("train", "validate", "test"), ERAS)}
     clim = scores["climatology"]["average_precision"]
     new_ap = scores["model"]["average_precision"]
 
@@ -276,7 +281,12 @@ def main() -> None:
         print(f"\n  edge over climatology: v1 {o_ap - clim:+.4f}  ->  v2 {new_ap - clim:+.4f}")
         print(f"  change: {new_ap - o_ap:+.4f} AP "
               f"({100 * (new_ap - o_ap) / max(1e-9, o_ap - clim):+.0f}% of v1's edge)")
-        print(f"\n  {'v2 WINS' if new_ap > o_ap else 'v2 does not win; keep v1'}")
+        # The decision is taken on the tuning years, not on the test score
+        # printed above; model_gate.py says why.
+        ok, why = verdict(old, {"splits": splits, "features": keep_names,
+                                "validate_ap": best_lean["validate_ap"],
+                                "feature_rules": rules})
+        print(f"\n  {'v2 may replace v1' if ok else 'keep v1'}: {why}")
 
     rel = reliability(p_model, Yte)
     print("\n  predicted      n        said    happened")
@@ -296,8 +306,12 @@ def main() -> None:
             "horizon_days": HORIZON,
             "target": f"at least one MODIS detection in the cell over the next {HORIZON} days",
             "grid_degrees": 0.25,
-            "population": "cells with at least one MODIS detection in 2003-2026",
-            "splits": {k: f"{lo}-{hi}" for k, (lo, hi) in zip(("train", "validate", "test"), ERAS)},
+            "population": (
+                "cells with at least one MODIS detection before the split began"
+                if rules else "cells with at least one MODIS detection in 2003-2026"
+            ),
+            "feature_rules": rules,
+            "splits": splits,
             "test_base_rate": te_rate,
             "scores": scores,
             "reliability": [
@@ -306,6 +320,8 @@ def main() -> None:
             ],
             "importance": importance,
             "trees": int(model.n_iter_),
+            # What model_gate.py compares, stated rather than re-derived.
+            "validate_ap": best_lean["validate_ap"],
             "features": keep_names,
             "dropped": dead if lean_wins else [],
             "tree_curve": {"all": curve_all, "pruned": curve_lean},

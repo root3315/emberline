@@ -95,8 +95,41 @@ export async function geocode(query: string, signal?: AbortSignal): Promise<Plac
     })
   }
 
-  cache.set(key, places)
-  return places
+  const distinct = distinctPlaces(places)
+  cache.set(key, distinct)
+  return distinct
+}
+
+/**
+ * One row per piece of ground.
+ *
+ * Nominatim often returns a city twice — once as its boundary, once as the
+ * point at its centre — with the same name and the same address. Once
+ * `widen` has opened both out, they are the same box on the map, so "cali"
+ * offered two identical "Cali · Valle del Cauca, Colombia" rows that led to
+ * the same place. The first, which is Nominatim's better match, is kept.
+ */
+export function distinctPlaces(places: readonly Place[]): Place[] {
+  const TOL = 0.2
+  const centre = (b: Place['bounds']) => [(b.south + b.north) / 2, (b.west + b.east) / 2]
+  const kept: Place[] = []
+  for (const p of places) {
+    const [lat, lon] = centre(p.bounds)
+    const twin = kept.some((k) => {
+      // Two rows a reader cannot tell apart are one row whatever their boxes
+      // say: "Москва · Центральный федеральный округ" came back twice.
+      if (k.name === p.name && k.detail === p.detail) return true
+      const [klat, klon] = centre(k.bounds)
+      return (
+        Math.abs(lat - klat) < TOL &&
+        Math.abs(lon - klon) < TOL &&
+        Math.abs(p.bounds.north - p.bounds.south - (k.bounds.north - k.bounds.south)) < TOL &&
+        Math.abs(p.bounds.east - p.bounds.west - (k.bounds.east - k.bounds.west)) < TOL
+      )
+    })
+    if (!twin) kept.push(p)
+  }
+  return kept
 }
 
 /** Pack a place into the picker's value, so nothing else needs a new type. */

@@ -132,7 +132,11 @@ export async function loadForecast(
     cells = out
     return { meta: m, cells: out }
   })().catch(() => null)
-  return wanted
+  // A failed fetch must not be remembered as the answer: the promise was
+  // kept, so after one dropped request every retry returned null at once.
+  const got = await wanted
+  if (!got) wanted = null
+  return got
 }
 
 /** One grid file, decompressed if it arrived that way, as cells. */

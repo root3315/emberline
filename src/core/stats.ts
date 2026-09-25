@@ -353,7 +353,15 @@ export interface Trend {
   /** Slope as a share of the median annual total. */
   slopePct: number
   years: number
+  /** Two-sided Mann-Kendall p-value for "there is a monotonic trend". */
+  p: number
+  /** Sen's 95% confidence interval on the slope, as shares of the median. */
+  loPct: number
+  hiPct: number
 }
+
+/** Below this, a slope is printed as a trend. */
+export const TREND_ALPHA = 0.05
 
 /**
  * The first year the MODIS pair was complete.
@@ -389,10 +397,10 @@ export function annualTrend(grid: YearGrid, whole?: { from: string; to: string }
    * whatever day it was last built. Both of those years hold a fraction
    * of a season and both pull on the slope. Yakutia, whose record starts
    * in May 2001, is the clearest case: every year gives -0.98%, and this
-   * rule — with the 2003 floor below — gives +4.34%. Not only the
-   * sign but whether anything is said at all: the page wants a full per
-   * cent before it calls something a trend, so at -0.98% it printed
-   * nothing, and at +4.34% it prints a rise that is really in the record.
+   * rule — with the 2003 floor below — gives +4.34%. That is the right
+   * slope to take, and still not a trend: Mann-Kendall below puts it at
+   * p = 0.49, so the page prints the slope with its interval and says no
+   * trend can be claimed.
    *
    * The range is optional so the statistic can still be taken over a bare
    * grid, which is what the tests do.
@@ -421,7 +429,67 @@ export function annualTrend(grid: YearGrid, whole?: { from: string; to: string }
   slopes.sort((a, b) => a - b)
   const slope = quantileSorted(slopes, 0.5)
   const median = quantileSorted([...totals.map((t) => t[1])].sort((a, b) => a - b), 0.5)
-  return { slope, slopePct: median > 0 ? slope / median : 0, years: totals.length }
+  const share = (v: number) => (median > 0 ? v / median : 0)
+
+  /*
+   * Whether the slope is there at all.
+   *
+   * A median slope is printed for any record, and "+4.3% a year" under
+   * Yakutia read as a finding. Over its 23 full years Mann-Kendall gives
+   * p = 0.49, and Sen's interval runs from a fall to a rise several times
+   * larger: the number was the middle of a range that includes no change.
+   * The page now says a trend only when the test does, and carries the
+   * interval either way.
+   */
+  const values = totals.map((t) => t[1])
+  const n = values.length
+  let S = 0
+  for (let i = 0; i < n; i++) for (let j = i + 1; j < n; j++) S += Math.sign(values[j] - values[i])
+  const ties = new Map<number, number>()
+  for (const v of values) ties.set(v, (ties.get(v) ?? 0) + 1)
+  let tieTerm = 0
+  for (const t of ties.values()) tieTerm += t * (t - 1) * (2 * t + 5)
+  const variance = (n * (n - 1) * (2 * n + 5) - tieTerm) / 18
+  const z = variance > 0 ? (S > 0 ? (S - 1) / Math.sqrt(variance) : S < 0 ? (S + 1) / Math.sqrt(variance) : 0) : 0
+  const p = 2 * (1 - normalCdf(Math.abs(z)))
+
+  // Sen (1968): the interval is read off the ordered pairwise slopes.
+  const c = 1.959964 * Math.sqrt(variance)
+  const lower = Math.max(0, Math.round((slopes.length - c) / 2) - 1)
+  const upper = Math.min(slopes.length - 1, Math.round((slopes.length + c) / 2))
+  return {
+    slope,
+    slopePct: share(slope),
+    years: n,
+    p,
+    loPct: share(slopes[lower]),
+    hiPct: share(slopes[upper]),
+  }
+}
+
+/** Standard normal CDF, Abramowitz and Stegun 7.1.26 (error below 1.5e-7). */
+export function normalCdf(x: number): number {
+  const t = 1 / (1 + 0.3275911 * (Math.abs(x) / Math.SQRT2))
+  const poly = t * (0.254829592 + t * (-0.284496736 + t * (1.421413741 + t * (-1.453152027 + t * 1.061405429))))
+  const erf = 1 - poly * Math.exp(-(x * x) / 2)
+  return x >= 0 ? (1 + erf) / 2 : (1 - erf) / 2
+}
+
+/**
+ * The years a baseline or a comparison may use.
+ *
+ * Whole years only, and none before the MODIS pair was complete. The
+ * climatology used to take every year on the grid: January to October 2000
+ * before Terra had flown, the months of the running year that have not
+ * happened yet, and 2001-2002, when one MODIS counted about a third of
+ * what two do — all as zeros or near-zeros under "usual". In Punjab that
+ * pulled the 2 November median down by a fifth and let 775 days rather
+ * than 717 read as busier than usual across 2003-2025.
+ */
+export function comparableYears(years: readonly number[], range: { from: string; to: string }): number[] {
+  const first = Number(range.from.slice(0, 4)) + (range.from.endsWith('-01-01') ? 0 : 1)
+  const last = Number(range.to.slice(0, 4)) - (range.to.endsWith('-12-31') ? 0 : 1)
+  return years.filter((y) => y >= Math.max(first, MODIS_PAIR_FROM) && y <= last)
 }
 
 /**
@@ -484,7 +552,13 @@ export function summarizeYears(grid: YearGrid, clim: Climatology): YearRow[] {
   const shapes = new Map<number, SeasonShape | null>()
   for (const y of years) shapes.set(y, seasonShape(grid.get(y)!, daysInYear(y)))
 
-  const totals = years.map((y) => shapes.get(y)?.total ?? 0).filter((v) => v > 0)
+  // The usual year is the median of the years the baseline was built from,
+  // so a Terra-only year or a half-finished one cannot pull it down.
+  const base = new Set(clim.years)
+  const totals = years
+    .filter((y) => base.size === 0 || base.has(y))
+    .map((y) => shapes.get(y)?.total ?? 0)
+    .filter((v) => v > 0)
   const medianTotal = quantileSorted([...totals].sort((a, b) => a - b), 0.5)
 
   return years.map((year) => {

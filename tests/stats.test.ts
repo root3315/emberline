@@ -1,19 +1,26 @@
+import { readFileSync } from 'node:fs'
+
 import { describe, expect, it } from 'vitest'
 
+import { readDays, type ArchiveCube } from '../src/core/cube'
+import { dayFromIndex } from '../src/core/grid'
+import { applySensitivity } from '../src/core/harmonize'
 import {
   DOY_MAX,
   analyzeYear,
   annualTrend,
   burningDays,
   climatology,
+  comparableYears,
   concentrationDays,
+  normalCdf,
   criticalPeriods,
   monthlyShare,
   seasonShape,
   summarizeYears,
   toYearGrid,
 } from '../src/core/stats'
-import type { AdjustedDay } from '../src/core/harmonize'
+import { type AdjustedDay } from '../src/core/harmonize'
 import { parseFirmsCsv } from '../src/sources/firms-csv'
 
 function row(fill: (doy: number) => number): Float64Array {
@@ -406,5 +413,52 @@ describe('year summary table', () => {
     expect(big.ratio).toBeGreaterThan(2.5)
     expect(big.shape).not.toBeNull()
     expect(big.activeDays).toBeGreaterThan(0)
+  })
+})
+
+describe('whether a slope is a trend', () => {
+  const trendOf = (aoi: string) => {
+    const c = JSON.parse(readFileSync(`public/data/${aoi}.json`, 'utf8')) as ArchiveCube
+    const days = readDays(c).map((d) => ({ ...d, day: dayFromIndex(d.dayIndex) }))
+    return annualTrend(toYearGrid(applySensitivity(days, c.sensitivity)), c.range)!
+  }
+
+  it('finds the Cerrado decline and nothing in Yakutia, whatever the medians say', () => {
+    const cerrado = trendOf('cerrado')
+    expect(cerrado.p).toBeLessThan(0.01)
+    expect(cerrado.hiPct).toBeLessThan(0)
+
+    const yakutia = trendOf('yakutia')
+    expect(yakutia.slopePct).toBeGreaterThan(0.04)
+    expect(yakutia.p).toBeGreaterThan(0.4)
+    expect(yakutia.loPct).toBeLessThan(0)
+  })
+
+  it('brackets the slope with its interval', () => {
+    for (const aoi of ['punjab', 'sierra', 'cerrado', 'yakutia']) {
+      const tr = trendOf(aoi)
+      expect(tr.loPct, aoi).toBeLessThanOrEqual(tr.slopePct)
+      expect(tr.hiPct, aoi).toBeGreaterThanOrEqual(tr.slopePct)
+    }
+  })
+
+  it('has a normal CDF that is right where the test reads it', () => {
+    expect(normalCdf(0)).toBeCloseTo(0.5, 7)
+    expect(normalCdf(1.959964)).toBeCloseTo(0.975, 6)
+    expect(normalCdf(-1.959964)).toBeCloseTo(0.025, 6)
+  })
+})
+
+describe('which years a usual is made of', () => {
+  it('drops the partial ends and the years before the MODIS pair', () => {
+    const years = Array.from({ length: 27 }, (_, i) => 2000 + i)
+    const kept = comparableYears(years, { from: '2000-11-01', to: '2026-09-19' })
+    expect(kept[0]).toBe(2003)
+    expect(kept[kept.length - 1]).toBe(2025)
+    expect(kept).toHaveLength(23)
+  })
+
+  it('keeps a year that the record covers whole', () => {
+    expect(comparableYears([2003, 2004], { from: '2003-01-01', to: '2004-12-31' })).toEqual([2003, 2004])
   })
 })

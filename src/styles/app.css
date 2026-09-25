@@ -58,6 +58,42 @@ canvas {
   display: block;
 }
 
+/* Only a phone needs telling that the table goes on to the right. */
+.table-hint {
+  display: none;
+}
+
+@media (max-width: 720px) {
+  .table-hint {
+    display: block;
+  }
+}
+
+/* The hero while an archive is on its way: said, not left blank. */
+.hero__answer.is-loading {
+  color: var(--ink-tertiary);
+}
+
+/*
+ * While the page is busy the hero keeps the room its answer will need, so
+ * the calendar does not arrive 260 pixels high and slide down to 700.
+ */
+main[aria-busy='true'] > .hero {
+  min-height: 560px;
+}
+
+@media (max-width: 720px) {
+  main[aria-busy='true'] > .hero {
+    min-height: 900px;
+  }
+}
+
+/* Static English waiting for its translation: see the script in <head>. */
+.i18n-pending [data-i18n],
+.i18n-pending [data-i18n-placeholder] {
+  visibility: hidden;
+}
+
 /* A class-level `display` outranks the UA rule for [hidden]; restore it. */
 [hidden] {
   display: none !important;
@@ -182,7 +218,12 @@ canvas {
   scroll-margin-top: calc(73px + var(--s-6));
 }
 
-@media (max-width: 720px) {
+/*
+ * Up to a tablet's width, not only a phone's: between 721 and 1023 pixels
+ * the bar wraps to 173 pixels and held 18-21% of the screen while the page
+ * scrolled behind it.
+ */
+@media (max-width: 1023px) {
   /*
    * On a phone the bar stops sticking.
    *
@@ -261,6 +302,13 @@ canvas {
 .bar__toggles {
   display: flex;
   gap: var(--s-2);
+}
+
+.bar__tools {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-3);
+  align-items: flex-end;
 }
 
 /* The bar floats over this rather than above it, so the top is tighter. */
@@ -503,6 +551,39 @@ canvas {
   padding-bottom: var(--s-8);
 }
 
+/*
+ * On a wide screen the hero's right half was empty; it now holds the one
+ * picture that says what the site is for. Stacked under the figures below
+ * that width.
+ */
+@media (min-width: 1080px) {
+  .hero:has(> .hero__seam:not([hidden])) {
+    display: grid;
+    grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr);
+    column-gap: var(--s-10);
+    align-items: start;
+  }
+
+  .hero:has(> .hero__seam:not([hidden])) > :not(.hero__seam) {
+    grid-column: 1;
+  }
+
+  .hero__seam {
+    grid-column: 2;
+    grid-row: 1 / span 4;
+    align-self: center;
+  }
+}
+
+.hero__seam {
+  margin: var(--s-6) 0 0;
+}
+
+.hero__seam canvas {
+  display: block;
+  width: 100%;
+}
+
 .hero__where {
   margin: 0 0 var(--s-3);
   font-family: var(--font-mono);
@@ -634,12 +715,8 @@ canvas {
 }
 
 .band__head h2 {
-  font-size: var(--t-h2);
+  font-size: var(--t-section);
   font-weight: 700;
-}
-
-#calendar .band__head h2 {
-  font-size: var(--t-h3);
 }
 
 .note {
@@ -658,7 +735,7 @@ canvas {
 .subhead {
   margin: var(--s-6) 0 var(--s-3);
   font-family: var(--font-ui);
-  font-size: var(--t-caption);
+  font-size: var(--t-subhead);
   font-weight: 600;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -829,7 +906,7 @@ canvas {
    * rows, and the figures land on one baseline whatever the notes do.
    */
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(124px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
   gap: var(--s-4) 0;
   margin: var(--s-6) 0 0;
   padding-top: var(--s-5);
@@ -873,6 +950,27 @@ canvas {
 }
 
 /*
+ * When the strip wraps, only its first cell lost the divider, so on a phone
+ * the left column started at 0 in one row and 17 pixels in the next. The
+ * dividers go and the gap does their work.
+ */
+@media (max-width: 720px) {
+  .metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    column-gap: var(--s-5);
+  }
+
+  .metrics > div {
+    padding-left: 0;
+    border-left: 0;
+  }
+
+  .metrics dd {
+    font-size: var(--t-h2);
+  }
+}
+
+/*
  * A label that has to be truncated is not a label.
  *
  * These were held on one line and cut with an ellipsis, which is right for
@@ -898,8 +996,9 @@ canvas {
   align-self: end;
   padding-top: 3px;
   font-family: var(--font-display);
-  font-size: var(--t-h4);
+  font-size: var(--t-h1);
   font-weight: 700;
+  line-height: 1.15;
   font-variant-numeric: tabular-nums;
   letter-spacing: -0.02em;
   white-space: nowrap;
@@ -922,6 +1021,15 @@ canvas {
 
 .metrics dd[data-tone='down'] {
   color: var(--signal-quiet);
+}
+
+/* "None" is an answer, not a figure: the same size, in the quiet ink. */
+.metrics dd[data-tone='none'] {
+  color: var(--ink-secondary);
+}
+
+.metrics > div > small {
+  max-width: 24ch;
 }
 
 .blank {
@@ -1081,6 +1189,22 @@ canvas {
   white-space: nowrap;
 }
 
+/*
+ * On a phone the meta goes under the dates. Beside them, unbreakable, the
+ * longer notes ("7 days · far above a usual that is almost nothing")
+ * pushed the whole page 58 pixels wider than the screen.
+ */
+@media (max-width: 560px) {
+  .period {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--s-1);
+  }
+
+  .period__meta {
+    white-space: normal;
+  }
+}
+
 .empty {
   margin: 0;
   padding: var(--s-4);
@@ -1090,16 +1214,159 @@ canvas {
   color: var(--ink-muted);
 }
 
+/* ---- the ratio, as a card ---- */
+
+.kcard {
+  margin: var(--s-6) 0 0;
+  padding: var(--s-4) var(--s-5) var(--s-5);
+  border: 1px solid var(--edge-soft);
+  border-radius: var(--r-card);
+  background: var(--ash-raised);
+}
+
+.kcard > p {
+  margin: 0;
+}
+
+.kcard__label {
+  font-size: var(--t-caption);
+  font-weight: 500;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--ink-tertiary);
+}
+
+.kcard__value {
+  margin-top: 6px !important;
+  font-family: var(--font-display);
+  font-size: 40px;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums;
+  color: var(--ember);
+}
+
+.kcard__ci {
+  margin-top: 6px !important;
+  font-family: var(--font-mono);
+  font-size: var(--t-caption);
+  color: var(--ink-tertiary);
+}
+
+.kcard__body,
+.kcard__check {
+  margin-top: var(--s-3) !important;
+  font-size: var(--t-small);
+  line-height: 1.55;
+  color: var(--ink-secondary);
+}
+
+.kcard__check {
+  padding-top: var(--s-3);
+  border-top: 1px solid var(--edge-soft);
+}
+
+/* ---- the two routes' slopes ---- */
+
+.routes__title {
+  margin-top: var(--s-8);
+}
+
+.route-stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--s-3);
+  margin: var(--s-4) 0 0;
+}
+
+.route-stats > div {
+  padding: var(--s-3) var(--s-4);
+  border: 1px solid var(--edge-soft);
+  border-radius: var(--r-card);
+}
+
+.route-stats dt {
+  font-size: var(--t-caption);
+  color: var(--ink-tertiary);
+}
+
+.route-stats dd {
+  margin: 4px 0 0;
+  font-family: var(--font-display);
+  font-size: var(--t-h3);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.route-stats [data-tone='modis'] dd {
+  color: var(--sensor-modis);
+}
+
+.route-stats [data-tone='viirs'] dd {
+  color: var(--sensor-viirs);
+}
+
+@media (max-width: 560px) {
+  .route-stats {
+    grid-template-columns: 1fr;
+    gap: var(--s-2);
+  }
+
+  .route-stats > div {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    padding: var(--s-2) var(--s-3);
+  }
+
+  .route-stats dd {
+    margin: 0;
+    font-size: var(--t-h4);
+  }
+}
+
 /* ============================================================ year table */
+
+/*
+ * About ten rows, and the rest by scrolling inside the box.
+ *
+ * It was every year at once for a while, twenty-seven rows and a full
+ * screen of table between the year above and the instruments below; the
+ * owner asked for it back in a box. The head stays put, the chosen year
+ * is scrolled into view whenever it changes, and a fade at the foot says
+ * there is more until the last row is reached. A wheel that reaches either
+ * end carries on scrolling the page.
+ */
+.table-box {
+  position: relative;
+}
 
 .table-wrap {
   max-width: 100%;
-  max-height: 380px;
+  max-height: 392px;
   overflow: auto;
   border: 1px solid var(--edge-soft);
   border-radius: var(--r-card);
   background: var(--ash-base);
-  overscroll-behavior: contain;
+}
+
+.table-box::after {
+  content: '';
+  position: absolute;
+  right: 1px;
+  bottom: 1px;
+  left: 1px;
+  height: 40px;
+  border-radius: 0 0 var(--r-card) var(--r-card);
+  background: linear-gradient(to bottom, transparent, var(--ash-base));
+  pointer-events: none;
+  transition: opacity var(--t-base) var(--ease-out);
+}
+
+.table-box[data-end='true']::after {
+  opacity: 0;
 }
 
 .years {
@@ -1209,8 +1476,11 @@ canvas {
   background: var(--ember-glow);
 }
 
+/* The ember on its own glow was 4.30:1 by day; the year is ink, the mark is the bar. */
 .years tbody tr[aria-selected='true'] .year-cell {
-  color: var(--ember);
+  color: var(--ink-primary);
+  font-weight: 700;
+  box-shadow: inset 3px 0 0 var(--ember);
 }
 
 /* A bar behind the total, so the column reads as a chart as well as numbers. */
@@ -1416,13 +1686,20 @@ canvas {
   color: var(--ink-muted);
 }
 
+/* Four figures in a row, label over value, like the strip under the calendar. */
 .mini-facts {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: var(--s-3) var(--s-4);
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--s-4) var(--s-4);
   margin: var(--s-5) 0 0;
   padding-top: var(--s-4);
   border-top: 1px solid var(--edge-soft);
+}
+
+@media (max-width: 560px) {
+  .mini-facts {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 /* Ours too, and "Квадратов горело хоть раз" is one narrow column away
@@ -1433,10 +1710,10 @@ canvas {
 }
 
 .mini-facts dd {
-  margin: 2px 0 0;
-  font-family: var(--font-mono);
-  font-size: var(--t-body);
-  font-weight: 500;
+  margin: 4px 0 0;
+  font-family: var(--font-display);
+  font-size: var(--t-h3);
+  font-weight: 700;
   font-variant-numeric: tabular-nums;
   color: var(--ink-primary);
 }
@@ -1567,12 +1844,81 @@ canvas {
     width: calc(100% - 2 * var(--s-4));
   }
 
+  /*
+   * The header on a phone: three rows, not five.
+   *
+   * Stacked, it was the brand, the labelled picker, the mode switch and a
+   * row of buttons — 240 pixels, 28% of a 844-pixel screen, before the
+   * first word of the answer. The buttons now share the brand's row, the
+   * picker's visible label goes (the button already names the place), and
+   * every control is 44 pixels tall, which a thumb can hit without aiming.
+   *
+   * A wrapping row rather than a two-column grid: on the forecast and about
+   * pages the buttons are "Back to the record" and friends, wider than the
+   * space beside the name, and a grid squeezed the brand to nothing and
+   * pushed the theme button off a 360-pixel screen. Here they drop to their
+   * own line instead, and the brand never shrinks.
+   */
   .bar__inner {
-    align-items: stretch;
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--s-2) var(--s-3);
+    align-items: center;
+    /* The row is already inset to the page's gutter; the desktop padding on
+       top of it put the brand 16px right of the text below it. */
+    padding-inline: 0;
   }
 
   .bar__controls {
-    width: 100%;
+    display: contents;
+  }
+
+  .brand {
+    order: 0;
+    flex: 0 0 auto;
+  }
+
+  .brand__text span {
+    display: none;
+  }
+
+  .bar__tools {
+    order: 1;
+    flex: 0 1 auto;
+    flex-wrap: nowrap;
+    gap: var(--s-2);
+    align-items: center;
+    margin-left: auto;
+    min-width: 0;
+  }
+
+  .picker {
+    order: 2;
+    flex: 1 1 100%;
+  }
+
+  #mode {
+    order: 3;
+    flex: 1 1 100%;
+  }
+
+  .picker .field__label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  .bar__inner .select,
+  .bar__inner .ghost-btn {
+    height: 44px;
+    min-width: 44px;
+  }
+
+  .bar__inner .segmented label {
+    min-height: 44px;
   }
 
   .field,
@@ -1633,7 +1979,8 @@ canvas {
 
 .mode-explain i {
   font-style: normal;
-  color: var(--ink-tertiary);
+  /* Secondary, not tertiary: on the amber wash tertiary measured 4.32:1. */
+  color: var(--ink-secondary);
 }
 
 /* Hover readout: coordinates and how often that square burned. */
@@ -2200,6 +2547,18 @@ canvas {
   }
 }
 
+/*
+ * On a phone the words come first. With the ring on top, the heading
+ * started 824 pixels down a 844-pixel screen, and the first thing a reader
+ * saw was an object and nine lines of small print explaining it.
+ */
+@media (max-width: 560px) {
+  .fireyear {
+    order: 0;
+    max-width: 300px;
+  }
+}
+
 .about-hero .hero__answer {
   max-width: 22ch;
 }
@@ -2269,6 +2628,33 @@ canvas {
   margin-top: 0;
 }
 
+#about-fleet + #about-heldout {
+  margin-top: var(--s-4);
+}
+
+/* The model's charts behind one toggle. */
+.about__more {
+  margin-top: var(--s-8);
+}
+
+.about__more > summary {
+  width: fit-content;
+  list-style: none;
+  cursor: pointer;
+}
+
+.about__more > summary::-webkit-details-marker {
+  display: none;
+}
+
+.about__more > summary::after {
+  content: ' ▾';
+}
+
+.about__more[open] > summary::after {
+  content: ' ▴';
+}
+
 .about__chart canvas {
   display: block;
   width: 100%;
@@ -2300,13 +2686,30 @@ canvas {
  * At 260px the fifth wrapped alone under four, which reads as an
  * afterthought rather than as the fifth of five.
  */
+/*
+ * Three to a row at most. Filled by `auto-fit` the lists ran five abreast,
+ * so a list of six left one card alone on a second row, and the longest card
+ * of a row stood twenty lines tall beside four of six.
+ */
 .about__list {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 208px), 1fr));
-  gap: var(--s-6) var(--s-6);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--s-6) var(--s-8);
   margin: 0;
   padding: 0;
   list-style: none;
+}
+
+@media (max-width: 900px) {
+  .about__list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 560px) {
+  .about__list {
+    grid-template-columns: 1fr;
+  }
 }
 
 .about__list li {
@@ -2325,29 +2728,73 @@ canvas {
   color: var(--ink-primary);
 }
 
+/*
+ * Figures in tiles, two to a row, label over value.
+ *
+ * They were a two-column list with the figure pushed to the right edge and
+ * its note stacked under it in a 26-character column: on the forecast page
+ * "7,9×" sat at the far edge of the column with four lines of small print
+ * beneath it, and the eye had to cross the whole width to pair a label
+ * with its number.
+ */
 .metrics--about {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: var(--s-3) var(--s-4);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--s-3);
   margin: 0;
+  padding: 0;
+  border: 0;
 }
 
-.metrics--about > div {
-  display: contents;
+.metrics--about > div,
+.metrics--about > div:first-child {
+  display: flex;
+  flex-direction: column;
+  grid-row: auto;
+  min-width: 0;
+  padding: var(--s-3) var(--s-4);
+  border: 1px solid var(--edge-soft);
+  border-radius: var(--r-card);
 }
 
 .metrics--about dt {
-  font-size: var(--t-small);
-  color: var(--ink-secondary);
+  font-size: var(--t-caption);
+  font-weight: 500;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  text-wrap: balance;
+  color: var(--ink-tertiary);
 }
 
 .metrics--about dd {
-  margin: 0;
-  font-family: var(--font-mono);
-  font-size: var(--t-body);
+  margin: 4px 0 0;
+  align-self: auto;
+  padding: 0;
+  font-family: var(--font-display);
+  font-size: var(--t-h2);
+  font-weight: 700;
   font-variant-numeric: tabular-nums;
-  text-align: right;
+  letter-spacing: -0.02em;
+  text-align: left;
+  white-space: normal;
   color: var(--ink-primary);
+}
+
+/*
+ * The note under a figure wraps, in the tile's own width. It inherited the
+ * figure's nowrap once, and one long note pushed the list to 750 pixels on
+ * a 390-pixel phone and the whole forecast page scrolled sideways.
+ */
+.metrics--about dd small {
+  display: block;
+  margin-top: 4px;
+  white-space: normal;
+  font-family: var(--font-ui);
+  font-size: var(--t-caption);
+  font-weight: 400;
+  letter-spacing: 0;
+  line-height: 1.45;
+  color: var(--ink-tertiary);
 }
 
 .colophon__links {
@@ -2382,6 +2829,25 @@ canvas {
   white-space: nowrap;
 }
 
+.bar__about-short {
+  display: none;
+}
+
+/*
+ * On a phone the link shares the brand's row, and "About the project" took
+ * the room the name needed: at 390 pixels in English the brand read
+ * "Emberli". The short label is the same link.
+ */
+@media (max-width: 720px) {
+  .bar__about-long {
+    display: none;
+  }
+
+  .bar__about-short {
+    display: inline;
+  }
+}
+
 /*
  * The year in five rows.
  *
@@ -2404,7 +2870,7 @@ canvas {
 
 .worst__row {
   display: grid;
-  grid-template-columns: 8ch minmax(0, 1fr) 6ch;
+  grid-template-columns: 7ch minmax(0, 1fr) 6ch;
   gap: var(--s-3);
   align-items: center;
   font-family: var(--font-mono);
@@ -2518,11 +2984,29 @@ canvas {
   height: 100%;
 }
 
+/* The ranked places are buttons into the globe's card. */
+.risk__row[role='button'] {
+  cursor: pointer;
+}
+
+.risk__row[role='button']:hover {
+  background: var(--ash-lifted);
+}
+
+.globe__pause {
+  position: absolute;
+  right: 4%;
+  bottom: 4%;
+  min-width: 44px;
+  height: 44px;
+  font-size: var(--t-caption);
+}
+
 .globe__call {
   margin: 0;
   text-align: center;
   font-size: var(--t-caption);
-  color: var(--ink-muted);
+  color: var(--ink-tertiary);
   transition: opacity var(--t-fast) var(--ease-out);
 }
 
@@ -2796,7 +3280,7 @@ canvas {
   font-size: var(--t-caption);
   letter-spacing: 0.07em;
   text-transform: uppercase;
-  color: var(--ink-muted);
+  color: var(--ink-tertiary);
 }
 
 .look__panel {
@@ -2926,7 +3410,7 @@ canvas {
 .shot__by {
   margin: 0;
   font-size: var(--t-caption);
-  color: var(--ink-muted);
+  color: var(--ink-tertiary);
 }
 
 /*

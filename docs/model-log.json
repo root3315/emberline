@@ -1,0 +1,765 @@
+{
+  "about": "Measurements behind the model section of the about page. Written by scripts/export_model_log.py from models/, which is not committed.",
+  "builtAt": "2026-09-23T14:51:18.949406+00:00",
+  "shipped": {
+    "1d": {
+      "features": [
+        "own_1d",
+        "own_3d",
+        "own_7d",
+        "own_14d",
+        "own_30d",
+        "own_90d",
+        "ring_1d",
+        "ring_3d",
+        "ring_7d",
+        "ring_30d",
+        "doy_sin",
+        "doy_cos",
+        "clim",
+        "clim_ring",
+        "cell_rate",
+        "since_last",
+        "lat",
+        "active_30d",
+        "lastyear_14d",
+        "anom_30d",
+        "ring_anom_30d",
+        "tile_anom_30d",
+        "ytd_anom",
+        "oni",
+        "w_tmax",
+        "w_rain",
+        "w_wind",
+        "w_dry",
+        "veg_low",
+        "veg_high"
+      ],
+      "dropped": [],
+      "trees": 300,
+      "validate_ap": 0.7242825084352265,
+      "test": {
+        "model_ap": 0.2993363495689906,
+        "model_roc_auc": 0.9469133146744403,
+        "model_brier": 0.010870799528560775,
+        "climatology_ap": 0.28895916375157193,
+        "persistence_ap": 0.2823100873283077,
+        "base_rate": 0.01318686627370258
+      },
+      "splits": {
+        "train": "2003-2013",
+        "validate": "2014-2017",
+        "test": "2018-2021"
+      },
+      "builtAt": "2026-09-21T08:42:12.174412+00:00"
+    },
+    "2d": {
+      "features": [
+        "own_1d",
+        "own_3d",
+        "own_14d",
+        "own_30d",
+        "own_90d",
+        "ring_1d",
+        "ring_3d",
+        "ring_7d",
+        "ring_30d",
+        "doy_sin",
+        "doy_cos",
+        "clim",
+        "cell_rate",
+        "lat",
+        "anom_30d",
+        "ring_anom_30d",
+        "tile_anom_30d",
+        "ytd_anom",
+        "w_tmax",
+        "w_rain",
+        "w_wind",
+        "w_dry",
+        "veg_low",
+        "veg_high"
+      ],
+      "dropped": [
+        "own_7d",
+        "active_30d",
+        "since_last",
+        "lastyear_14d",
+        "oni",
+        "clim_ring"
+      ],
+      "trees": 200,
+      "validate_ap": 0.7256912942812644,
+      "test": {
+        "model_ap": 0.41434988768008096,
+        "model_roc_auc": 0.9438118012819007,
+        "model_brier": 0.016573130452508727,
+        "climatology_ap": 0.40765488955744744,
+        "persistence_ap": 0.3587427412155293,
+        "base_rate": 0.02239115922635679
+      },
+      "splits": {
+        "train": "2003-2013",
+        "validate": "2014-2017",
+        "test": "2018-2021"
+      },
+      "builtAt": "2026-09-21T09:06:37.651187+00:00"
+    },
+    "3d": {
+      "features": [
+        "own_1d",
+        "own_3d",
+        "own_14d",
+        "own_30d",
+        "own_90d",
+        "ring_1d",
+        "ring_3d",
+        "ring_7d",
+        "ring_30d",
+        "doy_sin",
+        "doy_cos",
+        "clim",
+        "cell_rate",
+        "lat",
+        "anom_30d",
+        "ring_anom_30d",
+        "tile_anom_30d",
+        "ytd_anom",
+        "oni",
+        "w_tmax",
+        "w_rain",
+        "w_wind",
+        "w_dry",
+        "veg_low",
+        "veg_high"
+      ],
+      "dropped": [
+        "own_7d",
+        "since_last",
+        "active_30d",
+        "lastyear_14d",
+        "clim_ring"
+      ],
+      "trees": 300,
+      "validate_ap": 0.717055464894355,
+      "test": {
+        "model_ap": 0.45427215089598905,
+        "model_roc_auc": 0.9355077180688158,
+        "model_brier": 0.020843158170335347,
+        "climatology_ap": 0.45046030665996983,
+        "persistence_ap": 0.36944327639146446,
+        "base_rate": 0.029403105187744125
+      },
+      "splits": {
+        "train": "2003-2013",
+        "validate": "2014-2017",
+        "test": "2018-2021"
+      },
+      "builtAt": "2026-09-21T09:37:09.717017+00:00"
+    },
+    "4d": {
+      "features": [
+        "own_1d",
+        "own_3d",
+        "own_14d",
+        "own_30d",
+        "own_90d",
+        "ring_1d",
+        "ring_3d",
+        "ring_7d",
+        "ring_30d",
+        "doy_sin",
+        "doy_cos",
+        "clim",
+        "cell_rate",
+        "lat",
+        "active_30d",
+        "anom_30d",
+        "ring_anom_30d",
+        "tile_anom_30d",
+        "ytd_anom",
+        "oni",
+        "w_tmax",
+        "w_rain",
+        "w_wind",
+        "w_dry",
+        "veg_low",
+        "veg_high"
+      ],
+      "dropped": [
+        "since_last",
+        "lastyear_14d",
+        "own_7d",
+        "clim_ring"
+      ],
+      "trees": 1000,
+      "validate_ap": 0.714889238335997,
+      "test": {
+        "model_ap": 0.48859133200257177,
+        "model_roc_auc": 0.9320902303412457,
+        "model_brier": 0.024224914602179574,
+        "climatology_ap": 0.4837084807447964,
+        "persistence_ap": 0.38095339736737793,
+        "base_rate": 0.03556849507395856
+      },
+      "splits": {
+        "train": "2003-2013",
+        "validate": "2014-2017",
+        "test": "2018-2021"
+      },
+      "builtAt": "2026-09-21T10:07:48.968595+00:00"
+    },
+    "5d": {
+      "features": [
+        "own_1d",
+        "own_3d",
+        "own_14d",
+        "own_30d",
+        "own_90d",
+        "ring_1d",
+        "ring_3d",
+        "ring_7d",
+        "ring_30d",
+        "doy_sin",
+        "doy_cos",
+        "clim",
+        "cell_rate",
+        "lat",
+        "anom_30d",
+        "ring_anom_30d",
+        "tile_anom_30d",
+        "ytd_anom",
+        "oni",
+        "w_tmax",
+        "w_rain",
+        "w_wind",
+        "w_dry",
+        "veg_low",
+        "veg_high"
+      ],
+      "dropped": [
+        "own_7d",
+        "since_last",
+        "active_30d",
+        "lastyear_14d",
+        "clim_ring"
+      ],
+      "trees": 300,
+      "validate_ap": 0.7186357460049955,
+      "test": {
+        "model_ap": 0.522579423519905,
+        "model_roc_auc": 0.9304285737672295,
+        "model_brier": 0.026831409811025095,
+        "climatology_ap": 0.5055588495819299,
+        "persistence_ap": 0.38495102554356275,
+        "base_rate": 0.04087992155258249
+      },
+      "splits": {
+        "train": "2003-2013",
+        "validate": "2014-2017",
+        "test": "2018-2021"
+      },
+      "builtAt": "2026-09-21T10:32:48.801334+00:00"
+    },
+    "6d": {
+      "features": [
+        "own_1d",
+        "own_3d",
+        "own_14d",
+        "own_30d",
+        "ring_1d",
+        "ring_3d",
+        "ring_7d",
+        "ring_30d",
+        "doy_sin",
+        "doy_cos",
+        "clim",
+        "cell_rate",
+        "lat",
+        "anom_30d",
+        "ring_anom_30d",
+        "tile_anom_30d",
+        "ytd_anom",
+        "w_tmax",
+        "w_rain",
+        "w_wind",
+        "w_dry",
+        "veg_low",
+        "veg_high"
+      ],
+      "dropped": [
+        "own_7d",
+        "since_last",
+        "lastyear_14d",
+        "active_30d",
+        "own_90d",
+        "oni",
+        "clim_ring"
+      ],
+      "trees": 1000,
+      "validate_ap": 0.7096732473104589,
+      "test": {
+        "model_ap": 0.5325786061333393,
+        "model_roc_auc": 0.9303397242435881,
+        "model_brier": 0.02956290828080238,
+        "climatology_ap": 0.5214112453125705,
+        "persistence_ap": 0.3835722144032088,
+        "base_rate": 0.045655375552282766
+      },
+      "splits": {
+        "train": "2003-2013",
+        "validate": "2014-2017",
+        "test": "2018-2021"
+      },
+      "builtAt": "2026-09-21T11:00:46.961185+00:00"
+    },
+    "7d": {
+      "features": [
+        "own_1d",
+        "own_3d",
+        "own_14d",
+        "own_30d",
+        "own_90d",
+        "ring_1d",
+        "ring_3d",
+        "ring_7d",
+        "ring_30d",
+        "doy_sin",
+        "clim",
+        "cell_rate",
+        "lat",
+        "active_30d",
+        "anom_30d",
+        "ring_anom_30d",
+        "tile_anom_30d",
+        "ytd_anom",
+        "oni",
+        "w_tmax",
+        "w_rain",
+        "w_wind",
+        "w_dry",
+        "veg_low",
+        "veg_high"
+      ],
+      "dropped": [
+        "own_7d",
+        "lastyear_14d",
+        "since_last",
+        "doy_cos",
+        "clim_ring"
+      ],
+      "trees": 200,
+      "validate_ap": 0.7147191665778652,
+      "test": {
+        "model_ap": 0.5579200903808273,
+        "model_roc_auc": 0.9257587234199055,
+        "model_brier": 0.03146601325402839,
+        "climatology_ap": 0.5327531468905768,
+        "persistence_ap": 0.3869351314792494,
+        "base_rate": 0.05002453922878867
+      },
+      "splits": {
+        "train": "2003-2013",
+        "validate": "2014-2017",
+        "test": "2018-2021"
+      },
+      "builtAt": "2026-09-21T06:44:45.790505+00:00"
+    },
+    "7d-dry": {
+      "features": [
+        "own_1d",
+        "own_3d",
+        "own_14d",
+        "own_90d",
+        "ring_1d",
+        "ring_3d",
+        "ring_7d",
+        "ring_30d",
+        "doy_sin",
+        "clim",
+        "cell_rate",
+        "since_last",
+        "lat",
+        "active_30d",
+        "anom_30d",
+        "ring_anom_30d",
+        "tile_anom_30d",
+        "ytd_anom"
+      ],
+      "dropped": [
+        "own_7d",
+        "lastyear_14d",
+        "doy_cos",
+        "own_30d",
+        "oni",
+        "clim_ring"
+      ],
+      "trees": 200,
+      "validate_ap": 0.6946187754665406,
+      "test": {
+        "model_ap": 0.5459760790521289,
+        "model_roc_auc": 0.9258115627151619,
+        "model_brier": 0.03192495663987919,
+        "climatology_ap": 0.5327531468905768,
+        "persistence_ap": 0.3869351314792494,
+        "base_rate": 0.05002453922878867
+      },
+      "splits": {
+        "train": "2003-2013",
+        "validate": "2014-2017",
+        "test": "2018-2021"
+      },
+      "builtAt": "2026-09-21T06:56:33.819388+00:00"
+    }
+  },
+  "experiments": {
+    "trees": {
+      "question": "does a longer boosting run help?",
+      "curve": [
+        {
+          "trees": 100,
+          "validate_ap": 0.676042396301548
+        },
+        {
+          "trees": 150,
+          "validate_ap": 0.7064987393235463
+        },
+        {
+          "trees": 200,
+          "validate_ap": 0.7147191665778652
+        },
+        {
+          "trees": 300,
+          "validate_ap": 0.7132155725789944
+        },
+        {
+          "trees": 400,
+          "validate_ap": 0.712690982229323
+        },
+        {
+          "trees": 500,
+          "validate_ap": 0.7124806077532436
+        },
+        {
+          "trees": 750,
+          "validate_ap": 0.7126768649344476
+        },
+        {
+          "trees": 1000,
+          "validate_ap": 0.7124686560803553
+        }
+      ],
+      "note": "validation average precision, 2014-2017"
+    },
+    "tuning": {
+      "question": "which tree shape?",
+      "grid": {
+        "learning_rate": [
+          0.03,
+          0.05,
+          0.1
+        ],
+        "max_leaf_nodes": [
+          31,
+          63,
+          127
+        ],
+        "min_samples_leaf": [
+          50,
+          200
+        ]
+      },
+      "results": [
+        {
+          "learning_rate": 0.05,
+          "max_leaf_nodes": 127,
+          "min_samples_leaf": 200,
+          "validate_ap": 0.7147191665778652,
+          "trees": 200
+        },
+        {
+          "learning_rate": 0.03,
+          "max_leaf_nodes": 127,
+          "min_samples_leaf": 200,
+          "validate_ap": 0.7145574940300405,
+          "trees": 500
+        },
+        {
+          "learning_rate": 0.03,
+          "max_leaf_nodes": 127,
+          "min_samples_leaf": 50,
+          "validate_ap": 0.7139157369316149,
+          "trees": 2000
+        },
+        {
+          "learning_rate": 0.05,
+          "max_leaf_nodes": 127,
+          "min_samples_leaf": 50,
+          "validate_ap": 0.713753262946265,
+          "trees": 500
+        },
+        {
+          "learning_rate": 0.03,
+          "max_leaf_nodes": 63,
+          "min_samples_leaf": 50,
+          "validate_ap": 0.7136148216426927,
+          "trees": 750
+        },
+        {
+          "learning_rate": 0.03,
+          "max_leaf_nodes": 63,
+          "min_samples_leaf": 200,
+          "validate_ap": 0.7135587071543754,
+          "trees": 1000
+        },
+        {
+          "learning_rate": 0.1,
+          "max_leaf_nodes": 63,
+          "min_samples_leaf": 50,
+          "validate_ap": 0.7133669329214156,
+          "trees": 200
+        },
+        {
+          "learning_rate": 0.05,
+          "max_leaf_nodes": 63,
+          "min_samples_leaf": 200,
+          "validate_ap": 0.7133645116324723,
+          "trees": 750
+        },
+        {
+          "learning_rate": 0.1,
+          "max_leaf_nodes": 127,
+          "min_samples_leaf": 50,
+          "validate_ap": 0.7132370883296408,
+          "trees": 200
+        },
+        {
+          "learning_rate": 0.03,
+          "max_leaf_nodes": 31,
+          "min_samples_leaf": 200,
+          "validate_ap": 0.7126229021341671,
+          "trees": 1000
+        },
+        {
+          "learning_rate": 0.05,
+          "max_leaf_nodes": 63,
+          "min_samples_leaf": 50,
+          "validate_ap": 0.7125564191896994,
+          "trees": 500
+        },
+        {
+          "learning_rate": 0.1,
+          "max_leaf_nodes": 31,
+          "min_samples_leaf": 200,
+          "validate_ap": 0.7125179710640184,
+          "trees": 350
+        },
+        {
+          "learning_rate": 0.05,
+          "max_leaf_nodes": 31,
+          "min_samples_leaf": 200,
+          "validate_ap": 0.7123848151497701,
+          "trees": 500
+        },
+        {
+          "learning_rate": 0.1,
+          "max_leaf_nodes": 127,
+          "min_samples_leaf": 200,
+          "validate_ap": 0.7120492161759017,
+          "trees": 100
+        },
+        {
+          "learning_rate": 0.03,
+          "max_leaf_nodes": 31,
+          "min_samples_leaf": 50,
+          "validate_ap": 0.7119800643383871,
+          "trees": 1000
+        },
+        {
+          "learning_rate": 0.1,
+          "max_leaf_nodes": 63,
+          "min_samples_leaf": 200,
+          "validate_ap": 0.7113147270883917,
+          "trees": 200
+        },
+        {
+          "learning_rate": 0.05,
+          "max_leaf_nodes": 31,
+          "min_samples_leaf": 50,
+          "validate_ap": 0.7112470544859916,
+          "trees": 750
+        },
+        {
+          "learning_rate": 0.1,
+          "max_leaf_nodes": 31,
+          "min_samples_leaf": 50,
+          "validate_ap": 0.7112311315518889,
+          "trees": 350
+        }
+      ]
+    },
+    "population": {
+      "question": "does population per cell help?",
+      "added": [
+        "pop",
+        "pop_ring"
+      ],
+      "validate_ap": {
+        "without": 0.7147191665778652,
+        "with": 0.7155888016393603
+      },
+      "test_ap": {
+        "without": 0.5579200903808273,
+        "with": 0.5580527845641485
+      },
+      "importance": {
+        "pop": {
+          "rank": 13,
+          "of": 27,
+          "ap_drop": 0.0029521030480631483
+        },
+        "pop_ring": {
+          "rank": 12,
+          "of": 27,
+          "ap_drop": 0.003137547682412256
+        },
+        "clim": {
+          "rank": 1,
+          "of": 27,
+          "ap_drop": 0.38699234375160885
+        }
+      },
+      "bar": 0.002,
+      "shipped": false,
+      "verdict": "validation AP 0.71472 -> 0.71559 (+0.00087), new columns: pop, pop_ring, needs +0.0020"
+    },
+    "calibration": {
+      "question": "does a fitted calibration curve help?",
+      "horizon_days": 7,
+      "fitted_on": "validate",
+      "scored_on": "test",
+      "rule": "brier must fall and average precision may drop by at most 0.0005",
+      "ships": {
+        "average_precision": 0.5579200903808273,
+        "roc_auc": 0.9257587234199055,
+        "brier": 0.03146601325402839
+      },
+      "candidates": {
+        "isotonic": {
+          "average_precision": 0.5519342870550249,
+          "roc_auc": 0.9255892425009772,
+          "brier": 0.03146752365093237
+        },
+        "platt": {
+          "average_precision": 0.5579200903808273,
+          "roc_auc": 0.9257587234199055,
+          "brier": 0.03150904613854545
+        }
+      },
+      "passed": [],
+      "builtAt": "2026-09-23T14:32:40.549522+00:00"
+    }
+  },
+  "importance_7d": [
+    {
+      "feature": "clim",
+      "ap_drop": 0.3895701496907523
+    },
+    {
+      "feature": "lat",
+      "ap_drop": 0.06134863892326792
+    },
+    {
+      "feature": "w_rain",
+      "ap_drop": 0.018187276154243537
+    },
+    {
+      "feature": "ring_anom_30d",
+      "ap_drop": 0.014591242818726702
+    },
+    {
+      "feature": "w_tmax",
+      "ap_drop": 0.013544349884081819
+    },
+    {
+      "feature": "veg_low",
+      "ap_drop": 0.0103843210883805
+    },
+    {
+      "feature": "veg_high",
+      "ap_drop": 0.00928378683482034
+    },
+    {
+      "feature": "cell_rate",
+      "ap_drop": 0.007283979797952145
+    },
+    {
+      "feature": "w_dry",
+      "ap_drop": 0.005948610308438962
+    },
+    {
+      "feature": "ytd_anom",
+      "ap_drop": 0.005663717808575108
+    },
+    {
+      "feature": "anom_30d",
+      "ap_drop": 0.00428555031762945
+    },
+    {
+      "feature": "own_14d",
+      "ap_drop": 0.0029619087692196455
+    },
+    {
+      "feature": "w_wind",
+      "ap_drop": 0.002012229841980684
+    },
+    {
+      "feature": "ring_3d",
+      "ap_drop": 0.0019647848542913016
+    },
+    {
+      "feature": "tile_anom_30d",
+      "ap_drop": 0.001582979341851809
+    },
+    {
+      "feature": "ring_1d",
+      "ap_drop": 0.001562621808512521
+    },
+    {
+      "feature": "own_3d",
+      "ap_drop": 0.0015583989899494721
+    },
+    {
+      "feature": "doy_sin",
+      "ap_drop": 0.0013157702476790378
+    },
+    {
+      "feature": "own_1d",
+      "ap_drop": 0.001231430218763263
+    },
+    {
+      "feature": "ring_30d",
+      "ap_drop": 0.0007438211201200584
+    },
+    {
+      "feature": "own_90d",
+      "ap_drop": 0.0007097652187633141
+    },
+    {
+      "feature": "ring_7d",
+      "ap_drop": 0.00029590622476105555
+    },
+    {
+      "feature": "own_30d",
+      "ap_drop": 0.00023075699098762392
+    },
+    {
+      "feature": "oni",
+      "ap_drop": 0.00020262287925099098
+    },
+    {
+      "feature": "active_30d",
+      "ap_drop": 4.8233010849441094e-05
+    }
+  ]
+}
