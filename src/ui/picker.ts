@@ -43,6 +43,8 @@ interface Refs {
   search: HTMLInputElement
   list: HTMLElement
   empty: HTMLElement
+  /** The geocoder's attribution, shown while its answers are on the list. */
+  credit?: HTMLElement
   select: HTMLSelectElement
 }
 
@@ -302,6 +304,8 @@ export class Picker {
     this.optionEls = []
     this.r.empty.hidden = this.shown.length > 0
     if (!this.r.empty.hidden) this.r.empty.textContent = this.say(this.state)
+    // Nominatim's terms ask for it wherever its results are shown.
+    if (this.r.credit) this.r.credit.hidden = this.remote.length === 0
 
     this.shown.forEach((e, i) => {
       const li = document.createElement('li')

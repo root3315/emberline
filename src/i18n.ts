@@ -232,6 +232,8 @@ const en: Dict = {
   placeCalendarNote: '{place}: every day since 2000, summed over the {n} cells of {cell} inside the frame. One row a year, one square a day; the stronger the colour, the more burning at once, and a red outline marks a day hotter than 9 in 10 days at that time of year. Click a row to select that year.',
   placeQuiet: '{place}: nothing detected in {year}.',
   pickerEmpty: 'Nothing matches that.',
+  pickerCredit: 'Places from',
+  pickerCreditLink: '© OpenStreetMap contributors',
   pickerSearching: 'Looking…',
   pickerFailed: 'Place search is unavailable — try again in a moment.',
   snapshotBehind: 'It is {n} behind today.',
@@ -243,7 +245,7 @@ const en: Dict = {
   forecastShortWindow:
     'The scale is the same on every day of the strip, so a shorter window looks paler \u2014 fewer cells clear one per cent at all, and the ones that do have had less time. Over a single day {cells} cells are on the map against {all} for the whole week. The map has not gone quiet; the chance really is smaller.',
   forecastNote: 'Chance of a fire large enough for the 1 km sensor to see, {from} to {to}, per {cell} cell. Computed from the archive as it stood on {asOf} — a build-time estimate, not a live forecast.',
-  forecastSkill: 'Scored on {tested}, years held out of training (one leak is named on the about page): {model} average precision against {clim} for "how often it burns here at this time of year" and {persist} for "it burned last week". Picking at random scores {base}. The margin over the seasonal baseline is small, and it is printed here rather than hidden: without daily weather — rain, wind, humidity — most of what is predictable about the next week is the season.',
+  forecastSkill: 'Scored on {tested}, years held out of training (one leak is named on the about page): {model} average precision against {clim} for "how often it burns here at this time of year" and {persist} for "it burned last week". Picking at random scores {base}. The margin over the seasonal baseline is small, and it is printed here rather than hidden: even with the week’s rain, heat and wind in the model, most of what is predictable about the next week is the season.',
   forecastProbe: '{p} chance in the next {n} days',
   forecastMissing: 'No forecast has been built for this deployment.',
   forecastFailedTitle: 'The forecast did not load.',
@@ -282,7 +284,7 @@ const en: Dict = {
   worldNote: '{fires} in {year}, {cell} cells, MODIS and VIIRS together. Monthly — for a single day, pick a region.',
   worldNoteFine: '{fires} in {year}, {cell} cells, MODIS and VIIRS together. The whole year — for a single day, pick a region.',
   worldFailed: 'The global overview could not be loaded.',
-  worldScaleCaveat: 'Colour is relative to {year} alone: the darkest shade is the planet’s top 1% of burning cells that year. The same shade in two years is not the same count, so compare years on the chart above, not by colour here.',
+  worldScaleCaveat: 'Colour is relative to {year} alone: the last shade on the scale is the planet’s top 1% of burning cells that year. The same shade in two years is not the same count, so compare years on the chart above, not by colour here.',
   basemapLegend: 'Base map',
   basemapDark: 'Map',
   basemapSatellite: 'Satellite',
@@ -316,7 +318,7 @@ const en: Dict = {
   statusFetching: 'Asking NASA…',
   statusParsing: 'Reconciling…',
   statusLiveDone: '{n} detections over {days} days — that is {cells} cells alight, counted a day at a time.',
-  statusFileDone: '{n} detections from {files} files — that is {cells} cells alight, counted a day at a time.',
+  statusFileDone: '{n} detections from {files} — that is {cells} cells alight, counted a day at a time.',
   statusNeedKey: 'Paste a FIRMS key first.',
   statusNoRows: 'Nothing usable came back.',
   statusFailed: 'Could not load: {err}',
@@ -575,7 +577,7 @@ const ru: Dict = {
   modeHarmonized: 'Сведено',
   modeRaw: 'Как снято',
   modeExplainHarmonized:
-    'Весь ряд — по MODIS, который летает с тем же сенсором с 2002 года, умноженный один раз на отношение, которое показал S-NPP, пока летал один. Новый спутник VIIRS его не двигает — но сама стареющая пара MODIS с начала 2020-х уходит от своего времени пролёта, так что к самым новым годам стоит относиться осторожно.',
+    'Весь ряд — по MODIS, который летает с тем же сенсором с 2002 года, умноженный один раз на отношение, которое показал S-NPP, пока летал один. Новый спутник VIIRS его не двигает — но сама стареющая пара MODIS с начала 2020‑х уходит от своего времени пролёта, так что к самым новым годам стоит относиться осторожно.',
   modeExplainRaw:
     'Ровно то, что насчитали спутники, оба семейства вместе. Ступенька в 2012-м, снова в 2018-м и снова в 2024-м — каждая это новый спутник, а не рост пожаров.',
   modeCompare: 'Сравните два режима — смотрите на 2012-й и дальше, где они расходятся.',
@@ -585,7 +587,7 @@ const ru: Dict = {
   heroYearBusy: '{year} год дал {ratio} от обычного.',
   heroYearQuiet: '{year} год был спокойнее обычного — {ratio} от нормы.',
   heroYearNearNone: 'В {year} году здесь почти ничего не горело.',
-  driftCaveat: 'С начала 2020-х стареющая пара MODIS уходит от своего времени пролёта, заметнее всего с 2024 года, и ряд на основе MODIS может занижать эти годы.',
+  driftCaveat: 'С начала 2020‑х стареющая пара MODIS уходит от своего времени пролёта, заметнее всего с 2024 года, и ряд на основе MODIS может занижать эти годы.',
   heroYearPlain: '{year} год прошёл примерно как обычно.',
   heroConcentration: 'Половина огня за год пришлась на самые активные {n}.',
   partialYear: '{year} год ещё идёт — данные заканчиваются {date}, поэтому итоги за него неполные.',
@@ -780,6 +782,8 @@ const ru: Dict = {
   placeCalendarNote: '{place}: каждый день с 2000 года, сложено по {n} ячейкам по {cell} внутри рамки. Строка — год, квадратик — день; чем насыщеннее цвет, тем больше горело одновременно, а красный контур — день активнее, чем 9 из 10 дней в это же время года. Нажмите строку, чтобы выбрать год.',
   placeQuiet: '{place}: за {year} год ничего не зафиксировано.',
   pickerEmpty: 'Ничего не нашлось.',
+  pickerCredit: 'Места —',
+  pickerCreditLink: '© участники OpenStreetMap',
   pickerSearching: 'Ищу…',
   pickerFailed: 'Поиск мест недоступен — попробуйте через минуту.',
   snapshotBehind: 'Отстаёт от сегодня на {n}.',
@@ -791,7 +795,7 @@ const ru: Dict = {
   forecastShortWindow:
     'Шкала одна и та же на каждом дне полосы, поэтому короткое окно выглядит бледнее: меньше ячеек вообще переходит порог в один процент, а у тех, что перешли, было меньше времени. За один день на карте {cells} ячеек против {all} за всю неделю. Карта не потухла \u2014 шанс и правда меньше.',
   forecastNote: 'Вероятность пожара, достаточно крупного для километрового сенсора, с {from} по {to}, на ячейку {cell}. Считано по архиву на {asOf} — оценка на момент сборки, не живой прогноз.',
-  forecastSkill: 'Проверено на {tested} — годах, отложенных от обучения (одна утечка названа на странице о проекте): средняя точность {model} против {clim} у «как часто здесь горит в это время года» и {persist} у «горело на прошлой неделе». Случайный выбор даёт {base}. Перевес над сезонной базой небольшой, и он здесь написан, а не спрятан: без суточной погоды — дождя, ветра, влажности — предсказуемо в ближайшей неделе почти только сезон.',
+  forecastSkill: 'Проверено на {tested} — годах, отложенных от обучения (одна утечка названа на странице о проекте): средняя точность {model} против {clim} у «как часто здесь горит в это время года» и {persist} у «горело на прошлой неделе». Случайный выбор даёт {base}. Перевес над сезонной базой небольшой, и он здесь написан, а не спрятан: даже с дождём, жарой и ветром недели в модели предсказуемо в ближайшей неделе прежде всего сезон.',
   forecastProbe: '{p} вероятность в ближайшие {n} дней',
   forecastMissing: 'Для этой сборки прогноз не посчитан.',
   forecastFailedTitle: 'Прогноз не загрузился.',
@@ -830,7 +834,7 @@ const ru: Dict = {
   worldNote: '{fires} за {year} год, ячейка {cell}, MODIS и VIIRS вместе. Помесячно — за конкретный день смотрите регион.',
   worldNoteFine: '{fires} за {year} год, ячейка {cell}, MODIS и VIIRS вместе. Год целиком — за конкретный день смотрите регион.',
   worldFailed: 'Не удалось загрузить глобальный обзор.',
-  worldScaleCaveat: 'Цвет — относительно одного {year} года: самый тёмный оттенок — верхний 1% горящих ячеек планеты за этот год. Один и тот же оттенок в разные годы — разное число, поэтому годы сравнивайте по графику выше, а не по цвету здесь.',
+  worldScaleCaveat: 'Цвет — относительно одного {year} года: последний оттенок шкалы — верхний 1% горящих ячеек планеты за этот год. Один и тот же оттенок в разные годы — разное число, поэтому годы сравнивайте по графику выше, а не по цвету здесь.',
   basemapLegend: 'Подложка',
   basemapDark: 'Карта',
   basemapSatellite: 'Спутник',
@@ -864,7 +868,7 @@ const ru: Dict = {
   statusFetching: 'Спрашиваю NASA…',
   statusParsing: 'Свожу данные…',
   statusLiveDone: '{n} засечек за {days} дней — это {cells} ячеек с огнём, если считать каждый день отдельно.',
-  statusFileDone: '{n} засечек из {files} файлов — это {cells} ячеек с огнём, если считать каждый день отдельно.',
+  statusFileDone: '{n} засечек из {files} — это {cells} ячеек с огнём, если считать каждый день отдельно.',
   statusNeedKey: 'Сначала вставьте ключ FIRMS.',
   statusNoRows: 'Ничего пригодного не пришло.',
   statusFailed: 'Не удалось загрузить: {err}',
@@ -1319,6 +1323,11 @@ export function formatBox(south: number, north: number, west: number, east: numb
 /** A count and its noun, agreed: "5 354 ячейки", "1 detection". */
 export function counted(n: number, unit: (n: number) => string): string {
   return `${formatNumber(n)} ${unit(n)}`
+}
+
+/** "1 file" / "3 файлов" — "from 1 files" was the old way of saying one. */
+export function filesUnit(n: number): string {
+  return current === 'en' ? plural(n, 'file', 'files', 'files') : plural(n, 'файла', 'файлов', 'файлов')
 }
 
 export function cellsUnit(n: number): string {

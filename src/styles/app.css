@@ -1300,12 +1300,17 @@ main[aria-busy='true'] > .hero {
   white-space: nowrap;
 }
 
+/*
+ * The line colours, pulled toward the ink. On paper the pure sensor hues
+ * measured 3.4:1 and 4.2:1 as text; a fifth of the ink brings both over
+ * 4.5 in either theme and they still read as the two lines above.
+ */
 .route-stats [data-tone='modis'] dd {
-  color: var(--sensor-modis);
+  color: color-mix(in srgb, var(--sensor-modis) 78%, var(--ink-primary));
 }
 
 .route-stats [data-tone='viirs'] dd {
-  color: var(--sensor-viirs);
+  color: color-mix(in srgb, var(--sensor-viirs) 78%, var(--ink-primary));
 }
 
 @media (max-width: 560px) {
@@ -2159,6 +2164,16 @@ main[aria-busy='true'] > .hero {
   outline: none;
 }
 
+/*
+ * The map takes focus for its arrow keys, and the rule above, being more
+ * specific than the site's `:where(...)` ring, hid where the focus was.
+ * Inset, because the map's own box clips anything drawn outside it.
+ */
+.leaflet-container:focus-visible {
+  outline: 2px solid var(--edge-focus);
+  outline-offset: -2px;
+}
+
 .leaflet-control-zoom {
   border: 0 !important;
   border-radius: var(--r-control) !important;
@@ -2371,7 +2386,7 @@ main[aria-busy='true'] > .hero {
 /* The second line: what the option actually is, in the ink used for notes. */
 .picker__hint {
   color: var(--ink-tertiary);
-  font-size: var(--t-micro);
+  font-size: var(--t-small);
 }
 
 /* A rule between the places and the planet — they are different in kind. */
@@ -2385,7 +2400,17 @@ main[aria-busy='true'] > .hero {
 .picker__empty {
   margin: var(--s-3) var(--s-3) var(--s-2);
   color: var(--ink-tertiary);
-  font-size: var(--t-micro);
+  font-size: var(--t-small);
+}
+
+.picker__credit {
+  margin: var(--s-2) var(--s-3) var(--s-1);
+  color: var(--ink-tertiary);
+  font-size: var(--t-small);
+}
+
+.picker__credit a {
+  color: inherit;
 }
 
 /* ============================================================== forecast */

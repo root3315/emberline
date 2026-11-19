@@ -45,7 +45,7 @@
  */
 
 import { calibrate, comparable, dayOfYearIso, MIN_RATIO_SAMPLES, ratiosFromCounts } from '../core/harmonize'
-import { months } from '../i18n'
+import { formatDate, formatNumber, months } from '../i18n'
 import { heat, heatScale, MONO, rgba, varColor } from './paint'
 
 export interface FireYear {
@@ -369,7 +369,9 @@ export function mountFireYear(
     const angle = (Math.atan2(y, x) + Math.PI / 2 + TWO_PI) % TWO_PI
     const d = Math.min(days.length - 1, Math.floor((angle / TWO_PI) * days.length))
     const when = new Date(Date.UTC(year, 0, 1 + d))
-    const text = `${when.toISOString().slice(0, 10)} · ${Math.round(days[d] ?? 0).toLocaleString()}`
+    // In the site's words, not the browser's: an ISO date and a figure
+    // grouped by the reader's locale sat inside a Russian page.
+    const text = `${formatDate(when.toISOString().slice(0, 10))} · ${formatNumber(Math.round(days[d] ?? 0))}`
     centre(text)
     onProbe(text)
   }

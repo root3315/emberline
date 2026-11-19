@@ -18,6 +18,12 @@ async function main() {
   // Google returns blocks of `/* subset */ @font-face { ... }` — split on the subset comment.
   const blocks = css.split(/\/\*\s*([a-z-]+)\s*\*\//i).slice(1)
   const out = []
+  // A variable family comes back as one file per subset, repeated under every
+  // weight asked for. Written out weight by weight, the page declared three
+  // faces on three copies of the same bytes and the browser fetched each —
+  // two hundred kilobytes of duplicates on a Russian page. One face per file,
+  // its weights as a range, renders the same for a third of the download.
+  const seen = new Map()
   for (let i = 0; i < blocks.length; i += 2) {
     const subset = blocks[i].trim()
     const face = blocks[i + 1]
@@ -29,15 +35,25 @@ async function main() {
     const range = /unicode-range:\s*([^;]+);/.exec(face)?.[1]
     if (!family || !weight || !url) continue
 
+    const again = seen.get(url)
+    if (again) {
+      again.high = weight
+      continue
+    }
     const name = `${slug(family)}-${weight}-${subset}.woff2`
     const bytes = Buffer.from(await (await fetch(url, { headers: { 'User-Agent': UA } })).arrayBuffer())
     await writeFile(`public/fonts/${name}`, bytes)
-    out.push(
-      `@font-face {\n  font-family: '${family}';\n  font-style: normal;\n  font-weight: ${weight};\n  font-display: swap;\n  src: url('./fonts/${name}') format('woff2');${range ? `\n  unicode-range: ${range.trim()};` : ''}\n}`,
-    )
+    const entry = { family, low: weight, high: weight, name, range }
+    seen.set(url, entry)
+    out.push(entry)
     process.stdout.write(`  ${name} ${(bytes.length / 1024).toFixed(1)}kb\n`)
   }
-  await writeFile('public/fonts.css', `/* Vendored from Google Fonts. Regenerate: node scripts/fetch-assets.mjs */\n\n${out.join('\n\n')}\n`)
+  const faces = out.map((f) => {
+    const weights = f.low === f.high ? f.low : `${f.low} ${f.high}`
+    const range = f.range ? `\n  unicode-range: ${f.range.trim()};` : ''
+    return `@font-face {\n  font-family: '${f.family}';\n  font-style: normal;\n  font-weight: ${weights};\n  font-display: swap;\n  src: url('./fonts/${f.name}') format('woff2');${range}\n}`
+  })
+  await writeFile('public/fonts.css', `/* Vendored from Google Fonts. Regenerate: node scripts/fetch-assets.mjs */\n\n${faces.join('\n\n')}\n`)
 
   const land = Buffer.from(await (await fetch('https://cdn.jsdelivr.net/npm/world-atlas@2/land-110m.json')).arrayBuffer())
   await writeFile('public/geo/land-110m.json', land)

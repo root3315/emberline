@@ -187,7 +187,7 @@ export async function fetchLive(key: string, bounds: Bounds, dayRange: number): 
           return
         }
         const parsed = parseFirmsCsv(text)
-        detections.push(...parsed.detections)
+        append(detections, parsed.detections)
         nonVegetation += parsed.nonVegetation
       } catch (e) {
         failures.push(`${product}: ${String(e)}`)
@@ -203,10 +203,21 @@ export function parseFiles(texts: string[]): { detections: Detection[]; nonVeget
   let nonVegetation = 0
   for (const text of texts) {
     const parsed = parseFirmsCsv(text)
-    detections.push(...parsed.detections)
+    append(detections, parsed.detections)
     nonVegetation += parsed.nonVegetation
   }
   return { detections, nonVegetation }
+}
+
+/**
+ * One array onto the end of another, by loop.
+ *
+ * `push(...rows)` passes every row as an argument, and V8 stops at about a
+ * hundred and twenty thousand: a FIRMS archive download of a busy region is
+ * larger than that, and the upload failed with "Maximum call stack size".
+ */
+function append<T>(into: T[], rows: readonly T[]): void {
+  for (const row of rows) into.push(row)
 }
 
 /** Bounds that actually contain the detections, for a file of unknown extent. */

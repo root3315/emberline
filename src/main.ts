@@ -91,6 +91,7 @@ import {
   cellsAtRiskUnit,
   cellsLitUnit,
   cellsUnit,
+  filesUnit,
   counted,
   daysUnit,
   detectionsUnit,
@@ -362,6 +363,7 @@ const picker = new Picker({
   search: $<HTMLInputElement>('picker-search'),
   list: $('picker-list'),
   empty: $('picker-empty'),
+  credit: $('picker-credit'),
   select: els.aoi,
 })
 
@@ -1234,14 +1236,16 @@ async function drawModelCharts(): Promise<void> {
 async function aboutRing(): Promise<void> {
   if (fireYear) return
   const res = await fetch('/data/world/l0-daily.json').catch(() => null)
-  if (!res?.ok) {
+  // Parsed inside the same net: a server that answers a missing file with
+  // its index page says 200, and the HTML then threw out of this function.
+  const data = res?.ok ? ((await res.json().catch(() => null)) as FireYear | null) : null
+  if (!data) {
     // The ring, the fleet diagnosis and the planet's two routes all come
     // from this file; without it they were empty with nothing said.
     els.aboutYearRead.textContent = t('aboutDataFailed')
     els.aboutHeldout.textContent = t('aboutDataFailed')
     return
   }
-  const data = (await res.json()) as FireYear
   fireYear = mountFireYear(els.aboutYear, data, (text) => {
     els.aboutYearRead.textContent = text ?? ''
   })
@@ -1399,6 +1403,8 @@ async function renderFuture(): Promise<void> {
       els.futureWhere.textContent = ''
       els.futureStats.innerHTML = ''
       els.futureAnswer.textContent = t('forecastFailedTitle')
+      // One button however many times it has failed; they used to pile up.
+      document.querySelectorAll('.future__retry').forEach((el) => el.remove())
       const retry = document.createElement('button')
       retry.type = 'button'
       retry.className = 'ghost-btn future__retry'
@@ -1489,8 +1495,13 @@ async function showGlobe(): Promise<void> {
   if (!globe) {
     const land = await loadLand()
     if (!land) return
-    globe = mountGlobe(els.globeCanvas, land, { onPick: (p) => void openPick(p) })
-    addPauseButton(els.globeCanvas, globe)
+    // A language switch calls this again while the first call is still
+    // waiting on the land mask; without the second look both mounted, and
+    // the pause button could only ever stop one of the two.
+    if (!globe) {
+      globe = mountGlobe(els.globeCanvas, land, { onPick: (p) => void openPick(p) })
+      addPauseButton(els.globeCanvas, globe)
+    }
   }
   globe.setFires(globeFires())
 }
@@ -1647,8 +1658,11 @@ async function showLook(): Promise<void> {
   if (!lookGlobe) {
     const land = await loadLand()
     if (!land) return
-    lookGlobe = mountGlobe(els.lookGlobe, land, { onPick: (p) => void openLook(p) })
-    addPauseButton(els.lookGlobe, lookGlobe)
+    // Asked twice while the land mask was on its way: mount once.
+    if (!lookGlobe) {
+      lookGlobe = mountGlobe(els.lookGlobe, land, { onPick: (p) => void openLook(p) })
+      addPauseButton(els.lookGlobe, lookGlobe)
+    }
   }
   lookGlobe.setFires(globeFires())
   if (lookAt) return
@@ -1842,6 +1856,9 @@ async function playWeek(): Promise<void> {
   els.weekPlayText.textContent = t('weekLoading')
   await Promise.all(all.map((h) => loadHorizon(h.days)))
   els.weekPlay.disabled = false
+  // Left for the record while the files came: starting now would paint the
+  // week's probabilities over the archive's map.
+  if (!futureScope) return stopWeek()
 
   els.weekPlay.dataset.on = 'yes'
   els.weekPlayText.textContent = t('weekStop')
@@ -1938,6 +1955,9 @@ function renderRecord(weeks: readonly VerifyWeek[]): void {
  */
 async function renderProof(): Promise<void> {
   const got = await loadVerify().catch(() => null)
+  // Gone back to the record meanwhile: the band would open on its page.
+  // The forecast page asks again when it is next opened.
+  if (!futureScope) return
   els.futureProof.hidden = !got
   if (!got) return
 
@@ -2106,17 +2126,30 @@ async function renderProof(): Promise<void> {
   renderRecord(await loadVerifyRecord())
 }
 
+/**
+ * Only the newest press may draw.
+ *
+ * A day whose file is slow and a day already cached, pressed in that order,
+ * used to finish in the other: the strip said the 24th and the map showed
+ * the 22nd's grid.
+ */
+let dayRun = 0
+
 /** Fetch the day's grid if it is not here yet, then redraw. */
 async function pickDay(days: number): Promise<void> {
   if (days === weekDay) return
   weekDay = days
-  weekCells = days ? await loadHorizon(days) : null
+  const run = ++dayRun
+  const cells = days ? await loadHorizon(days) : null
+  if (run !== dayRun) return
+  weekCells = cells
   if (days && !weekCells) {
     // The file did not arrive. Fall back rather than draw the wrong week.
     weekDay = 0
   }
   fillWeek()
-  renderMapForecast(null, null, 'future')
+  // The reader may have gone back to the record while the file came.
+  if (futureScope) renderMapForecast(null, null, 'future')
 }
 
 /**
@@ -2160,8 +2193,11 @@ async function showDoor(): Promise<void> {
   if (!doorGlobe) {
     const land = await loadLand()
     if (!land) return
-    doorGlobe = mountGlobe(els.ctaGlobe, land)
-    addPauseButton(els.ctaGlobe, doorGlobe)
+    // Asked twice while the land mask was on its way: mount once.
+    if (!doorGlobe) {
+      doorGlobe = mountGlobe(els.ctaGlobe, land)
+      addPauseButton(els.ctaGlobe, doorGlobe)
+    }
   }
   doorGlobe.setFires(globeFires())
 }
@@ -3302,9 +3338,11 @@ function renderSensors(ds: Dataset): void {
     ...values,
     from: formatDate(s.from ?? ''),
     to: formatDate(s.to ?? ''),
+    // An arrow, because each fleet is the last one plus a satellite: joined
+    // with a dot, the list read "4.60× · + NOAA-20", which looked like a slip.
     eras: eras
       .map((e, i) => t('sensitivityEra', { fleet: fleetName(e.fleet, i === 0), k: formatNumber(e.k, 2) }))
-      .join(' · '),
+      .join(' → '),
   })
   /*
    * The test the reconciliation never had: each year of the reference era
@@ -4211,6 +4249,7 @@ function renderPlaceRibbon(): boolean {
   if (!any) return false
 
   ribbonFromGrid(days.years, '2000-11-01', last)
+  renderLegends()
   els.calendarNote.textContent = t('placeCalendarNote', {
     place: place.name,
     cell: t('cellQuarter'),
@@ -4242,6 +4281,9 @@ function renderWorldRibbon(): void {
   renderModeExplain()
 
   ribbonFromGrid(worldInstruments(daily), '2000-11-01', worldLastDay(daily))
+  // The same marks as a region's calendar, so the same key: opened straight
+  // on #/world it was empty, and the rails beside each year went unnamed.
+  renderLegends()
 }
 
 async function worldFor(year: number, level: WorldLevel): Promise<WorldYear | null> {
@@ -5322,6 +5364,7 @@ async function selectPlace(bounds: Bounds, name: string, wantYear?: number): Pro
       if (token !== loadToken) return
     }
     if (worldForecast) forecast ??= await loadForecast()
+    if (token !== loadToken) return
     worldScope = true
     worldPlace = { bounds, name }
     // The map first, then the calendar: the cube is a few hundred kilobytes
@@ -5356,6 +5399,9 @@ async function selectPlace(bounds: Bounds, name: string, wantYear?: number): Pro
     }
     renderWorldPanels()
   } catch (err) {
+    // A request the reader has already walked away from can still fail, and
+    // without this its blank page landed on top of whatever they opened next.
+    if (token !== loadToken) return
     // The reader is told the globe would not load either way, but a bug in
     // the drawing reaches this catch as readily as a dropped request does,
     // and silence here once cost an afternoon of looking at the network tab.
@@ -5396,6 +5442,7 @@ async function selectWorld(wantYear?: number): Promise<void> {
     writeUrl()
     status('')
   } catch (err) {
+    if (token !== loadToken) return
     // The reader is told the globe would not load either way, but a bug in
     // the drawing reaches this catch as readily as a dropped request does,
     // and silence here once cost an afternoon of looking at the network tab.
@@ -5436,17 +5483,8 @@ async function selectAoi(id: string, wantYear?: number): Promise<void> {
     // view writes claim to be the place the reader had just left.
     if (worldNow) worldNowData ??= await loadWorldNow().catch(() => null)
     if (worldForecast) forecast ??= await loadForecast()
-    worldScope = false
-    worldPlace = null
-    placeDays = null
-    showWorldLayout(false)
-    els.calendarTitle.textContent = t('sectionCalendar')
-    els.blank.hidden = true
-    els.ribbonWrap.hidden = false
-    els.calendarNote.hidden = false
-    els.ribbonLegendWrap.hidden = false
-    els.modeExplain.hidden = false
-    showDataSections(true)
+    if (token !== loadToken) return
+    showRecordLayout()
     rebuild()
     render()
     status('')
@@ -5468,6 +5506,28 @@ async function selectAoi(id: string, wantYear?: number): Promise<void> {
       status('')
     }
   }
+}
+
+/**
+ * The record's own layout: a dataset's panels rather than the planet's.
+ *
+ * Shared by the three ways a dataset arrives — a bundled region, a live
+ * query and a file. The last two used to skip it, so a file opened while
+ * the planet was on screen drew its calendar and figures under "The planet,
+ * day by day", and the address went on calling it the world.
+ */
+function showRecordLayout(): void {
+  worldScope = false
+  worldPlace = null
+  placeDays = null
+  showWorldLayout(false)
+  els.calendarTitle.textContent = t('sectionCalendar')
+  els.blank.hidden = true
+  els.ribbonWrap.hidden = false
+  els.calendarNote.hidden = false
+  els.ribbonLegendWrap.hidden = false
+  els.modeExplain.hidden = false
+  showDataSections(true)
 }
 
 async function runLive(): Promise<void> {
@@ -5496,7 +5556,10 @@ async function runLive(): Promise<void> {
       result.detections,
       result.nonVegetation,
     )
+    // Whatever was still loading is no longer what the reader asked for.
+    ++loadToken
     state.dataset = ds
+    showRecordLayout()
     rebuild()
     render()
     status(
@@ -5530,13 +5593,15 @@ async function loadFiles(files: FileList | null): Promise<void> {
       detections,
       nonVegetation,
     )
+    ++loadToken
     state.dataset = ds
+    showRecordLayout()
     rebuild()
     render()
     status(
       t('statusFileDone', {
         n: formatNumber(detections.length),
-        files: files.length,
+        files: counted(files.length, filesUnit),
         cells: formatNumber(ds.days.reduce((s, d) => s + d.activeCells, 0)),
       }) + (state.years.length < 4 ? ` ${t('statusShortRecord')}` : ''),
     )
@@ -5559,9 +5624,33 @@ function fillAoiOptions(): void {
   if (selected) picker.setValue(selected)
 }
 
+/**
+ * localStorage, where the browser allows it.
+ *
+ * With site data blocked, and in some webviews, touching it throws, and the
+ * first read sat at the top of `boot`: the page stayed white. The inline
+ * script in the head already guarded its own read; these are the same guard.
+ * Without storage the choice simply lasts for the visit.
+ */
+function stored(key: string): string | null {
+  try {
+    return localStorage.getItem(key)
+  } catch {
+    return null
+  }
+}
+
+function store(key: string, value: string): void {
+  try {
+    localStorage.setItem(key, value)
+  } catch {
+    // Remembered for this visit only.
+  }
+}
+
 function applyTheme(theme: 'night' | 'day'): void {
   document.documentElement.dataset.theme = theme
-  localStorage.setItem('emberline.theme', theme)
+  store('emberline.theme', theme)
   els.theme.querySelector('[data-theme-icon]')!.textContent = theme === 'night' ? '☾' : '☀'
   els.theme.setAttribute('aria-pressed', String(theme === 'day'))
   invalidateRamp()
@@ -5617,7 +5706,7 @@ function labelLang(): void {
 
 function switchLang(lang: Lang): void {
   setLang(lang)
-  localStorage.setItem('emberline.lang', lang)
+  store('emberline.lang', lang)
   els.lang.textContent = lang === 'en' ? 'RU' : 'EN'
   labelLang()
   applyStaticStrings()
@@ -5817,6 +5906,20 @@ interface UrlState {
   mode?: Mode
 }
 
+/**
+ * A place's name out of the address, or the address's own spelling of it.
+ *
+ * A link cut short in a chat app ends mid-escape (`%E0%A4%A`), and the throw
+ * from decoding it stopped the page loading at all.
+ */
+function decodeName(raw: string): string {
+  try {
+    return decodeURIComponent(raw)
+  } catch {
+    return raw
+  }
+}
+
 function readUrl(): UrlState {
   const raw = location.hash.replace(/^#\/?/, '')
   if (!raw) return {}
@@ -5859,7 +5962,7 @@ function readUrl(): UrlState {
     if (nums.length === 4 && nums.every(Number.isFinite)) {
       return {
         place: {
-          name: decodeURIComponent(parts[1]),
+          name: decodeName(parts[1]),
           bounds: { west: nums[0], south: nums[1], east: nums[2], north: nums[3] },
         },
         year: parts[3] && /^\d{4}$/.test(parts[3]) ? Number(parts[3]) : undefined,
@@ -6144,8 +6247,8 @@ function applyUrl(): void {
 }
 
 async function boot(): Promise<void> {
-  const savedLang = (localStorage.getItem('emberline.lang') as Lang | null) ?? (navigator.language.startsWith('ru') ? 'ru' : 'en')
-  const savedTheme = (localStorage.getItem('emberline.theme') as 'night' | 'day' | null) ?? 'night'
+  const savedLang = (stored('emberline.lang') as Lang | null) ?? (navigator.language.startsWith('ru') ? 'ru' : 'en')
+  const savedTheme = (stored('emberline.theme') as 'night' | 'day' | null) ?? 'night'
 
   setLang(savedLang)
   els.lang.textContent = savedLang === 'en' ? 'RU' : 'EN'

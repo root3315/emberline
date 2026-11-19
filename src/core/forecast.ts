@@ -186,7 +186,12 @@ export async function loadHorizon(days: number, base = '/data'): Promise<Forecas
   if (!found) return null
   let job = byHorizon.get(days)
   if (!job) {
-    job = readGrid(`${base}/${found.file}`, got.meta).catch(() => null)
+    // A failure is not kept: one dropped request used to make that day
+    // fall back to the week for the rest of the visit without asking again.
+    job = readGrid(`${base}/${found.file}`, got.meta).catch(() => {
+      byHorizon.delete(days)
+      return null
+    })
     byHorizon.set(days, job)
   }
   return job
